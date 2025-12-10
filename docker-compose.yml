@@ -1,0 +1,32 @@
+version: "3.9"
+services:
+  backend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: orion-analytics-backend:latest
+    ports:
+      - "8080:8080"
+    environment:
+      - SPRING_PROFILES_ACTIVE=prod
+      - JAVA_TOOL_OPTIONS=-Xmx1024m -Xms384m
+    restart: unless-stopped
+  frontend:
+    build:
+      context: ./frontend-app
+      dockerfile: Dockerfile
+    image: orion-analytics-frontend:latest
+    ports:
+      - "8081:8081"
+    environment:
+      - PORT=8081
+    restart: unless-stopped
+    # Useful for local dev so code changes are visible without rebuilding.
+    # Uncomment the next line when developing locally (requires Node and deps on host).
+    # volumes:
+    #   - ./frontend-app:/usr/src/app:cached
+    healthcheck:
+      test: [ "CMD", "wget", "--spider", "--quiet", "http://localhost:8081/ || exit 1" ]
+      interval: 30s
+      timeout: 5s
+      retries: 3

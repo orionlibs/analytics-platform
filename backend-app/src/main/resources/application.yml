@@ -1,0 +1,103 @@
+orion:
+  version: 0.0.1
+
+server:
+  port: 8080
+  address: 0.0.0.0
+  shutdown: graceful
+  error:
+    include-binding-errors: always
+    include-message: always
+    include-stacktrace: never
+
+management:
+  endpoint:
+    health:
+      show-details: always
+  endpoints:
+    web:
+      base-path: /actuator
+      exposure:
+        include: "*"
+  metrics:
+    enable:
+      all: true
+  prometheus:
+    metrics:
+      export:
+        enabled: true
+
+springdoc:
+  packagesToScan: orion.analytics.app.api
+  writer-with-order-by-keys: true
+  api-docs:
+    path: /api/docs
+  swagger-ui:
+    path: /api/swagger-ui
+
+spring:
+  application:
+    name: Orion Analytics
+  main:
+    banner-mode: off
+    #jackson:
+    #property-naming-strategy: SNAKE_CASE
+
+# Production profile (default)
+---
+spring:
+  config:
+    activate:
+      on-profile: "!test"
+
+  datasource:
+    driver-class-name: com.mysql.cj.jdbc.Driver
+    url: ${DATABASE_URL}
+    username: ${DATABASE_USERNAME}
+    password: ${DATABASE_PASSWORD}
+    hikari:
+      minimumIdle: 2
+      maximumPoolSize: 10
+      idleTimeout: 10000
+      maxLifetime: 1800000
+      connectionTimeout: 30000
+  jpa:
+    database: MYSQL
+    hibernate:
+      ddl-auto: update
+      dialect: org.hibernate.dialect.MySQL8Dialect
+      jdbc:
+        lob:
+          non_contextual_creation: true
+    #show-sql: true
+    properties:
+      hibernate:
+        format_sql: true
+
+
+
+---
+spring:
+  config:
+    activate:
+      on-profile: test
+
+  datasource:
+    driver-class-name: org.h2.Driver
+    url: jdbc:h2:mem:testdb;DB_CLOSE_DELAY=-1;MODE=MySQL;\INIT=CREATE SCHEMA IF NOT EXISTS orionanalytics;
+    username: sa
+    password:
+  logging-datasource:
+    driver-class-name: org.h2.Driver
+    url: jdbc:h2:mem:testdb;DB_CLOSE_DELAY=-1;MODE=MySQL;\INIT=CREATE SCHEMA IF NOT EXISTS orionanalytics;
+    username: sa
+    password:
+  jpa:
+    database: H2
+    hibernate:
+      ddl-auto: create-drop
+      dialect: org.hibernate.dialect.H2Dialect
+    #show-sql: true
+    properties:
+      hibernate:
+        format_sql: true
