@@ -1,9 +1,0 @@
---no-private
---title=OpenTelemetry Processor Baggage
---markup=markdown
---main=README.md
-./lib/opentelemetry/processor/baggage/**/*.rb
-./lib/opentelemetry/processor/baggage.rb
--
-README.md
-CHANGELOG.md

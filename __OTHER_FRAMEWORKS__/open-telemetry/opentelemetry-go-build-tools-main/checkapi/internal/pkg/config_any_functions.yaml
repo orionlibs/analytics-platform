@@ -1,4 +1,0 @@
-allowed_functions:
-  - classes:
-      - pkg
-    name: "*"

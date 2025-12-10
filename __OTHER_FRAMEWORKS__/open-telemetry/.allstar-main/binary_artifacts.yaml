@@ -1,6 +1,0 @@
-# https://github.com/ossf/allstar#binary-artifacts
-optConfig:
-  optOutStrategy: true
-action: issue
-ignoreFiles:
-- gradle-wrapper.jar

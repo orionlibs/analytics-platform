@@ -1,6 +1,0 @@
-inherit_from: ../../.rubocop.yml
-
-Lint/EmptyBlock:
-  Enabled: true
-  Exclude:
-    - test/instrumentation/graphql/tracers/graphql_tracer_test.rb

@@ -1,8 +1,0 @@
-inherit_from: ../../.rubocop.yml
-
-Lint/SuppressedException:
-  Enabled: false
-Metrics/ParameterLists:
-  Enabled: true
-  Exclude:
-    - lib/opentelemetry/instrumentation/rdkafka/patches/producer.rb

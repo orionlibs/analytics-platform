@@ -1,6 +1,0 @@
-inherit_from: ../../.rubocop.yml
-
-Lint/EmptyBlock:
-  Enabled: true
-  Exclude:
-    - test/opentelemetry/instrumentation/rspec/formatter_test.rb

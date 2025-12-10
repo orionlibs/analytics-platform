@@ -1,4 +1,0 @@
-# https://github.com/ossf/allstar#securitymd
-optConfig:
-  optOutStrategy: true
-action: issue

@@ -1,7 +1,0 @@
-# App dependencies
-flask==2.3.2
-
-# OTel dependencies
-opentelemetry-api==1.21.0
-opentelemetry-sdk==1.21.0
-opentelemetry-instrumentation-flask==0.42b0

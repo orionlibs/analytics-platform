@@ -1,1 +1,0 @@
--define(ROLL_COUNTER, roll_counter).

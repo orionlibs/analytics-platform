@@ -1,1 +1,0 @@
-PROJECTS := github-datasource

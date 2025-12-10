@@ -1,6 +1,0 @@
-inherit_from: ../../.rubocop.yml
-
-Lint/EmptyBlock:
-  Enabled: true
-  Exclude:
-    - test/opentelemetry/instrumentation/bunny/patches/consumer_test.rb

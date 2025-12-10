@@ -1,4 +1,0 @@
-LIBRARY "TestApplication.ContinuousProfiler.NativeDep.dll"
-
-EXPORTS
-    OTelAutoCallbackTest

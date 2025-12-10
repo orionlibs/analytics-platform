@@ -1,6 +1,0 @@
-inherit_from: ../../.rubocop.yml
-
-Style/FetchEnvVar:
-  Enabled: true
-  Exclude:
-    - test/test_helper.rb
