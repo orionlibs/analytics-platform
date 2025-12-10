@@ -40,4 +40,10 @@ public class Configuration extends Properties
     {
         PROPERTIES.remove(key);
     }
+
+
+    public static void deleteAllProps()
+    {
+        PROPERTIES.clear();
+    }
 }
