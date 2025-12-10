@@ -10,7 +10,6 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.web.server.LocalServerPort;
-import org.springframework.http.HttpHeaders;
 import org.springframework.test.context.ActiveProfiles;
 import orion.analytics.app.TestBase;
 import orion.analytics.app.api.GetSystemVersionAPI.Version;
@@ -23,14 +22,12 @@ class GetSystemVersionAPITest extends TestBase
 {
     @LocalServerPort int port;
     @Autowired APITestUtils apiUtils;
-    HttpHeaders headers;
 
 
     @BeforeEach
     void setUp()
     {
         addPortToAPIEndpoint(port);
-        headers = new HttpHeaders();
         RestAssured.baseURI = apiEndpointPrefix;
     }
 
@@ -39,9 +36,9 @@ class GetSystemVersionAPITest extends TestBase
     void getProjectTypes()
     {
         RestAssured.baseURI += "/system/version";
-        Response response = apiUtils.makeGetAPICall(headers);
+        Response response = apiUtils.makeGetAPICall(null);
         assertThat(response.statusCode()).isEqualTo(200);
-        APIResponse<Version> body = response.as(new TypeRef<APIResponse<GetSystemVersionAPI.Version>>()
+        APIResponse<Version> body = response.as(new TypeRef<>()
         {
         });
         assertThat(body.getData().getVersion()).isEqualTo("0.0.1");

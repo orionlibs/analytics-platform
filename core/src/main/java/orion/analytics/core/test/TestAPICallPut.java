@@ -9,8 +9,8 @@ import io.restassured.response.Response;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpHeaders;
 import org.springframework.stereotype.Component;
-import orion.analytics.core.Logger;
-import orion.analytics.core.json.JSONService;
+import orion.analytics.core.utils.Logger;
+import orion.analytics.core.utils.JSONUtils;
 
 @Component
 class TestAPICallPut
@@ -27,7 +27,7 @@ class TestAPICallPut
                         .contentType(ContentType.JSON)
                         .headers(headers)
                         .accept(ContentType.JSON)
-                        .body(JSONService.convertObjectToJSON(objectToSave))
+                        .body(JSONUtils.convertObjectToJSON(objectToSave))
                         .when()
                         .put()
                         .then()

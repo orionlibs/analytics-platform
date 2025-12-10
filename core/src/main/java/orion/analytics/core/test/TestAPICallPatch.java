@@ -1,8 +1,8 @@
 package orion.analytics.core.test;
 
 import static io.restassured.RestAssured.given;
-import orion.analytics.core.Logger;
-import orion.analytics.core.json.JSONService;
+import orion.analytics.core.utils.Logger;
+import orion.analytics.core.utils.JSONUtils;
 import io.restassured.RestAssured;
 import io.restassured.http.ContentType;
 import io.restassured.parsing.Parser;
@@ -26,7 +26,7 @@ class TestAPICallPatch
                         .contentType(ContentType.JSON)
                         .headers(headers)
                         .accept(ContentType.JSON)
-                        .body(JSONService.convertObjectToJSON(objectToSave))
+                        .body(JSONUtils.convertObjectToJSON(objectToSave))
                         .when()
                         .patch()
                         .then()

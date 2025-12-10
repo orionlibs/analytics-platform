@@ -1,7 +1,7 @@
 package orion.analytics.core.test;
 
 import static io.restassured.RestAssured.given;
-import orion.analytics.core.Logger;
+import orion.analytics.core.utils.Logger;
 import io.restassured.RestAssured;
 import io.restassured.http.ContentType;
 import io.restassured.parsing.Parser;
