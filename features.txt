@@ -1,0 +1,1 @@
+load configuration from the backend-app application.yml and from InputStream
