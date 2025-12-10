@@ -1,0 +1,27 @@
+{
+  "ignorePaths": [".github/**", ".yarn/**", "node_modules/**", "dist/**", "yarn.lock"],
+  "words": [
+    "SIGV",
+    "isob",
+    "isoe",
+    "isof",
+    "Creds",
+    "CREDS",
+    "opensearch",
+    "esbuild",
+    "testid",
+    "Datasources",
+    "Datasource",
+    "typecheck",
+    "tibdex",
+    "eslintcache",
+    "lefthook",
+    "gofmt",
+    "hmac",
+    "grabpl",
+    "spellcheck",
+    "amazonprometheus",
+    "zizmor",
+    "npmPreapprovedPackages"
+  ]
+}

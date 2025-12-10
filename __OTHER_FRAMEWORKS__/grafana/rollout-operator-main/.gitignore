@@ -1,0 +1,7 @@
+/rollout-operator
+integration/mock-service/mock-service
+.idea
+Makefile.local
+jsonnet-tests/
+integration/jsonnet-integration-tests/
+

@@ -1,0 +1,8 @@
+!.vscode
+.yarn
+node_modules
+.idea
+dist
+*.vsix
+.vscode-test
+out

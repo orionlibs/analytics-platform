@@ -1,0 +1,17 @@
+{
+  alerting+: import './alerting/main.libsonnet',
+  asserts+: import './asserts/main.libsonnet',
+  cloud+: import './cloud/main.libsonnet',
+  cloudprovider+: import './cloudprovider/main.libsonnet',
+  connections+: import './connections/main.libsonnet',
+  enterprise+: import './enterprise/main.libsonnet',
+  fleetmanagement+: import './fleetmanagement/main.libsonnet',
+  frontendobservability+: import './frontendobservability/main.libsonnet',
+  k6+: import './k6/main.libsonnet',
+  ml+: import './ml/main.libsonnet',
+  oncall+: import './oncall/main.libsonnet',
+  oss+: import './oss/main.libsonnet',
+  slo+: import './slo/main.libsonnet',
+  sm+: import './sm/main.libsonnet',
+  nogroup+: import './nogroup/main.libsonnet',
+}

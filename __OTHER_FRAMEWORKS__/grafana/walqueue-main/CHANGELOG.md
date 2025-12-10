@@ -1,0 +1,12 @@
+# walqueue changelog
+- [ENHANCEMENT] Allow disabling of metadata cache for v2. (@dehaansa)
+- [ENHANCEMENT] Support Prometheus Remote Write v2. (@dehaansa)
+- [BUG] Initialize seconds metrics that represent timestamps to current time. (@dehaansa)
+- [BUG] Added support for exemplars. (@mattdurham)
+- [CHORE] Set up linting on the project. (@dehaansa)
+- [BUG] Changed metric naming to better align with prometheus standard, adding `_total` to counters. (@mattdurham)
+- [ENHANCEMENT] Make zstd the default compression layer. (@mattdurham)
+- [ENHANCEMENT] Instead of file queue pushing data, the network writers request it. (@mattdurham)
+- [BUG] Fix issue with memory growth with slicing vs copying file bytes. (@mattdurham)
+- [FEATURE] Add support for headers in outgoing connections. (@mattdurham)
+- [FEATURE] Add support for proxies. (@mattdurham)

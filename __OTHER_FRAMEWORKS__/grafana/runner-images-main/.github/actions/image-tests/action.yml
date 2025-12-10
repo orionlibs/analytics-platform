@@ -1,0 +1,133 @@
+name: "Image tests"
+description: "Run tests on runner images from within workflow"
+
+inputs:
+  image_os:
+    description: "The operating system of the image"
+    required: false
+    default: "ubuntu"
+  os_version:
+    description: "The version of the operating system of the image"
+    required: false
+    default: "2204"
+  image_tag:
+    description: "The version of the image"
+    required: true
+
+runs:
+  using: "composite"
+  steps:
+    - name: Checkout repository
+      uses: actions/checkout@692973e3d937129bcbf40652eb9f2f61becf3332 # v4.1.7
+      id: checkout
+      with:
+        repository: grafana/runner-images
+        ref: ${{ inputs.image_tag }}
+        path: runner-images
+
+    - name: Test runner tools
+      shell: pwsh
+      env:
+        IMAGE_OS: ${{ inputs.image_os }}
+        TESTS_PATH: images/${{ inputs.image_os }}/scripts/tests
+        TOOLSET_PATH: images/${{ inputs.image_os }}/toolsets/toolset-${{ inputs.os_version }}.json
+      run: |
+        echo "::group::Test runner tools"
+        $ErrorActionPreference = "Stop"
+        $repoPath = (Get-Item -Path "runner-images").FullName
+        Import-Module "$repoPath/$env:TESTS_PATH/Helpers.psm1" -DisableNameChecking
+        function global:Get-ToolsetContentOverride {
+            $toolsetPath = "$repoPath/$env:TOOLSET_PATH"
+            $toolsetJson = Get-Content -Path $toolsetPath -Raw
+            ConvertFrom-Json -InputObject $toolsetJson
+        }
+        Set-Alias -Name Get-ToolsetContent -Value Get-ToolsetContentOverride -Scope global
+        Invoke-Pester -Output Detailed $repoPath/$env:TESTS_PATH
+        echo "::endgroup::"
+
+    - name: Test runner expressions
+      shell: bash
+      env:
+        CONTAINS_TRUE: ${{ contains('Hello World', 'World') }}
+        CONTAINS_FALSE: ${{ contains('Hello World', 'Goodbye') }}
+        STARTS_WITH_TRUE: ${{ startsWith('Hello World', 'Hello') }}
+        STARTS_WITH_FALSE: ${{ startsWith('Hello World', 'World') }}
+        ENDS_WITH_TRUE: ${{ endsWith('Hello World', 'World') }}
+        ENDS_WITH_FALSE: ${{ endsWith('Hello World', 'Hello') }}
+        FORMAT_TEST: ${{ format('Hello {0}{1}', 'World', '!') }}
+        JOIN_TEST: ${{ join(fromJSON('["Hello", "World"]'), ' ') }}
+        HASH_FILES_NON_EMPTY: ${{ hashFiles('runner-images') }}
+        HASH_FILES_EMPTY: ${{ hashFiles('/var/empty') }}
+        FROM_JSON_TEST: ${{ fromJSON('{"key":"value"}').key }}
+        TO_JSON_TEST: ${{ toJSON(fromJSON('{"key":"value"}')) }}
+      run: |
+        echo "::group::Test runner expressions"
+        # Initialize the failed flag and counters
+        passed_count=0
+        failed_count=0
+
+        # ANSI color codes
+        GREEN='\033[32m'
+        RED='\033[31m'
+        NC='\033[0m' # No Color
+
+        # Function to test expression results
+        check_result() {
+          local name=$1
+          local result=$2
+          local expected=$3
+
+          if [[ "$expected" == "non-empty" ]]; then
+            # Special case: check that result is not an empty string
+            if [[ -n "$result" ]]; then
+              echo -e "${GREEN}  [+] $name${NC}"
+              passed_count=$((passed_count + 1))
+            else
+              echo -e "${RED}  [-] $name (Expected non-empty result, Got: '$result')${NC}"
+              failed_count=$((failed_count + 1))
+            fi
+          else
+            # General case: check that result matches expected
+            if [[ "$result" == "$expected" ]]; then
+              echo -e "${GREEN}  [+] $name${NC}"
+              passed_count=$((passed_count + 1))
+            else
+              echo -e "${RED}  [-] $name (Expected: $expected, Got: $result)${NC}"
+              failed_count=$((failed_count + 1))
+            fi
+          fi
+        }
+
+        # Run the tests
+        mkdir empty-dir
+        echo "Testing runner expressions..."
+        start_time=$(date +%s)
+        check_result "contains (true)" "$CONTAINS_TRUE" "true"
+        check_result "contains (false)" "$CONTAINS_FALSE" "false"
+        check_result "startsWith (true)" "$STARTS_WITH_TRUE" "true"
+        check_result "startsWith (false)" "$STARTS_WITH_FALSE" "false"
+        check_result "endsWith (true)" "$ENDS_WITH_TRUE" "true"
+        check_result "endsWith (false)" "$ENDS_WITH_FALSE" "false"
+        check_result "format" "$FORMAT_TEST" "Hello World!"
+        check_result "join" "$JOIN_TEST" "Hello World"
+        check_result "hashFiles (non-empty)" "$HASH_FILES_NON_EMPTY" "non-empty"
+        check_result "hashFiles (empty)" "$HASH_FILES_EMPTY" ""
+        check_result "fromJSON" "$FROM_JSON_TEST" "value"
+        check_result "toJSON" "$TO_JSON_TEST" '{
+          "key": "value"
+        }'
+
+        # Calculate total test time
+        end_time=$(date +%s)
+        total_time=$((end_time - start_time))
+        total_time_ms=$((total_time * 1000))
+
+        # Output summary
+        echo ""
+        echo "Tests Passed: $passed_count, Failed: $failed_count"
+
+        # Fail the step if any test failed
+        if [[ $failed_count -gt 0 ]]; then
+          exit 1
+        fi
+        echo "::endgroup::"

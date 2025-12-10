@@ -1,0 +1,44 @@
+description: >
+  Run a k6 test
+docker:
+  - image: loadimpact/k6:<< parameters.tag >>
+parameters:
+  tag:
+    description:
+      Allows for overriding the tag used to pick a docker image for the k6 test job.
+    type: string
+    default: latest
+  arguments:
+    description: >
+      Any command-line arguments, or flags, that you would like to pass on to k6.
+      For a full list of options, see https://k6.io/docs/using-k6/options.
+    type: string
+    default: ''
+  script:
+    description: >
+      The path to your test script, relative to the current working directory
+    type: string
+    default: test.js
+  cloud:
+    description: >
+      Whether it runs the k6 test in the k6 Cloud.
+      If true, set your K6_CLOUD_TOKEN on the CircleCI environment variables.
+    type: boolean
+    default: false
+steps:
+  - checkout
+  - when:
+      condition: << parameters.cloud >>
+      steps:
+        - run:
+            name: Execute cloud test
+            command: >
+              k6 cloud << parameters.script >> << parameters.arguments >>
+  - unless:
+      condition: << parameters.cloud >>
+      steps:
+        - run:
+            name: Local Execution
+            command: k6 run << parameters.script >> << parameters.arguments >>
+        - store_artifacts:
+            path: /tmp/artifacts

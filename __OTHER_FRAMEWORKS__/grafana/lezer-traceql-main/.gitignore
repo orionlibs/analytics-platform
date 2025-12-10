@@ -1,0 +1,9 @@
+.DS_STORE
+.tern-*
+/.idea
+/.vscode
+/dev/
+/dist/
+/node_modules/
+/src/parser.*
+notes.txt

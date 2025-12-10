@@ -1,0 +1,81 @@
+# Default values for k6-loadtester.
+# This is a YAML-formatted file.
+# Declare variables to be passed into your templates.
+
+replicaCount: 1
+
+image:
+  repository: ghcr.io/grafana/flagger-k6-webhook
+  pullPolicy: Always
+  # Overrides the image tag whose default is the chart appVersion.
+  tag: ""
+
+# accepted values are debug, info, warning, error (defaults to info)
+logLevel: debug
+
+readinessProbe:
+  httpGet:
+    port: 8000
+    path: /health
+
+serviceAccount:
+  # Specifies whether a service account should be created
+  create: true
+  # Annotations to add to the service account
+  annotations: {}
+  # The name of the service account to use.
+  # If not set and create is true, a name is generated using the fullname template
+  name: ""
+  # Will create Role/Rolebinding for serviceAccount to read secrets in current namespace.
+  rbac: true
+
+podAnnotations: {}
+
+podSecurityContext:
+  fsGroup: 65534
+
+securityContext:
+  capabilities:
+    drop:
+    - ALL
+  readOnlyRootFilesystem: true
+  runAsNonRoot: true
+  runAsUser: 65534
+
+service:
+  type: ClusterIP
+  port: 8000
+
+resources: {}
+  # limits:
+  #   cpu: 100m
+  #   memory: 128Mi
+  # requests:
+  #   cpu: 100m
+  #   memory: 128Mi
+
+nodeSelector: {}
+
+tolerations: []
+
+affinity: {}
+
+webhook:
+  name: "k6-loadtester"
+  # A list of configurable variables
+  vars:
+    # "K6_CLOUD_TOKEN" : ""
+    # "SLACK_TOKEN" : ""
+    # if you need to access secrets in the cluster, use this environment value.
+    "KUBERNETES_CLIENT": "in-cluster"
+
+# Additional volumes Deployment (can be used with initContainers, below)
+volumes: []
+
+## InitContainers allows injecting additional initContainers. This can be used in combination
+## with volumes (above) and volumeMounts (below) to import test assets from configmaps, or
+## additional container images
+initContainers: []
+
+# Additional VolumeMounts on the Deployment
+volumeMounts: []

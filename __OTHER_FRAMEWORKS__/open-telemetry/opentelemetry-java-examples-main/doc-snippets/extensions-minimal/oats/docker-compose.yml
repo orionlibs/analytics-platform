@@ -1,0 +1,11 @@
+version: '3'
+services:
+  app:
+    build:
+      context: ../../
+      dockerfile: extensions-minimal/oats/Dockerfile
+    environment:
+      OTEL_SERVICE_NAME: "extensions-minimal-test-app"
+      OTEL_EXPORTER_OTLP_ENDPOINT: http://lgtm:4318
+    ports:
+      - "8080:8080"

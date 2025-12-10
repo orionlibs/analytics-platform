@@ -1,0 +1,49 @@
+name: Lint PR title
+
+on:
+  pull_request:
+    types:
+      - edited
+      - opened
+      - ready_for_review
+      - synchronize
+
+  merge_group:
+
+permissions:
+  contents: read
+
+jobs:
+  lint-pr-title:
+    permissions:
+      contents: read
+      pull-requests: read
+
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Harden the runner (Audit all outbound calls)
+        uses: step-security/harden-runner@95d9a5deda9de15063e7595e9719c11c38c90ae2 # v2.13.2
+        with:
+          egress-policy: audit
+
+      - name: Checkout
+        uses: actions/checkout@1af3b93b6815bc44a9784bd300feb67ff0d1eeb3 # v6.0.0
+        with:
+          persist-credentials: false
+
+      - id: lint-pr-title
+        name: Lint PR title
+        uses: ./actions/lint-pr-title
+
+      # This is an integration test ensuring that we don't regress absolute path
+      # support
+      - name: Copy lint-pr-title config to temp dir
+        run: |
+          cp actions/lint-pr-title/commitlint.config.js "${{ runner.temp }}/commitlint.config.js"
+
+      - id: lint-pr-title-separate-config
+        name: Lint PR title with separate config
+        uses: ./actions/lint-pr-title
+        with:
+          config-path: "${{ runner.temp }}/commitlint.config.js"

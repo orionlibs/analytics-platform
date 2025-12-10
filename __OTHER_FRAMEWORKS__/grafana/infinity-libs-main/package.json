@@ -1,0 +1,29 @@
+{
+  "name": "@grafana/infinity-libs",
+  "version": "1.0.1",
+  "private": true,
+  "workspaces": [
+    "lib/go/*"
+  ],
+  "description": "Libraries used by Grafana Infinity data source plugin",
+  "keywords": [],
+  "license": "Apache-2.0",
+  "author": "Grafana Labs",
+  "scripts": {
+    "tidy": "turbo run tidy",
+    "test": "turbo run test:backend",
+    "bench": "turbo run bench:backend",
+    "watch": "turbo watch test:backend",
+    "spellcheck": "cspell -c cspell.config.json \"**/*.{ts,tsx,js,go,md,mdx,yml,yaml,json,scss,css}\""
+  },
+  "packageManager": "yarn@1.22.22",
+  "dependencies": {},
+  "devDependencies": {
+    "@changesets/cli": "^2.27.12",
+    "cspell": "8.15.7",
+    "turbo": "2.2.3"
+  },
+  "resolutions": {
+    "micromatch": "4.0.8"
+  }
+}

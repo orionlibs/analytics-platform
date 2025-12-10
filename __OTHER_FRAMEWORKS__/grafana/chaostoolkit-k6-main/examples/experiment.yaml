@@ -1,0 +1,58 @@
+version: 1.0.0
+title: k6 test
+description: |
+  When terminating a random pod from a replicaset containing API servers,
+  there should not be any dropped, or erroring, request while the service recovers.
+tags:
+  - kubernetes
+  - pods
+  - replicaset
+  - error rates
+  - http
+contributions:
+  reliability: medium
+  security: none
+  scalability: medium
+steady-state-hypothesis:
+  title: api is alive and healthy
+  probes:
+    - type: probe
+      name: api-is-responding-with-http-status-200
+      tolerance: true
+      provider:
+        type: python
+        module: chaosk6.probes
+        func: http
+        arguments:
+          endpoint: http://chaos.example.com
+          method: get
+          status: 200
+          vus: 10
+          duration: 5s
+          debug: true
+          headers:
+            Content-Type: application/json
+    - name: count-pods
+      type: probe
+      tolerance: 5
+      provider:
+        type: python
+        module: chaosk8s.pod.probes
+        func: count_pods
+        arguments:
+          ns: chaos-demo
+          label_selector: run=chaos-nginx
+          phase: Running
+method:
+  - type: action
+    name: terminate-webserver-pod
+    provider:
+      type: python
+      module: chaosk8s.pod.actions
+      func: terminate_pods
+      arguments:
+        ns: chaos-demo
+        label_selector: run=chaos-nginx
+        name_pattern: '^chaos-webserver-.*$'
+        grace_period: 2
+        rand: true

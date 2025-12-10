@@ -1,0 +1,237 @@
+{
+    "smithy": "1.0",
+    "shapes": {
+        "example.smithy#MyService": {
+            "type": "service",
+            "version": "2006-03-01",
+            "resources": [
+                {
+                    "target": "example.smithy#Payload"
+                }
+            ],
+            "traits": {
+                "aws.protocols#restJson1": {},
+                "aws.auth#sigv4": {
+                    "name": "myservice"
+                },
+                "smithy.api#cors": {
+                    "origin": "https://www.example.com",
+                    "maxAge": 86400,
+                    "additionalAllowedHeaders": [
+                        "X-Service-Input-Metadata"
+                    ],
+                    "additionalExposedHeaders": [
+                        "X-Service-Output-Metadata"
+                    ]
+                },
+                "aws.apigateway#integration": {
+                    "type": "aws_proxy",
+                    "credentials": "arn:aws:iam::123456789012:role/{serviceName}{operationName}LambdaRole",
+                    "uri": "arn:aws:apigateway:us-west-2:lambda:path/2015-03-31/functions/arn:aws:lambda:us-west-2:123456789012:function:{serviceName}{operationName}/invocations",
+                    "httpMethod": "POST",
+                    "payloadFormatVersion": "1.0"
+                }
+            }
+        },
+        "example.smithy#Payload": {
+            "type": "resource",
+            "identifiers": {
+                "id": {
+                    "target": "smithy.api#String"
+                }
+            },
+            "put": {
+                "target": "example.smithy#PutPayload"
+            },
+            "read": {
+                "target": "example.smithy#GetPayload"
+            },
+            "delete": {
+                "target": "example.smithy#DeletePayload"
+            },
+            "list": {
+                "target": "example.smithy#ListPayloads"
+            }
+        },
+        "example.smithy#PutPayload": {
+            "type": "operation",
+            "input": {
+                "target": "example.smithy#PutPayloadInput"
+            },
+            "traits": {
+                "smithy.api#idempotent":  {},
+                "smithy.api#http": {
+                    "uri": "/payload/{id}",
+                    "method": "PUT",
+                    "code": 201
+                }
+            }
+        },
+        "example.smithy#GetPayload": {
+            "type": "operation",
+            "input": {
+                "target": "example.smithy#GetPayloadInput"
+            },
+            "output": {
+                "target": "example.smithy#GetPayloadOutput"
+            },
+            "traits": {
+                "smithy.api#readonly":  {},
+                "smithy.api#http": {
+                    "uri": "/payload/{id}",
+                    "method": "GET"
+                }
+            }
+        },
+        "example.smithy#DeletePayload": {
+            "type": "operation",
+            "input": {
+                "target": "example.smithy#DeletePayloadInput"
+            },
+            "traits": {
+                "smithy.api#idempotent":  {},
+                "smithy.api#http": {
+                    "uri": "/payload/{id}",
+                    "method": "DELETE",
+                    "code": 204
+                }
+            }
+        },
+        "example.smithy#ListPayloads": {
+            "type": "operation",
+            "output": {
+                "target": "example.smithy#ListPayloadsOutput"
+            },
+            "traits": {
+                "smithy.api#readonly":  {},
+                "smithy.api#http": {
+                    "uri": "/payload",
+                    "method": "GET"
+                }
+            }
+        },
+        "example.smithy#PutPayloadInput": {
+            "type": "structure",
+            "members": {
+                "id": {
+                    "target": "smithy.api#String",
+                    "traits": {
+                        "smithy.api#required":  {},
+                        "smithy.api#httpLabel":  {}
+                    }
+                },
+                "header": {
+                    "target": "smithy.api#String",
+                    "traits": {
+                        "smithy.api#httpHeader": "X-Foo-Header"
+                    }
+                },
+                "query": {
+                    "target": "smithy.api#Integer",
+                    "traits": {
+                        "smithy.api#httpQuery": "query"
+                    }
+                },
+                "enum": {
+                    "target": "example.smithy#EnumString",
+                    "traits": {
+                        "smithy.api#httpHeader": "X-EnumString"
+                    }
+                },
+                "body": {
+                    "target": "smithy.api#Blob",
+                    "traits": {
+                        "smithy.api#httpPayload":  {}
+                    }
+                }
+            }
+        },
+        "example.smithy#GetPayloadInput": {
+            "type": "structure",
+            "members": {
+                "id": {
+                    "target": "smithy.api#String",
+                    "traits": {
+                        "smithy.api#httpLabel":  {},
+                        "smithy.api#required":  {}
+                    }
+                }
+            }
+        },
+        "example.smithy#GetPayloadOutput": {
+            "type": "structure",
+            "members": {
+                "header": {
+                    "target": "smithy.api#String",
+                    "traits": {
+                        "smithy.api#httpHeader": "X-Foo-Header"
+                    }
+                },
+                "body": {
+                    "target": "smithy.api#Blob",
+                    "traits": {
+                        "smithy.api#httpPayload":  {}
+                    }
+                }
+            }
+        },
+        "example.smithy#DeletePayloadInput": {
+            "type": "structure",
+            "members": {
+                "id": {
+                    "target": "smithy.api#String",
+                    "traits": {
+                        "smithy.api#httpLabel":  {},
+                        "smithy.api#required":  {}
+                    }
+                }
+            }
+        },
+        "example.smithy#ListPayloadsOutput": {
+            "type": "structure",
+            "members": {
+                "items": {
+                    "target": "example.smithy#PayloadDescriptions"
+                }
+            }
+        },
+        "example.smithy#EnumString": {
+            "type": "string",
+            "traits": {
+                "smithy.api#enum": [
+                    {
+                        "value": "a",
+                        "name": "A"
+                    },
+                    {
+                        "value": "c",
+                        "name": "C"
+                    }
+                ]
+            }
+        },
+        "example.smithy#PayloadDescriptions": {
+            "type": "list",
+            "member": {
+                "target": "example.smithy#PayloadDescription"
+            }
+        },
+        "example.smithy#PayloadDescription": {
+            "type": "structure",
+            "members": {
+                "id": {
+                    "target": "smithy.api#String",
+                    "traits": {
+                        "smithy.api#required":  {}
+                    }
+                },
+                "createdAt": {
+                    "target": "smithy.api#Timestamp",
+                    "traits": {
+                        "smithy.api#required":  {}
+                    }
+                }
+            }
+        }
+    }
+}

@@ -1,0 +1,80 @@
+name: E2E tests
+on:
+  pull_request:
+    paths:
+      - 'packages/plugin-e2e/**'
+      - '.github/workflows/playwright.yml'
+
+permissions:
+  contents: read
+  id-token: write
+
+jobs:
+  resolve-versions:
+    name: Resolve Grafana images
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    outputs:
+      matrix: ${{ steps.resolve-versions.outputs.matrix }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Resolve Grafana E2E versions
+        id: resolve-versions
+        uses: grafana/plugin-actions/e2e-version@main
+        with:
+          version-resolver-type: version-support-policy
+
+  playwright-tests:
+    needs: resolve-versions
+    timeout-minutes: 60
+    strategy:
+      fail-fast: false
+      matrix:
+        GRAFANA_IMAGE: ${{fromJson(needs.resolve-versions.outputs.matrix)}}
+    name: ${{ matrix.GRAFANA_IMAGE.name }}@${{ matrix.GRAFANA_IMAGE.VERSION }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node.js environment
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          registry-url: 'https://registry.npmjs.org'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build frontend
+        run: npm run build --w @grafana/plugin-e2e
+
+      - name: Install Playwright Browsers
+        run: npx playwright install --with-deps chromium
+
+      - name: Start Grafana
+        run: |
+          cd packages/plugin-e2e
+          docker-compose pull
+          AWS_SECRET_ACCESS_KEY=${{secrets.AWS_SECRET_ACCESS_KEY}} AWS_ACCESS_KEY_ID=${{secrets.AWS_ACCESS_KEY_ID}} GOOGLE_JWT_FILE=${{secrets.GOOGLE_JWT_FILE}} GRAFANA_IMAGE=${{ matrix.GRAFANA_IMAGE.NAME }} GRAFANA_VERSION=${{ matrix.GRAFANA_IMAGE.VERSION }} docker-compose up -d
+
+      - name: Wait for Grafana to start
+        uses: nev7n/wait_for_response@v1
+        with:
+          url: 'http://localhost:3000/'
+          responseCode: 200
+          timeout: 60000
+          interval: 500
+
+      - name: Run Playwright tests
+        id: run-tests
+        run: npm run playwright:test --w @grafana/plugin-e2e
+        env:
+          GOOGLE_JWT_FILE: ${{ secrets.GOOGLE_JWT_FILE }}
+
+      - name: Publish report to GCS
+        if: ${{ github.repository_owner == 'grafana' && (always() && steps.run-tests.outcome == 'success') || (failure() && steps.run-tests.outcome == 'failure') }}
+        uses: grafana/plugin-actions/publish-report@main
+        with:
+          grafana-version: ${{ matrix.GRAFANA_IMAGE.VERSION }}
+          path: packages/plugin-e2e/playwright-report

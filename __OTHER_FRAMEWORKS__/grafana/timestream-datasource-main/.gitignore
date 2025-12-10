@@ -1,0 +1,28 @@
+.DS_Store
+.idea/
+node_modules/
+coverage/
+ci/
+dist/
+pkg/__debug_bin
+yarn-error.log
+.eslintcache
+.env*
+
+# End to End tests
+provisioning/
+!provisioning/datasources/aws-timestream-e2e.yaml
+/test-results/
+/playwright-report/
+/blob-report/
+/playwright/.cache/
+/playwright/.auth/
+
+# yarn
+.pnp.*
+.yarn/*
+!.yarn/patches
+!.yarn/plugins
+!.yarn/releases
+!.yarn/sdks
+!.yarn/versions

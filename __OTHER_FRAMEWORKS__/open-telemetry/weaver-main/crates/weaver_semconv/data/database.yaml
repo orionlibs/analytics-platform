@@ -1,0 +1,686 @@
+groups:
+  - id: db
+    stability: stable
+    type: span
+    brief: >
+      This document defines the attributes used to perform database client calls.
+    span_kind: client
+    attributes:
+      - id: db.system
+        stability: stable
+        tag: connection-level
+        brief: An identifier for the database management system (DBMS) product being used. See below for a list of well-known identifiers.
+        requirement_level: required
+        type:
+          members:
+            - id: other_sql
+              stability: stable
+              value: 'other_sql'
+              brief: 'Some other SQL database. Fallback only. See notes.'
+            - id: mssql
+              stability: stable
+              value: 'mssql'
+              brief: 'Microsoft SQL Server'
+            - id: mssqlcompact
+              stability: stable
+              value: 'mssqlcompact'
+              brief: 'Microsoft SQL Server Compact'
+            - id: mysql
+              stability: stable
+              value: 'mysql'
+              brief: 'MySQL'
+            - id: oracle
+              stability: stable
+              value: 'oracle'
+              brief: 'Oracle Database'
+            - id: db2
+              stability: stable
+              value: 'db2'
+              brief: 'IBM Db2'
+            - id: postgresql
+              stability: stable
+              value: 'postgresql'
+              brief: 'PostgreSQL'
+            - id: redshift
+              stability: stable
+              value: 'redshift'
+              brief: 'Amazon Redshift'
+            - id: hive
+              stability: stable
+              value: 'hive'
+              brief: 'Apache Hive'
+            - id: cloudscape
+              stability: stable
+              value: 'cloudscape'
+              brief: 'Cloudscape'
+            - id: hsqldb
+              stability: stable
+              value: 'hsqldb'
+              brief: 'HyperSQL DataBase'
+            - id: progress
+              stability: stable
+              value: 'progress'
+              brief: 'Progress Database'
+            - id: maxdb
+              stability: stable
+              value: 'maxdb'
+              brief: 'SAP MaxDB'
+            - id: hanadb
+              stability: stable
+              value: 'hanadb'
+              brief: 'SAP HANA'
+            - id: ingres
+              stability: stable
+              value: 'ingres'
+              brief: 'Ingres'
+            - id: firstsql
+              stability: stable
+              value: 'firstsql'
+              brief: 'FirstSQL'
+            - id: edb
+              stability: stable
+              value: 'edb'
+              brief: 'EnterpriseDB'
+            - id: cache
+              stability: stable
+              value: 'cache'
+              brief: 'InterSystems Caché'
+            - id: adabas
+              stability: stable
+              value: 'adabas'
+              brief: 'Adabas (Adaptable Database System)'
+            - id: firebird
+              stability: stable
+              value: 'firebird'
+              brief: 'Firebird'
+            - id: derby
+              stability: stable
+              value: 'derby'
+              brief: 'Apache Derby'
+            - id: filemaker
+              stability: stable
+              value: 'filemaker'
+              brief: 'FileMaker'
+            - id: informix
+              stability: stable
+              value: 'informix'
+              brief: 'Informix'
+            - id: instantdb
+              stability: stable
+              value: 'instantdb'
+              brief: 'InstantDB'
+            - id: interbase
+              stability: stable
+              value: 'interbase'
+              brief: 'InterBase'
+            - id: mariadb
+              stability: stable
+              value: 'mariadb'
+              brief: 'MariaDB'
+            - id: netezza
+              stability: stable
+              value: 'netezza'
+              brief: 'Netezza'
+            - id: pervasive
+              stability: stable
+              value: 'pervasive'
+              brief: 'Pervasive PSQL'
+            - id: pointbase
+              stability: stable
+              value: 'pointbase'
+              brief: 'PointBase'
+            - id: sqlite
+              stability: stable
+              value: 'sqlite'
+              brief: 'SQLite'
+            - id: sybase
+              stability: stable
+              value: 'sybase'
+              brief: 'Sybase'
+            - id: teradata
+              stability: stable
+              value: 'teradata'
+              brief: 'Teradata'
+            - id: vertica
+              stability: stable
+              value: 'vertica'
+              brief: 'Vertica'
+            - id: h2
+              stability: stable
+              value: 'h2'
+              brief: 'H2'
+            - id: coldfusion
+              stability: stable
+              value: 'coldfusion'
+              brief: 'ColdFusion IMQ'
+            - id: cassandra
+              stability: stable
+              value: 'cassandra'
+              brief: 'Apache Cassandra'
+            - id: hbase
+              stability: stable
+              value: 'hbase'
+              brief: 'Apache HBase'
+            - id: mongodb
+              stability: stable
+              value: 'mongodb'
+              brief: 'MongoDB'
+            - id: redis
+              stability: stable
+              value: 'redis'
+              brief: 'Redis'
+            - id: couchbase
+              stability: stable
+              value: 'couchbase'
+              brief: 'Couchbase'
+            - id: couchdb
+              stability: stable
+              value: 'couchdb'
+              brief: 'CouchDB'
+            - id: cosmosdb
+              stability: stable
+              value: 'cosmosdb'
+              brief: 'Microsoft Azure Cosmos DB'
+            - id: dynamodb
+              stability: stable
+              value: 'dynamodb'
+              brief: 'Amazon DynamoDB'
+            - id: neo4j
+              stability: stable
+              value: 'neo4j'
+              brief: 'Neo4j'
+            - id: geode
+              stability: stable
+              value: 'geode'
+              brief: 'Apache Geode'
+            - id: elasticsearch
+              stability: stable
+              value: 'elasticsearch'
+              brief: 'Elasticsearch'
+            - id: memcached
+              stability: stable
+              value: 'memcached'
+              brief: 'Memcached'
+            - id: cockroachdb
+              stability: stable
+              value: 'cockroachdb'
+              brief: 'CockroachDB'
+            - id: opensearch
+              stability: stable
+              value: 'opensearch'
+              brief: 'OpenSearch'
+            - id: clickhouse
+              stability: stable
+              value: 'clickhouse'
+              brief: 'ClickHouse'
+            - id: spanner
+              stability: stable
+              value: 'spanner'
+              brief: 'Cloud Spanner'
+            - id: trino
+              stability: stable
+              value: 'trino'
+              brief: 'Trino'
+      - id: db.connection_string
+        stability: stable
+        tag: connection-level
+        type: string
+        brief: >
+          The connection string used to connect to the database.
+          It is recommended to remove embedded credentials.
+        examples: 'Server=(localdb)\v11.0;Integrated Security=true;'
+      - id: db.user
+        stability: stable
+        tag: connection-level
+        type: string
+        brief: >
+          Username for accessing the database.
+        examples: ['readonly_user', 'reporting_user']
+      - id: db.jdbc.driver_classname
+        stability: stable
+        tag: connection-level-tech-specific
+        type: string
+        brief: >
+          The fully-qualified class name of the [Java Database Connectivity (JDBC)](https://docs.oracle.com/javase/8/docs/technotes/guides/jdbc/) driver used to connect.
+        examples: ['org.postgresql.Driver', 'com.microsoft.sqlserver.jdbc.SQLServerDriver']
+      - id: db.name
+        stability: stable
+        tag: call-level
+        type: string
+        requirement_level:
+          conditionally_required: If applicable.
+        brief: >
+          This attribute is used to report the name of the database being accessed.
+          For commands that switch the database, this should be set to the target database
+          (even if the command fails).
+        note: >
+          In some SQL databases, the database name to be used is called "schema name".
+          In case there are multiple layers that could be considered for database name
+          (e.g. Oracle instance name and schema name),
+          the database name to be used is the more specific layer (e.g. Oracle schema name).
+        examples: [ 'customers', 'main' ]
+      - id: db.statement
+        stability: stable
+        tag: call-level
+        type: string
+        requirement_level:
+          recommended: >
+            Should be collected by default only if there is sanitization that excludes sensitive information.
+        brief: >
+          The database statement being executed.
+        examples: ['SELECT * FROM wuser_table', 'SET mykey "WuValue"']
+      - id: db.operation
+        stability: stable
+        tag: call-level
+        type: string
+        requirement_level:
+          conditionally_required: If `db.statement` is not applicable.
+        brief: >
+          The name of the operation being executed, e.g. the [MongoDB command name](https://docs.mongodb.com/manual/reference/command/#database-operations)
+          such as `findAndModify`, or the SQL keyword.
+        note: >
+          When setting this to an SQL keyword, it is not recommended to
+          attempt any client-side parsing of `db.statement` just to get this
+          property, but it should be set if the operation name is provided by
+          the library being instrumented.
+          If the SQL statement has an ambiguous operation, or performs more
+          than one operation, this value may be omitted.
+        examples: ['findAndModify', 'HMSET', 'SELECT']
+      - ref: server.address
+        tag: connection-level
+        requirement_level:
+          conditionally_required: See alternative attributes below.
+        brief: >
+          Name of the database host.
+      - ref: server.port
+        tag: connection-level
+        requirement_level:
+          conditionally_required: If using a port other than the default port for this DBMS and if `server.address` is set.
+      - ref: server.socket.address
+        tag: connection-level
+      - ref: server.socket.port
+        tag: connection-level
+      - ref: network.transport
+        tag: connection-level
+      - ref: network.type
+        tag: connection-level
+      - ref: server.socket.domain
+        requirement_level:
+          recommended: If different than `server.address` and if `server.socket.address` is set.
+
+  - id: db.mssql
+    stability: stable
+    type: span
+    span_kind: client
+    extends: db
+    brief: >
+      Connection-level attributes for Microsoft SQL Server
+    attributes:
+      - id: db.mssqlinstance_name
+        stability: stable
+        tag: connection-level-tech-specific
+        type: string
+        note: >
+          If setting a `db.mssql.instance_name`, `server.port` is no longer
+          required (but still recommended if non-standard).
+        brief: >
+          The Microsoft SQL Server [instance name](https://docs.microsoft.com/en-us/sql/connect/jdbc/building-the-connection-url?view=sql-server-ver15)
+          connecting to. This name is used to determine the port of a named instance.
+        examples: 'MSSQLSERVER'
+
+  - id: db.cassandra
+    stability: stable
+    type: span
+    span_kind: client
+    extends: db
+    brief: >
+      Call-level attributes for Cassandra
+    attributes:
+      - ref: db.name
+        tag: call-level-tech-specific-cassandra
+        brief: >
+          The keyspace name in Cassandra.
+        examples: ["mykeyspace"]
+        note: For Cassandra the `db.name` should be set to the Cassandra keyspace name.
+      - id: db.cassandra.page_size
+        stability: stable
+        type: int
+        tag: call-level-tech-specific-cassandra
+        brief: >
+          The fetch size used for paging, i.e. how many rows will be returned at once.
+        examples: [5000]
+      - id: db.cassandra.consistency_level
+        stability: stable
+        tag: call-level-tech-specific-cassandra
+        brief: >
+          The consistency level of the query. Based on consistency values from [CQL](https://docs.datastax.com/en/cassandra-oss/3.0/cassandra/dml/dmlConfigConsistency.html).
+        type:
+          members:
+            - id: all
+              stability: stable
+              value: 'all'
+            - id: each_quorum
+              stability: stable
+              value: 'each_quorum'
+            - id: quorum
+              stability: stable
+              value: 'quorum'
+            - id: local_quorum
+              stability: stable
+              value: 'local_quorum'
+            - id: one
+              stability: stable
+              value: 'one'
+            - id: two
+              stability: stable
+              value: 'two'
+            - id: three
+              stability: stable
+              value: 'three'
+            - id: local_one
+              stability: stable
+              value: 'local_one'
+            - id: any
+              stability: stable
+              value: 'any'
+            - id: serial
+              stability: stable
+              value: 'serial'
+            - id: local_serial
+              stability: stable
+              value: 'local_serial'
+      - id: db.cassandra.table
+        stability: stable
+        type: string
+        tag: call-level-tech-specific-cassandra
+        requirement_level: recommended
+        brief: The name of the primary table that the operation is acting upon, including the keyspace name (if applicable).
+        note: >
+          This mirrors the db.sql.table attribute but references cassandra rather than sql.
+          It is not recommended to attempt any client-side parsing of
+          `db.statement` just to get this property, but it should be set if
+          it is provided by the library being instrumented.
+          If the operation is acting upon an anonymous table, or more than one table, this
+          value MUST NOT be set.
+        examples: 'mytable'
+      - id: db.cassandra.idempotence
+        stability: stable
+        type: boolean
+        tag: call-level-tech-specific-cassandra
+        brief: >
+          Whether or not the query is idempotent.
+      - id: db.cassandra.speculative_execution_count
+        stability: stable
+        type: int
+        tag: call-level-tech-specific-cassandra
+        brief: >
+          The number of times a query was speculatively executed. Not set or `0` if the query was not executed speculatively.
+        examples: [0, 2]
+      - id: db.cassandra.coordinator.id
+        stability: stable
+        type: string
+        tag: call-level-tech-specific-cassandra
+        brief: >
+          The ID of the coordinating node for a query.
+        examples: 'be13faa2-8574-4d71-926d-27f16cf8a7af'
+      - id: db.cassandra.coordinator.dc
+        stability: stable
+        type: string
+        tag: call-level-tech-specific-cassandra
+        brief: >
+          The data center of the coordinating node for a query.
+        examples: 'us-west-2'
+
+  - id: db.hbase
+    stability: stable
+    type: span
+    span_kind: client
+    extends: db
+    brief: >
+      Call-level attributes for HBase
+    attributes:
+      - ref: db.name
+        tag: call-level-tech-specific
+        brief: >
+          The HBase namespace.
+        examples: ['mynamespace']
+        note: For HBase the `db.name` should be set to the HBase namespace.
+
+  - id: db.couchdb
+    stability: stable
+    type: span
+    span_kind: client
+    extends: db
+    brief: >
+      Call-level attributes for CouchDB
+    attributes:
+      - ref: db.operation
+        tag: call-level-tech-specific
+        brief: >
+          The HTTP method + the target REST route.
+        examples: ['GET /{db}/{docid}']
+        note: >
+          In **CouchDB**, `db.operation` should be set to the HTTP method +
+          the target REST route according to the API reference documentation.
+          For example, when retrieving a document, `db.operation` would be set to
+          (literally, i.e., without replacing the placeholders with concrete values):
+          [`GET /{db}/{docid}`](http://docs.couchdb.org/en/stable/api/document/common.html#get--db-docid).
+
+  - id: db.redis
+    stability: stable
+    type: span
+    span_kind: client
+    extends: db
+    brief: >
+      Call-level attributes for Redis
+    attributes:
+      - id: db.redis.database_index
+        stability: stable
+        type: int
+        requirement_level:
+          conditionally_required: If other than the default database (`0`).
+        tag: call-level-tech-specific
+        brief: >
+          The index of the database being accessed as used in the [`SELECT` command](https://redis.io/commands/select), provided as an integer.
+          To be used instead of the generic `db.name` attribute.
+        examples: [0, 1, 15]
+      - ref: db.statement
+        tag: call-level-tech-specific
+        brief: >
+          The full syntax of the Redis CLI command.
+        examples: ["HMSET myhash field1 'Hello' field2 'World'"]
+        note: >
+          For **Redis**, the value provided for `db.statement` SHOULD correspond to the syntax of the Redis CLI.
+          If, for example, the [`HMSET` command](https://redis.io/commands/hmset) is invoked, `"HMSET myhash field1 'Hello' field2 'World'"` would be a suitable value for `db.statement`.
+  - id: db.mongodb
+    stability: stable
+    type: span
+    span_kind: client
+    extends: db
+    brief: >
+      Call-level attributes for MongoDB
+    attributes:
+      - id: db.mongodb.collection
+        stability: stable
+        type: string
+        requirement_level: required
+        tag: call-level-tech-specific
+        brief: >
+          The collection being accessed within the database stated in `db.name`.
+        examples: [ 'customers', 'products' ]
+
+  - id: db.elasticsearch
+    stability: stable
+    type: span
+    span_kind: client
+    extends: db
+    brief: >
+      Call-level attributes for Elasticsearch
+    attributes:
+      - ref: http.request.method
+        requirement_level: required
+      - ref: db.operation
+        requirement_level: required
+        brief: The endpoint identifier for the request.
+        examples: [ 'search', 'ml.close_job', 'cat.aliases' ]
+      - ref: url.full
+        requirement_level: required
+        examples: [ 'https://localhost:9200/index/_search?q=user.id:kimchy' ]
+      - ref: db.statement
+        requirement_level:
+          recommended: >
+            Should be collected by default for search-type queries and only if there is sanitization that excludes
+            sensitive information.
+        brief: The request body for a [search-type query](https://www.elastic.co/guide/en/elasticsearch/reference/current/search.html), as a json string.
+        examples: [ '"{\"query\":{\"term\":{\"user.id\":\"kimchy\"}}}"' ]
+      - ref: server.address
+      - ref: server.port
+
+  - id: db.sql
+    stability: stable
+    type: span
+    span_kind: client
+    extends: 'db'
+    brief: >
+      Call-level attributes for SQL databases
+    attributes:
+      - id: db.sql.table
+        stability: stable
+        tag: call-level-tech-specific
+        type: string
+        requirement_level: recommended
+        brief: The name of the primary table that the operation is acting upon, including the database name (if applicable).
+        note: >
+          It is not recommended to attempt any client-side parsing of
+          `db.statement` just to get this property, but it should be set if
+          it is provided by the library being instrumented.
+          If the operation is acting upon an anonymous table, or more than one table, this
+          value MUST NOT be set.
+        examples: ['public.users', 'customers']
+
+  - id: db.cosmosdb
+    stability: stable
+    type: span
+    span_kind: client
+    extends: db
+    brief: >
+      Call-level attributes for Cosmos DB.
+    attributes:
+      - id: db.cosmosdb.client_id
+        stability: stable
+        type: string
+        brief: Unique Cosmos client instance id.
+        examples: '3ba4827d-4422-483f-b59f-85b74211c11d'
+      - id: db.cosmosdb.operation_type
+        stability: stable
+        type:
+          members:
+            - id: invalid
+              stability: stable
+              value: 'Invalid'
+            - id: create
+              stability: stable
+              value: 'Create'
+            - id: patch
+              stability: stable
+              value: 'Patch'
+            - id: read
+              stability: stable
+              value: 'Read'
+            - id: read_feed
+              stability: stable
+              value: 'ReadFeed'
+            - id: delete
+              stability: stable
+              value: 'Delete'
+            - id: replace
+              stability: stable
+              value: 'Replace'
+            - id: execute
+              stability: stable
+              value: 'Execute'
+            - id: query
+              stability: stable
+              value: 'Query'
+            - id: head
+              stability: stable
+              value: 'Head'
+            - id: head_feed
+              stability: stable
+              value: 'HeadFeed'
+            - id: upsert
+              stability: stable
+              value: 'Upsert'
+            - id: batch
+              stability: stable
+              value: 'Batch'
+            - id: query_plan
+              stability: stable
+              value: 'QueryPlan'
+            - id: execute_javascript
+              stability: stable
+              value: 'ExecuteJavaScript'
+        brief: CosmosDB Operation Type.
+        requirement_level:
+          conditionally_required: when performing one of the operations in this list
+      - ref: user_agent.original
+        brief: 'Full user-agent string is generated by Cosmos DB SDK'
+        note: >
+          The user-agent value is generated by SDK which is a combination of<br>
+          `sdk_version` : Current version of SDK. e.g. 'cosmos-netstandard-sdk/3.23.0'<br>
+          `direct_pkg_version` : Direct package version used by Cosmos DB SDK. e.g. '3.23.1'<br>
+          `number_of_client_instances` : Number of cosmos client instances created by the application. e.g. '1'<br>
+          `type_of_machine_architecture` : Machine architecture. e.g. 'X64'<br>
+          `operating_system` : Operating System. e.g. 'Linux 5.4.0-1098-azure 104 18'<br>
+          `runtime_framework` : Runtime Framework. e.g. '.NET Core 3.1.32'<br>
+          `failover_information` : Generated key to determine if region failover enabled.
+             Format Reg-{D (Disabled discovery)}-S(application region)|L(List of preferred regions)|N(None, user did not configure it).
+             Default value is "NS".
+        examples: ['cosmos-netstandard-sdk/3.23.0\|3.23.1\|1\|X64\|Linux 5.4.0-1098-azure 104 18\|.NET Core 3.1.32\|S\|']
+      - id: db.cosmosdb.connection_mode
+        stability: stable
+        type:
+          members:
+            - id: gateway
+              stability: stable
+              value: 'gateway'
+              brief: Gateway (HTTP) connections mode
+            - id: direct
+              stability: stable
+              value: 'direct'
+              brief: Direct connection.
+        brief: Cosmos client connection mode.
+        requirement_level:
+          conditionally_required: if not `direct` (or pick gw as default)
+      - id: db.cosmosdb.container
+        stability: stable
+        type: string
+        brief: Cosmos DB container name.
+        requirement_level:
+          conditionally_required: if available
+        examples: 'anystring'
+      - id: db.cosmosdb.request_content_length
+        stability: stable
+        type: int
+        brief: Request payload size in bytes
+      - id: status_code
+        stability: stable
+        type: int
+        brief: Cosmos DB status code.
+        examples: [200, 201]
+        requirement_level:
+          conditionally_required: if response was received
+      - id: db.cosmosdb.sub_status_code
+        stability: stable
+        type: int
+        brief: Cosmos DB sub status code.
+        examples: [1000, 1002]
+        requirement_level:
+          conditionally_required: when response was received and contained sub-code.
+      - id: db.cosmosdb.request_charge
+        stability: stable
+        type: double
+        brief: RU consumed for that operation
+        examples: [46.18, 1.0]
+        requirement_level:
+          conditionally_required: when available

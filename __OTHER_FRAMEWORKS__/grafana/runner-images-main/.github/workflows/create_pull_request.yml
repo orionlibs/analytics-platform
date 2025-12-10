@@ -1,0 +1,76 @@
+name: Create Pull Request
+
+on:
+  repository_dispatch:
+    types: [create-pr]
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  Create_pull_request:
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v5
+      with:
+        fetch-depth: 0
+        persist-credentials: false
+
+    - name: Clone release branch to create pull request
+      env:
+        RELEASE_BRANCH_NAME: ${{ github.event.client_payload.ReleaseBranchName }}
+      run: |
+        git checkout "$RELEASE_BRANCH_NAME"
+        git branch "${RELEASE_BRANCH_NAME}-docs"
+        git push origin "${RELEASE_BRANCH_NAME}-docs" --force
+
+    - name: Create pull request
+      id: create-pr
+      uses: actions/github-script@v8
+      env:
+        PR_TITLE: ${{ github.event.client_payload.PullRequestTitle }}
+        RELEASE_BRANCH_NAME: ${{ github.event.client_payload.ReleaseBranchName }}
+        PR_BASE: ${{ github.event.client_payload.PullRequestBase }}
+        PR_BODY: ${{ github.event.client_payload.PullRequestBody }}
+      with:
+        github-token: ${{secrets.GITHUB_TOKEN}}
+        script: |
+          const pulls = await github.rest.pulls.list({
+            owner: context.repo.owner,
+            repo: context.repo.repo,
+            head: `${context.repo.owner}:${process.env.RELEASE_BRANCH_NAME}-docs`,
+            base: process.env.PR_BASE,
+            state: 'open'
+          });
+
+          if (pulls.data.length > 0) {
+            console.log(`Pull request already exists: ${pulls.data[0].html_url}`);
+            return pulls.data[0].number;
+          } else {
+            console.log('No existing pull request found, creating new one');
+            let response = await github.rest.pulls.create({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              title: process.env.PR_TITLE,
+              head: `${process.env.RELEASE_BRANCH_NAME}-docs`,
+              base: process.env.PR_BASE,
+              body: process.env.PR_BODY
+            });
+            return response.data.number;
+          }
+
+    - name: Request reviewers
+      uses: actions/github-script@v8
+      env:
+        PR_NUMBER: ${{ steps.create-pr.outputs.result }}
+      with:
+        github-token: ${{secrets.PRAPPROVAL_SECRET}}
+        script: |
+          github.rest.pulls.requestReviewers({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              pull_number: Number(process.env.PR_NUMBER),
+              team_reviewers: ['runner-images-team']
+          })

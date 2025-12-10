@@ -1,0 +1,56 @@
+name: Release
+
+# The release should be created by release-please
+on:
+  release:
+    types: [published]
+
+# FIXME(kolesnikovae):
+#  # for manual invocations
+#  workflow_dispatch:
+#    # not really used
+#    inputs:
+#      # the release tag automatically created
+#      tag_name:
+#        type: string
+
+permissions:
+  contents: read
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5
+        with:
+          persist-credentials: 'false'
+      - name: asdf_install
+        uses: asdf-vm/actions/install@1902764435ca0dd2f3388eea723a4f92a4eb8302 # v4.0.0
+      - run: make clean
+      - run: make build-amd
+      - run: make build-arm
+      - run: make package-amd
+      - run: make package-arm
+      # Release the lambda extension and update the github release
+      - run: deno run --allow-write --allow-env --allow-read --allow-run scripts/publish.ts --name=pyroscope-lambda-extension --log-level=DEBUG --table-file=release.tmp.md --dry-run=false
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+      # use tag_name if available (ie manual invokation)
+      - if: ${{ inputs.tag_name == '' }}
+        id: update_release_auto
+        uses: tubone24/update_release@c04c17054b939144ec8a7cba969d74992f812d66 # v1.3.1
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        with:
+          body_path: release.tmp.md
+          is_append_body: true
+      - if: ${{ inputs.tag_name != '' }}
+        id: update_release_manual
+        uses: tubone24/update_release@c04c17054b939144ec8a7cba969d74992f812d66 # v1.3.1
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+          TAG_NAME: ${{ inputs.tag_name }}
+        with:
+          body_path: release.tmp.md
+          is_append_body: true

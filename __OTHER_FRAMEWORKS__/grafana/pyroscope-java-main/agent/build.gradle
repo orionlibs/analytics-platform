@@ -1,0 +1,139 @@
+import java.util.jar.JarFile
+
+plugins {
+    id 'java-library'
+    id 'maven-publish'
+    id 'signing'
+    id "com.gradleup.shadow" version '8.3.9'
+}
+
+sourceCompatibility = JavaVersion.VERSION_1_8
+targetCompatibility = JavaVersion.VERSION_1_8
+
+repositories {
+    mavenCentral()
+}
+
+def pyroscopeVersion = project.properties['pyroscope_version']
+dependencies {
+    api project(":async-profiler-context")
+    compileOnly 'org.jetbrains:annotations:24.1.0'
+    implementation('com.squareup.okhttp3:okhttp:4.12.0')
+    implementation("com.squareup.moshi:moshi:1.15.2")
+    implementation("org.jetbrains.kotlin:kotlin-stdlib-jdk8:2.2.20")
+    api 'com.google.protobuf:protobuf-java:4.33.0'
+    testImplementation group: 'org.junit.jupiter', name: 'junit-jupiter-api', version: '5.7.2'
+    testRuntimeOnly group: 'org.junit.jupiter', name: 'junit-jupiter-engine', version: '5.7.2'
+    testImplementation group: 'org.mockito', name: 'mockito-core', version: '3.12.4'
+    testImplementation group: 'org.mockito', name: 'mockito-junit-jupiter', version: '3.12.4'
+}
+
+javadoc{
+    // excluded as javadoc generation fails on inaccessible sun.management.VMManagement class
+    exclude("io/pyroscope/javaagent/CurrentPidProvider.java")
+}
+
+jar {
+    manifest {
+        attributes(
+                'Premain-Class': 'io.pyroscope.javaagent.PyroscopeAgent'
+        )
+    }
+}
+
+test {
+    useJUnitPlatform()
+}
+
+java {
+    withJavadocJar()
+    withSourcesJar()
+}
+
+shadowJar {
+    exclude 'Log4j-*'
+    exclude 'META-INF/org/apache/logging/log4j/**'
+    exclude 'META-INF/services/**'
+
+    from("$buildDir/async-profiler/native") {
+        include "**.so"
+        include "**.so.sha1"
+    }
+
+    archiveFileName = "pyroscope.jar"
+
+    minimize()
+    archiveClassifier.set('')
+    relocate("com.google",    "io.pyroscope.vendor.com.google")
+    relocate("one.profiler",  "io.pyroscope.vendor.one.profiler")
+    relocate("okio",  "io.pyroscope.vendor.okio")
+    relocate("okhttp3",  "io.pyroscope.vendor.okhttp3")
+    relocate("kotlin",  "io.pyroscope.vendor.kotlin")
+    relocate("com",  "io.pyroscope.vendor.com")
+
+    dependencies {
+        exclude "org/jetbrains/**"
+        exclude "org/intellij/**"
+        exclude "google/protobuf/**"
+    }
+}
+
+publishing {
+    publications {
+        shadow(MavenPublication) { publication ->
+            project.shadow.component(publication)
+            groupId = 'io.pyroscope'
+            artifactId = 'agent'
+            version = pyroscopeVersion
+            artifacts = [ shadowJar, javadocJar, sourcesJar ]
+            pom {
+                name = 'Pyroscope Java agent'
+                description = 'The Java profiling agent for Pyroscope.io. Based on async-profiler.'
+                url = 'https://pyroscope.io'
+                licenses {
+                    license {
+                        name = 'The Apache License, Version 2.0'
+                        url = 'http://www.apache.org/licenses/LICENSE-2.0.txt'
+                    }
+                }
+                developers {
+                    developer {
+                        id = 'pyroscope'
+                        name = 'Pyroscope'
+                        email = 'anatoly@pyroscope.io'
+                    }
+                }
+                scm {
+                    connection = 'scm:git:git://github.com/pyroscope-io/pyroscope-java.git'
+                    developerConnection = 'scm:git:ssh://github.com/pyroscope-io/pyroscope-java.git'
+                    url = 'https://github.com/pyroscope-io/pyroscope-java'
+                }
+            }
+        }
+    }
+    repositories {
+        maven {
+            credentials {
+                username project.hasProperty('nexusUsername') ? project.nexusUsername : ''
+                password project.hasProperty('nexusPassword') ? project.nexusPassword : ''
+            }
+            url "https://s01.oss.sonatype.org/service/local/staging/deploy/maven2/"
+        }
+    }
+}
+
+signing {
+    sign publishing.publications.shadow
+}
+
+afterEvaluate {
+    if (project.tasks.findByName('signShadowPublication')) {
+        project.tasks.named('signShadowPublication').configure {
+            dependsOn 'jar'
+            dependsOn 'sourcesJar'
+            dependsOn 'javadocJar'
+        }
+    }
+}
+
+generateMetadataFileForShadowPublication.dependsOn 'jar'

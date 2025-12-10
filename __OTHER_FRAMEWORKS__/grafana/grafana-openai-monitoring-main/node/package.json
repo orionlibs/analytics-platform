@@ -1,0 +1,38 @@
+{
+  "name": "grafana-openai-monitoring",
+  "version": "0.0.4",
+  "description": "Package to monitor your OpenAI usage and send metrics and logs to Grafana Cloud",
+  "main": "src/index.js",
+  "scripts": {
+    "test": "mocha tests/**/*.test.cjs"
+  },
+  "type": "module",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/grafana/grafana-openai-monitoring.git",
+    "directory": "node"
+  },
+  "keywords": [
+    "OpenAI",
+    "Grafana",
+    "ChatGPT",
+    "GPT",
+    "observability",
+    "monitoring"
+  ],
+  "author": "Ishan Jain",
+  "license": "GPL-3.0-or-later",
+  "bugs": {
+    "url": "https://github.com/grafana/grafana-openai-monitoring/issues"
+  },
+  "homepage": "https://github.com/grafana/grafana-openai-monitoring/node#readme",
+  "dependencies": {
+    "chai": "^4.3.10",
+    "mocha": "^10.2.0",
+    "openai": "^4.14.2"
+  },
+  "devDependencies": {
+    "eslint": "^8.52.0",
+    "eslint-plugin-react": "^7.33.2"
+  }
+}

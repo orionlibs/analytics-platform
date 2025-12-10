@@ -1,0 +1,92 @@
+{
+    "smithy": "1.0",
+    "shapes": {
+        "ns.foo#CreateFoo": {
+            "type": "operation"
+        },
+        "ns.foo#DeleteFoo": {
+            "type": "operation"
+        },
+        "ns.foo#UpdateFoo": {
+            "type": "operation"
+        },
+        "ns.foo#BatchCreateFoo": {
+            "type": "operation"
+        },
+        "ns.foo#BatchDeleteFoo": {
+            "type": "operation"
+        },
+        "ns.foo#BatchUpdateFoo": {
+            "type": "operation"
+        },
+        "ns.foo#BatchMakeFoo": {
+            "type": "operation"
+        },
+        "ns.foo#BatchDestroyFoo": {
+            "type": "operation"
+        },
+        "ns.foo#BatchChangeFoo": {
+            "type": "operation"
+        },
+        "ns.foo#MakeFoo": {
+            "type": "operation"
+        },
+        "ns.foo#DestroyFoo": {
+            "type": "operation"
+        },
+        "ns.foo#ChangeFoo": {
+            "type": "operation"
+        },
+        "ns.foo#Batch": {
+            "type": "operation"
+        }
+    },
+    "metadata": {
+        "validators": [
+            {
+                "name": "StandardOperationVerb",
+                "id": "Pointless"
+            },
+            {
+                "name": "StandardOperationVerb",
+                "id": "WithVerbsAndPrefixes",
+                "configuration": {
+                    "verbs": [
+                        "Create",
+                        "Update",
+                        "Delete"
+                    ],
+                    "prefixes": [
+                        "Batch"
+                    ]
+                }
+            },
+            {
+                "name": "StandardOperationVerb",
+                "id": "SuggestAlternatives",
+                "configuration": {
+                    "verbs": [
+                        "Create",
+                        "Update",
+                        "Delete"
+                    ],
+                    "prefixes": [
+                        "Batch"
+                    ],
+                    "suggestAlternatives": {
+                        "Make": [
+                            "Create",
+                            "Generate"
+                        ],
+                        "Change": [
+                            "Update"
+                        ],
+                        "Destroy": [
+                            "Delete"
+                        ]
+                    }
+                }
+            }
+        ]
+    }
+}

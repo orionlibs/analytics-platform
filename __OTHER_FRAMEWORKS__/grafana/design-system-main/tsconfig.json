@@ -1,0 +1,19 @@
+{
+  "extends": ["@tsconfig/docusaurus/tsconfig.json", "@grafana/tsconfig/base.json"],
+  "compilerOptions": {
+    "jsx": "react",
+    "baseUrl": ".",
+    "allowJs": false,
+    "strict": true,
+    "resolveJsonModule": true,
+    "useUnknownInCatchVariables": true,
+    "incremental": true,
+    "tsBuildInfoFile": "./tsconfig.tsbuildinfo",
+    "preserveSymlinks": true,
+    "lib": ["es2021", "dom"],
+    "types": ["@docusaurus/theme-live-codeblock"],
+
+
+  },
+  "exclude": ["node_modules", "build", ".docusaurus"]
+}

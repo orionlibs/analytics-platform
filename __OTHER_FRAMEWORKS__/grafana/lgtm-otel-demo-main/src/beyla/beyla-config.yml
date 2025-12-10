@@ -1,0 +1,12 @@
+# Copyright The OpenTelemetry Authors
+# SPDX-License-Identifier: Apache-2.0
+
+# Open port configuration - instrument all services on these ports
+open_port: 8080,8081,8082,8083,8084,8085,8086,8087,8088,8089,8090,9555
+
+# Export configuration
+otel_traces_export:
+  endpoint: http://otel-collector:4317
+
+otel_metrics_export:
+  endpoint: http://otel-collector:4317

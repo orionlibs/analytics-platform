@@ -1,0 +1,13 @@
+services:
+  lgtm:
+    image: grafana/otel-lgtm:{{ .LgtmVersion }}
+    environment:
+      {{ range $key, $value := .LgtmLogSettings }}
+         {{ $key }}: "{{ $value }}"
+      {{ end }}
+    ports:
+      - "{{ .GrafanaHTTPPort }}:3000"
+      - "{{ .PrometheusHTTPPort }}:9090"
+      - "{{ .TempoHTTPPort }}:3200"
+      - "{{ .LokiHTTPPort }}:3100"
+      - "{{ .PyroscopeHttpPort }}:4040"

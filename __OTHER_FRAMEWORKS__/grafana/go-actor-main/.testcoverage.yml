@@ -1,0 +1,7 @@
+# Config file for go-test-coverage github action.
+# go-actor commits to keep 100% test coverage.
+
+profile: cover.out
+local-prefix: "github.com/vladopajic/go-actor"
+threshold:
+  total: 100

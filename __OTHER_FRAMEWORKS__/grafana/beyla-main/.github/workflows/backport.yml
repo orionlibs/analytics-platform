@@ -1,0 +1,35 @@
+name: Backport PR creator
+on:
+  pull_request:
+    types: [closed]
+    branches: [ 'main' ]
+
+# Set restrictive permissions at workflow level
+permissions:
+  contents: read
+
+jobs:
+  main:
+    # Only run this job when a PR was merged (not just closed without merging)
+    # And make sure we only run this on our own repository, not on forks
+    if: github.repository == 'grafana/beyla' && github.event.pull_request.merged == true
+    runs-on: ubuntu-latest
+    # Grant specific permissions needed only for this job
+    permissions:
+      pull-requests: write
+    steps:
+      - name: Checkout Actions
+        uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
+        with:
+          persist-credentials: 'false'
+          repository: grafana/grafana-github-actions
+          path: ./actions
+          ref: main
+      - name: Install Actions
+        run: npm install --production --prefix ./actions
+      - name: Run backport
+        uses: ./actions/backport
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          labelsToAdd: backport
+          title: "[{{base}}] {{originalTitle}}"

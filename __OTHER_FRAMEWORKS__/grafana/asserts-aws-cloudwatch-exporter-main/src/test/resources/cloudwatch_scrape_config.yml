@@ -1,0 +1,155 @@
+delay: 60
+scrapeInterval: 300
+discoverECSTasks: true
+regions:
+  - us-west-2
+namespaces:
+  - name: AWS/Lambda
+    dimensionFilters:
+      FunctionName: .+
+    metrics:
+      - name: Invocations
+        stats:
+          - Sum
+      - name: Errors
+        stats:
+          - Sum
+      - name: Throttles
+        stats:
+          - Sum
+      - name: Duration
+        stats:
+          - p99
+          - Average
+          - Maximum
+      - name: ConcurrentExecutions
+        stats:
+          - Average
+          - Maximum
+  - name: AWS/SQS
+    metrics:
+      - name: NumberOfMessagesSent
+        stats:
+          - Sum
+  - name: AWS/S3
+    scrapeInterval: 86400
+    metrics:
+      - name: NumberOfObjects
+        stats:
+          - Average
+      - name: BucketSizeBytes
+        stats:
+          - Average
+  - name: LambdaInsights
+    dimensionFilters:
+      function_name: .+
+    metrics:
+      - name: memory_utilization
+        stats:
+          - Average
+      - name: total_memory
+        stats:
+          - Average
+      - name: used_memory_max
+        stats:
+          - Average
+      - name: cpu_total_time
+        stats:
+          - Sum
+      - name: tx_bytes
+        stats:
+          - Sum
+      - name: rx_bytes
+        stats:
+          - Sum
+dimensionToLabels:
+  - namespace: AWS/EC2
+    dimensionName: InstanceId
+  - namespace: AWS/AutoScaling
+    dimensionName: AutoScalingGroupName
+    mapToLabel: label_ec2_amazonaws_com_aws_autoscaling_group_name
+  - namespace: AWS/RDS
+    dimensionName: DBInstanceIdentifier
+  - namespace: AWS/S3
+    dimensionName: BucketName
+  - namespace: AWS/DynamoDB
+    dimensionName: TableName
+  - namespace: AWS/SQS
+    dimensionName: QueueName
+    mapToLabel: topic
+  - namespace: AWS/SNS
+    dimensionName: TopicName
+  - namespace: AWS/Lambda
+    dimensionName: FunctionName
+  - namespace: AWS/ELB
+    dimensionName: LoadBalancerName
+  - namespace: AWS/ApplicationELB
+    dimensionName: LoadBalancer
+  - namespace: AWS/NetworkELB
+    dimensionName: LoadBalancer
+  - namespace: AWS/ECS
+    dimensionName: ServiceName
+  - namespace: AWS/ApiGateway
+    dimensionName: ApiGateway
+  - namespace: AWS/Firehose
+    dimensionName: DeliveryStreamName
+  - namespace: AWS/Kinesis
+    dimensionName: StreamName
+  - namespace: AWS/KinesisAnalytics
+    dimensionName: Application
+relabelConfigs:
+  # Namespace
+  - source_labels: [__name__, cw_namespace]
+    regex: aws_.+;(.+)
+    target_label: namespace
+    replacement: $1
+
+  # AWS Dynamo metrics
+  - source_labels: [ __name__ ]
+    regex: aws_dynamodb_.+
+    target_label: namespace
+    replacement: AWS/DynamoDB
+
+  - source_labels: [ __name__, d_table_name ]
+    regex: aws_dynamodb_.+;(.+)
+    target_label: job
+    replacement: $1
+
+  - source_labels: [ __name__, d_operation ]
+    regex: aws_dynamodb_.+;(.+)
+    target_label: asserts_request_context
+    replacement: $1
+
+  # When operation is BatchExecuteStatement or ExecuteTransaction, the operation type distinguishes between read
+  # and write operations
+  - source_labels: [ __name__, d_operation, d_operation_type ]
+    regex: aws_dynamodb_.+;(.+);(.+)
+    target_label: asserts_request_context
+    replacement: $1-$2
+
+  # Include GSI name in the context for GSI capacity metrics
+  - source_labels: [ __name__, d_operation, d_global_secondary_index_name ]
+    regex: aws_dynamodb_.+;(.+);(.+)
+    target_label: asserts_request_context
+    replacement: $1-$2
+
+
+  # AWS Exporter internal metrics
+  - source_labels: [ __name__, operation ]
+    regex: aws_exporter.+;(.+)
+    target_label: asserts_request_type
+    replacement: outbound
+
+  - source_labels: [ __name__, operation ]
+    regex: aws_exporter.+;(.+)
+    target_label: asserts_request_context
+    replacement: $1
+
+  - source_labels: [account_id]
+    regex: (.+)
+    target_label: asserts_env
+    replacement: $1
+  - source_labels: [region]
+    regex: (.+)
+    target_label: asserts_site
+    replacement: $1

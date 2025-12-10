@@ -1,0 +1,27 @@
+services:
+  grafana:
+    container_name: 'grafana-pyroscope-app'
+    build:
+      dockerfile: ./Dockerfile.remote
+      args:
+        grafana_image: ${GRAFANA_IMAGE:-grafana-enterprise}
+        grafana_version: ${GRAFANA_VERSION:-12.1.3}
+        backendUrl: ${REMOTE_BACKEND_URL}
+        basicAuthUser: ${REMOTE_BASIC_AUTH_USER}
+        basicAuthPassword: ${REMOTE_BASIC_AUTH_PASSWORD}
+    ports:
+      - 3000:3000/tcp
+    volumes:
+      - ./dist:/var/lib/grafana/plugins/grafana-pyroscope-app
+    environment:
+      GF_INSTALL_PLUGINS: grafana-llm-app
+      OPENAI_API_KEY: $OPENAI_API_KEY
+      OPENAI_ORGANIZATION_ID: $OPENAI_ORGANIZATION_ID
+
+  qdrant:
+    image: qdrant/qdrant@sha256:0fb8897412abc81d1c0430a899b9a81eb8328aa634e7242d1bc804c1fe8fe863
+    volumes:
+      - qdrant-storage:/qdrant/storage
+
+volumes:
+  qdrant-storage:

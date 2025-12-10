@@ -1,0 +1,78 @@
+apiVersion: v1
+data:
+  config.alloy: "otelcol.receiver.otlp \"default\" {\n  // https://grafana.com/docs/alloy/latest/reference/components/otelcol.receiver.otlp/\n\n
+    \ // configures the default grpc endpoint \"0.0.0.0:4317\"\n  grpc { }\n  // configures
+    the default http/protobuf endpoint \"0.0.0.0:4318\"\n  http { }\n\n  output {\n
+    \   metrics = [otelcol.processor.resourcedetection.default.input]\n    logs    =
+    [otelcol.processor.resourcedetection.default.input]\n    traces  = [otelcol.processor.resourcedetection.default.input]\n
+    \ }\n}\n\notelcol.processor.resourcedetection \"default\" {\n  // https://grafana.com/docs/alloy/latest/reference/components/otelcol.processor.resourcedetection/\n
+    \ detectors = [\"env\", \"system\"] // add \"gcp\", \"ec2\", \"ecs\", \"elastic_beanstalk\",
+    \"eks\", \"lambda\", \"azure\", \"aks\", \"consul\", \"heroku\"  if you want to
+    use cloud resource detection\n\n  system {\n    hostname_sources = [\"os\"]\n
+    \ }\n\n  output {\n    metrics = [otelcol.processor.transform.drop_unneeded_resource_attributes.input]\n
+    \   logs    = [otelcol.processor.transform.drop_unneeded_resource_attributes.input]\n
+    \   traces  = [otelcol.processor.transform.drop_unneeded_resource_attributes.input]\n
+    \ }\n}\n\notelcol.processor.transform \"drop_unneeded_resource_attributes\" {\n
+    \ // https://grafana.com/docs/alloy/latest/reference/components/otelcol.processor.transform/\n
+    \ error_mode = \"ignore\"\n\n  trace_statements {\n    context    = \"resource\"\n
+    \   statements = [\n      \"delete_key(attributes, \\\"k8s.pod.start_time\\\")\",\n
+    \     \"delete_key(attributes, \\\"os.description\\\")\",\n      \"delete_key(attributes,
+    \\\"os.type\\\")\",\n      \"delete_key(attributes, \\\"process.command_args\\\")\",\n
+    \     \"delete_key(attributes, \\\"process.executable.path\\\")\",\n      \"delete_key(attributes,
+    \\\"process.pid\\\")\",\n      \"delete_key(attributes, \\\"process.runtime.description\\\")\",\n
+    \     \"delete_key(attributes, \\\"process.runtime.name\\\")\",\n      \"delete_key(attributes,
+    \\\"process.runtime.version\\\")\",\n    ]\n  }\n\n  metric_statements {\n    context
+    \   = \"resource\"\n    statements = [\n      \"delete_key(attributes, \\\"k8s.pod.start_time\\\")\",\n
+    \     \"delete_key(attributes, \\\"os.description\\\")\",\n      \"delete_key(attributes,
+    \\\"os.type\\\")\",\n      \"delete_key(attributes, \\\"process.command_args\\\")\",\n
+    \     \"delete_key(attributes, \\\"process.executable.path\\\")\",\n      \"delete_key(attributes,
+    \\\"process.pid\\\")\",\n      \"delete_key(attributes, \\\"process.runtime.description\\\")\",\n
+    \     \"delete_key(attributes, \\\"process.runtime.name\\\")\",\n      \"delete_key(attributes,
+    \\\"process.runtime.version\\\")\",\n    ]\n  }\n\n  log_statements {\n    context
+    \   = \"resource\"\n    statements = [\n      \"delete_key(attributes, \\\"k8s.pod.start_time\\\")\",\n
+    \     \"delete_key(attributes, \\\"os.description\\\")\",\n      \"delete_key(attributes,
+    \\\"os.type\\\")\",\n      \"delete_key(attributes, \\\"process.command_args\\\")\",\n
+    \     \"delete_key(attributes, \\\"process.executable.path\\\")\",\n      \"delete_key(attributes,
+    \\\"process.pid\\\")\",\n      \"delete_key(attributes, \\\"process.runtime.description\\\")\",\n
+    \     \"delete_key(attributes, \\\"process.runtime.name\\\")\",\n      \"delete_key(attributes,
+    \\\"process.runtime.version\\\")\",\n    ]\n  }\n\n  output {\n    metrics = [otelcol.processor.transform.reduce_otel_demo_cardinality.input]\n
+    \   logs    = [otelcol.processor.transform.reduce_otel_demo_cardinality.input]\n
+    \   traces  = [otelcol.processor.transform.reduce_otel_demo_cardinality.input]\n
+    \ }\n\n}\n\n// This component is not part of the starter AppOlly production config
+    provided in Grafana's docs.\n// (see the link further up, next to \"content block
+    based on\".)\n// \n// This adds a custom set of OTTL transformations that normalizes
+    span names,\n// to remove high-cardinality IDs (like cart ID, recommendation ID)\notelcol.processor.transform
+    \"reduce_otel_demo_cardinality\" {\n\n  error_mode = \"ignore\"\n\n  trace_statements
+    {\n    context    = \"span\"\n    statements = [\n      \"replace_match(name,
+    \\\"GET /api/cart*\\\", \\\"GET /api/cart\\\")\",\n      \"replace_match(name,
+    \\\"GET /api/recommendations*\\\", \\\"GET /api/recommendations\\\")\",\n      \"replace_match(name,
+    \\\"GET /api/products*\\\", \\\"GET /api/products\\\")\",\n    ]\n  }\n\n  output
+    {\n    metrics = [otelcol.processor.transform.add_resource_attributes_as_metric_attributes.input]\n
+    \   logs    = [otelcol.processor.batch.default.input]\n    traces  = [\n      otelcol.processor.batch.default.input,\n
+    \     otelcol.connector.host_info.default.input,\n    ]\n  }\n}\n\n\notelcol.connector.host_info
+    \"default\" {\n  // https://grafana.com/docs/alloy/latest/reference/components/otelcol.connector.host_info/\n
+    \ host_identifiers = [\"host.name\"]\n\n  output {\n    metrics = [otelcol.processor.batch.default.input]\n
+    \ }\n}\n\notelcol.processor.transform \"add_resource_attributes_as_metric_attributes\"
+    {\n  // https://grafana.com/docs/alloy/latest/reference/components/otelcol.processor.transform/\n
+    \ error_mode = \"ignore\"\n\n  metric_statements {\n    context    = \"datapoint\"\n
+    \   statements = [\n      \"set(attributes[\\\"deployment.environment\\\"], resource.attributes[\\\"deployment.environment\\\"])\",\n
+    \     \"set(attributes[\\\"service.version\\\"], resource.attributes[\\\"service.version\\\"])\",\n
+    \   ]\n  }\n\n  output {\n    metrics = [otelcol.processor.batch.default.input]\n
+    \ }\n}\n\notelcol.processor.batch \"default\" {\n  // https://grafana.com/docs/alloy/latest/reference/components/otelcol.processor.batch/\n
+    \ output {\n    metrics = [otelcol.exporter.otlphttp.grafana_cloud.input]\n    logs
+    \   = [otelcol.exporter.otlphttp.grafana_cloud.input]\n    traces  = [otelcol.exporter.otlphttp.grafana_cloud.input]\n
+    \ }\n}\n\n// start here with making use of pre-provisioned data (host, user, password)\n//
+    see: \n// https://grafana.com/docs/alloy/latest/reference/components/remote/remote.kubernetes.configmap/\n//
+    https://grafana.com/docs/alloy/latest/reference/components/remote/remote.kubernetes.configmap/\n\nremote.kubernetes.configmap
+    \"grafanacloud_otlphttp_configmap\" {\n  namespace = \"collector\"\n  name = \"grafanacloud-otlphttp-configmap\"\n}\nremote.kubernetes.secret
+    \"grafanacloud_otlphttp_secret\" {\n  namespace = \"collector\"\n  name = \"grafanacloud-otlphttp-secret\"\n}\n\notelcol.exporter.otlphttp
+    \"grafana_cloud\" {\n  // https://grafana.com/docs/alloy/latest/reference/components/otelcol.exporter.otlphttp/\n
+    \ client {\n    endpoint = remote.kubernetes.configmap.grafanacloud_otlphttp_configmap.data[\"url\"]\n
+    \   auth     = otelcol.auth.basic.grafana_cloud.handler\n  }\n}\n\notelcol.auth.basic
+    \"grafana_cloud\" {\n  // https://grafana.com/docs/alloy/latest/reference/components/otelcol.auth.basic/\n
+    \ username = convert.nonsensitive(remote.kubernetes.configmap.grafanacloud_otlphttp_configmap.data[\"username\"])\n
+    \ password = remote.kubernetes.secret.grafanacloud_otlphttp_secret.data[\"password\"]\n}\n\n"
+kind: ConfigMap
+metadata:
+  name: alloy-config
+  namespace: collector

@@ -1,0 +1,220 @@
+name: CI
+on:
+  pull_request: ~
+  push:
+    branches: [main] # so that we build a Go cache that can be re-used in PRs
+
+env:
+  DEVBOX_VERSION: 0.14.0
+
+jobs:
+  linters:
+    name: Linters
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 #v5.0.0
+        with:
+          persist-credentials: false
+
+      - name: Restore go vendors
+        uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 #v4.3.0
+        with:
+          path: |
+            ~/go/pkg/mod
+            ~/.cache/go-build
+          key: go-deps-${{ runner.os }}-${{ hashFiles('go.sum') }}
+          restore-keys: |
+            go-deps-${{ runner.os }}
+
+      - name: Install devbox
+        uses: jetify-com/devbox-install-action@a0d2d53632934ae004f878c840055956d9f741b0 #v0.14.0
+        with:
+          enable-cache: "true"
+          devbox-version: ${{ env.DEVBOX_VERSION }}
+
+      - name: Run golangci-lint
+        run: make lint
+
+  tests:
+    name: Tests
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 #v5.0.0
+        with:
+          persist-credentials: false
+
+      - name: Restore go vendors
+        uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 #4.3.0
+        with:
+          path: |
+            ~/go/pkg/mod
+            ~/.cache/go-build
+          key: go-deps-${{ runner.os }}-${{ hashFiles('go.sum') }}
+          restore-keys: |
+            go-deps-${{ runner.os }}
+
+      - name: Install devbox
+        uses: jetify-com/devbox-install-action@a0d2d53632934ae004f878c840055956d9f741b0 #v0.14.0
+        with:
+          enable-cache: "true"
+          devbox-version: ${{ env.DEVBOX_VERSION }}
+
+      - name: Tests
+        run: make tests
+
+  docs:
+    name: Generate docs
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 #v5.0.0
+        with:
+          persist-credentials: false
+
+      - name: Install devbox
+        uses: jetify-com/devbox-install-action@a0d2d53632934ae004f878c840055956d9f741b0 #v0.14.0
+        with:
+          enable-cache: "true"
+          devbox-version: ${{ env.DEVBOX_VERSION }}
+
+      - name: Docs
+        run: make docs
+
+  registry:
+    name: Generate registry
+    runs-on: ubuntu-latest
+
+    strategy:
+      matrix:
+        kind_version: [next, v11.4.x, v11.0.x, v10.4.x]
+
+    steps:
+      - uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 #v5.0.0
+        with:
+          submodules: recursive
+          persist-credentials: false
+
+      - name: Restore go vendors
+        uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 #4.3.0
+        with:
+          path: |
+            ~/go/pkg/mod
+            ~/.cache/go-build
+          key: go-deps-${{ runner.os }}-${{ matrix.kind_version }}-${{ hashFiles('go.sum') }}
+          restore-keys: |
+            go-deps-${{ runner.os }}
+
+      - name: Install devbox
+        uses: jetify-com/devbox-install-action@a0d2d53632934ae004f878c840055956d9f741b0 #v0.14.0
+        with:
+          enable-cache: "true"
+          devbox-version: ${{ env.DEVBOX_VERSION }}
+
+      - name: Clone kind-registry
+        run: git clone --depth=1 https://github.com/grafana/kind-registry.git ../kind-registry
+
+      - name: Run code generation
+        run: |
+          devbox run go run cmd/cli/main.go generate \
+            --config ./config/foundation_sdk.dev.yaml \
+            --parameters grafana_version=${{ matrix.kind_version == 'next' && 'main' || matrix.kind_version }},kind_registry_version=${{ matrix.kind_version }}
+        env:
+          GOGC: "off"
+
+      - name: Compile generated Go code
+        run: devbox run ./scripts/ci/build-go.sh
+
+      - name: Compile generated Typescript code
+        run: devbox run ./scripts/ci/build-ts.sh
+
+      - name: Lint generated Python code
+        run: devbox run ./scripts/ci/build-python.sh
+
+      # See https://docs.gradle.org/current/userguide/build_cache.html
+      - name: Restore Gradle build cache
+        uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 #4.3.0
+        with:
+          path: |
+            ~/.gradle/caches
+          key: gradle-build-cache-${{ runner.os }}-${{ matrix.kind_version }}
+          restore-keys: |
+            gradle-build-cache-${{ runner.os }}-
+
+      - name: Compile generated Java code
+        run: devbox run ./scripts/ci/build-java.sh
+
+      # See https://phpstan.org/user-guide/result-cache
+      # See https://psalm.dev/docs/running_psalm/configuration/#cachedirectory
+      - name: Restore PHP linters cache
+        uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 #4.3.0
+        with:
+          path: |
+            /tmp/phpstan
+            ~/.cache/psalm
+          key: php-linters-result-cache-${{ matrix.kind_version }}
+          restore-keys: |
+            php-linters-result-cache-
+
+      - name: Lint generated PHP code
+        run: devbox run ./scripts/ci/build-php.sh
+
+  examples:
+    name: Run examples
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 #v5.0.0
+        with:
+          submodules: recursive
+          persist-credentials: false
+
+      - name: Restore go vendors
+        uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 #4.3.0
+        with:
+          path: |
+            ~/go/pkg/mod
+            ~/.cache/go-build
+          key: go-deps-${{ runner.os }}-next-${{ hashFiles('go.sum') }}
+          restore-keys: |
+            go-deps-${{ runner.os }}
+
+      - name: Install devbox
+        uses: jetify-com/devbox-install-action@a0d2d53632934ae004f878c840055956d9f741b0 #v0.14.0
+        with:
+          enable-cache: "true"
+          devbox-version: ${{ env.DEVBOX_VERSION }}
+
+      - name: Clone kind-registry
+        run: git clone --depth=1 https://github.com/grafana/kind-registry.git ../kind-registry
+
+      - name: Run code generation
+        run: make gen-sdk-dev
+        env:
+          GOGC: "off"
+
+      - name: Run the Go example
+        run: make run-go-example
+
+      - name: Run the Typescript example
+        run: make run-ts-example
+
+      - name: Run the PHP example
+        run: make run-php-example
+
+      # See https://docs.gradle.org/current/userguide/build_cache.html
+      - name: Restore Gradle build cache
+        uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 #4.3.0
+        with:
+          path: |
+            ~/.gradle/caches
+          key: gradle-build-cache-${{ runner.os }}-${{ matrix.kind_version }}
+          restore-keys: |
+            gradle-build-cache-${{ runner.os }}-
+
+      - name: Run Java example
+        run: make run-java-example
+
+      - name: Run Python example
+        run: make run-python-example

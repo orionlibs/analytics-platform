@@ -1,0 +1,12 @@
+[package]
+name = "encoder_test_all"
+version = "0.1.0"
+edition = "2021"
+
+[lib]
+# Aggregator remains a staticlib for C++ consumers; Rust binaries
+# link per-app crates directly via rlib dependencies.
+crate-type = ["staticlib"]
+
+[dependencies]
+encoder_test_app1 = { path = "app1" }

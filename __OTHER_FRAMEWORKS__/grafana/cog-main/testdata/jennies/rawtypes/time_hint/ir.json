@@ -1,0 +1,50 @@
+{
+  "Package": "time_hint",
+  "Objects": {
+    "objTime": {
+      "Name": "objTime",
+      "SelfRef": {
+        "ReferredPkg": "time_hint",
+        "ReferredType": "objTime"
+      },
+      "Type": {
+        "Kind": "scalar",
+        "Scalar": {
+          "ScalarKind": "string"
+        },
+        "Hints": {
+          "string_format_datetime": true
+        }
+      }
+    },
+    "objWithTimeField": {
+      "Name": "objWithTimeField",
+      "SelfRef": {
+        "ReferredPkg": "time_hint",
+        "ReferredType": "objWithTimeField"
+      },
+      "Type": {
+        "Kind": "struct",
+        "Nullable": false,
+        "Struct": {
+          "Fields": [
+            {
+              "Name": "registeredAt",
+              "Type": {
+                "Kind": "scalar",
+                "Nullable": false,
+                "Scalar": {
+                  "ScalarKind": "string"
+                },
+                "Hints": {
+                  "string_format_datetime": true
+                }
+              },
+              "Required": true
+            }
+          ]
+        }
+      }
+    }
+  }
+}

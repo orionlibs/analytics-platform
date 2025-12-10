@@ -1,0 +1,75 @@
+---
+alwaysApply: false
+---
+# Testing Strategy
+
+## Overview
+
+This document outlines our testing strategy for the Grafana Interactive Leraning Plugin project, focusing on incrementally building test coverage while maintaining development velocity. Our strategy specifically accounts for code quality and potential refactoring needs, especially in our AI-assisted development environment.
+
+## Current Testing Infrastructure
+
+- **Framework**: Jest + React Testing Library (RTL)
+- **CI Integration**: Tests run via GitHub Actions using `npm run test:ci`
+- **Development Mode**: Watch mode available via `npm test`
+- **File Convention**: `.test.ts` or `.test.tsx` extensions
+- **Performance**: Uses SWC for faster compilation
+
+# E2E Testing
+
+We will use playwright tested against common versions of Grafana in the build chain. 
+
+# Unit Testing
+
+## Testing Priorities
+
+This is an aspirational list of what agents should recommend, when developing
+and testing code.
+
+### 1. Core Business Logic (High Priority)
+Priority is now determined by both criticality AND code quality:
+
+a. **Well-Designed, Stable Code**
+- React hooks in `src/utils/*.hook.ts`
+- Service layer code
+- Full unit test coverage
+- Implementation-specific tests acceptable
+
+b. **Code Needing Refactoring**
+- Focus on behavioral/integration tests
+- Test inputs/outputs, not implementation
+- Document known issues
+- Use AI to help maintain test/code alignment
+
+### 2. Shared Components (Medium Priority)
+- Reusable UI components
+- Error boundaries and handlers
+- Configuration modules
+- Test at integration level if refactoring likely
+
+### 3. UI Layer (Lower Priority)
+- One-off components
+- Layout components
+- Simple display elements
+- Defer testing if refactoring planned
+
+## Testing Guidelines
+
+### Best Practices
+1. **Test Organization**
+   - Keep tests close to implementation
+   - Use descriptive test names
+   - Group related tests with `describe`
+
+2. **Coverage Goals**
+   - Stable Core Logic: 80%+
+   - Refactoring-Needed Code: Focus on critical paths
+   - UI Components: 60-70%
+   - Overall: 70%+
+
+3. **Testing Approach**
+   - Test behavior, not implementation
+   - Consider code quality in test design
+   - Use behavioral tests for unstable code
+   - Leverage AI for test maintenance
+   - Document assumptions and constraints

@@ -1,0 +1,3 @@
+/k6
+/alertmanager/smtp_auth_password
+/environments/smtp.env

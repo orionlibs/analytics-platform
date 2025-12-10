@@ -1,0 +1,36 @@
+[tools]
+go = "1.25.4"
+golangci-lint = "2.6.2"
+
+[tasks.test]
+description = "Run tests"
+run = "go test $(go list ./...)"
+
+[tasks.integration-test]
+description = "Run integration tests"
+env.INTEGRATION_TESTS = "true"
+run = "go test github.com/grafana/oats/tests"
+
+[tasks.fmt]
+description = "Format code"
+run = "gofmt -w ."
+
+[tasks.check-fmt]
+description = "Check code formatting"
+run = "gofmt -l . | grep . && exit 1 || exit 0"
+
+[tasks.lint]
+description = "Lint code"
+run = "golangci-lint run"
+
+[tasks.deps]
+description = "Update dependencies"
+run = "go mod tidy"
+
+[tasks.check]
+description = "Run all checks"
+depends = ['lint', 'test', 'check-fmt']
+
+[tasks.build]
+description = "Build the project"
+run = "go build"

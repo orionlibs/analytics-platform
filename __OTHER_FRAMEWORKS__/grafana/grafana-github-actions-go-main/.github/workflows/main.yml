@@ -1,0 +1,22 @@
+name: "Main"
+on:
+  push:
+    branches:
+      - main
+
+permissions: {}
+
+jobs:
+  main:
+    permissions:
+      contents: write
+    env:
+      GITHUB_TOKEN: "${{github.token}}"
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version: "1.23"
+          cache: true
+      - run: "go run ci/main.go --do-test --do-build --do-upload"

@@ -1,0 +1,17 @@
+#####################################################
+#
+# List of approvers for this repository
+#
+#####################################################
+#
+# Learn about membership in OpenTelemetry community:
+#  https://github.com/open-telemetry/community/blob/main/guides/contributor/membership.md
+#
+#
+# Learn about CODEOWNERS file format:
+#  https://help.github.com/en/articles/about-code-owners
+#
+
+* @open-telemetry/go-approvers @open-telemetry/go-instrumentation-approvers @open-telemetry/collector-approvers @open-telemetry/collector-contrib-approvers
+
+CODEOWNERS @open-telemetry/go-maintainers @open-telemetry/go-instrumentation-maintainers @open-telemetry/collector-maintainers @open-telemetry/collector-contrib-maintainers

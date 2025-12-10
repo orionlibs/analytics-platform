@@ -1,0 +1,222 @@
+name: CI
+on:
+  pull_request:
+# Requiring certain checks for PRs to be merge-able in Github, forces for those checks to be *always* run.
+# Even if the changes do not require them (i.e. the paths indicated below). That's why `paths-ignore` is commented out.
+#
+#    paths-ignore:
+#      - 'docs/**'
+#      - 'example/**'
+#      - 'tools/**'
+
+concurrency:
+  # Cancel any running workflow for the same branch when new commits are pushed.
+  # We group both by ref_name (available when CI is triggered by a push to a branch/tag)
+  # and head_ref (available when CI is triggered by a PR).
+  group: "${{ github.ref_name }}-${{ github.head_ref }}"
+  cancel-in-progress: true
+
+permissions: {}
+
+jobs:
+  lint:
+    name: Lint
+    runs-on: ubuntu-24.04
+    steps:
+
+      - name: Check out code
+        uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5
+        with:
+          fetch-depth: "0"
+          persist-credentials: false
+      - name: Set up Go
+        uses: actions/setup-go@44694675825211faa026b3c33043df3e48a5fa00 # v6
+        with:
+          go-version: '1.25.4'
+
+      - name: check-fmt
+        run: make check-fmt
+
+      - name: check-jsonnetfmt
+        run: make check-jsonnetfmt
+
+      - name: Get year and week number
+        id: get-year-week-number
+        run: echo "date=$(date +"%Yweek%U")" >> $GITHUB_OUTPUT
+
+      - name: cache golangci
+        uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4
+        with:
+          path: .cache/golangci-lint
+          key: golangci-lint-${{ runner.os }}-${{ steps.get-year-week-number.outputs.date }}-${{ hashFiles('go.mod', '.golangci.yml') }}
+
+      - name: lint
+        # using env instead of template expansions to avoid template injection
+        # https://woodruffw.github.io/zizmor/audits/#template-injection
+        run: |
+          make lint base=origin/${BASE_REF}
+          sudo chown -R $(id -u):$(id -g) .cache/golangci-lint  # needed to archive cache
+        env:
+          BASE_REF: ${{ github.base_ref }}
+
+
+  unit-tests:
+    name: Run Unit Tests
+    runs-on: ubuntu-24.04
+    strategy:
+      fail-fast: false
+      matrix:
+        test-target:
+          [
+            test-with-cover-pkg,
+            test-with-cover-tempodb,
+            test-with-cover-tempodb-wal,
+            test-with-cover-others,
+          ]
+
+    steps:
+      - name: Check out code
+        uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5
+        with:
+          persist-credentials: false
+
+      - name: Set up Go
+        uses: actions/setup-go@44694675825211faa026b3c33043df3e48a5fa00 # v6
+        with:
+          go-version: '1.25.4'
+
+      - name: Run Tests
+        run: make ${{ matrix.test-target }}
+
+  integration-tests:
+    name: Run integration tests
+    runs-on: ubuntu-24.04
+    strategy:
+      fail-fast: false
+      matrix:
+        test-target:
+          [
+            test-e2e,
+            test-e2e-api,
+            test-integration-poller,
+            test-integration-backendscheduler,
+            test-e2e-deployments,
+            test-e2e-ingest,
+          ]
+
+    steps:
+      - name: Check out code
+        uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5
+        with:
+          persist-credentials: false
+      - name: Fetch tags
+        run: git fetch --prune --unshallow --tags
+      - name: Set up Go
+        uses: actions/setup-go@44694675825211faa026b3c33043df3e48a5fa00 # v6
+        with:
+          go-version: '1.25.4'
+      - name: Run Tests
+        run: make ${{ matrix.test-target }}
+
+  build:
+    name: Build
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Check out code
+        uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5
+        with:
+          persist-credentials: false
+
+      - name: Set up Go
+        uses: actions/setup-go@44694675825211faa026b3c33043df3e48a5fa00 # v6
+        with:
+          go-version: '1.25.4'
+
+      - name: Build Tempo
+        run: make tempo
+
+      - name: generate-manifest
+        run: make generate-manifest
+
+      - name: Build tempo-query
+        run: make tempo-query
+
+      - name: Build vulture
+        run: make tempo-vulture
+
+      - name: Build tempo-cli
+        run: make tempo-cli
+
+  benchmark:
+    name: Benchmark
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Check out code
+        uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5
+        with:
+          persist-credentials: false
+
+      - name: Set up Go
+        uses: actions/setup-go@44694675825211faa026b3c33043df3e48a5fa00 # v6
+        with:
+          go-version: '1.25.4'
+
+      - name: Bench
+        run: make test-bench
+
+  vendor-check:
+    name: Vendor check
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Check out code
+        uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5
+        with:
+          persist-credentials: false
+
+      - name: Set up Go
+        uses: actions/setup-go@44694675825211faa026b3c33043df3e48a5fa00 # v6
+        with:
+          go-version: '1.25.4'
+
+      - name: Install Protoc
+        uses: arduino/setup-protoc@c65c819552d16ad3c9b72d9dfd5ba5237b9c906b # v3
+        with:
+          repo-token: ${{ github.token }}
+
+      - name: Check vendor
+        run: make vendor-check
+
+  tempo-jsonnet:
+    name: Check jsonnet & tempo-mixin
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Check out code
+        uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5
+        with:
+          persist-credentials: false
+
+      - name: Set up Go
+        uses: actions/setup-go@44694675825211faa026b3c33043df3e48a5fa00 # v6
+        with:
+          go-version: '1.25.4'
+
+      - name: Check jsonnet
+        run: make jsonnet-check
+
+      - name: Check tempo-mixin
+        run: make tempo-mixin-check
+
+      - name: Test jsonnet
+        run: make jsonnet-test
+
+  build-technical-documentation:
+    name: Build technical documentation
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Check out code
+        uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5
+        with:
+          persist-credentials: false
+
+      - name: Build Website
+        run: docker run -v ${PWD}/docs/sources:/hugo/content/docs/tempo/latest --rm grafana/docs-base:latest make prod

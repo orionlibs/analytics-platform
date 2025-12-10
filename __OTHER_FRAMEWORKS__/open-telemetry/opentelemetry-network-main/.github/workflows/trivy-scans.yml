@@ -1,0 +1,33 @@
+name: trivy scans
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    paths:
+      - '.github/workflows/trivy-scans.yml'
+      - '.trivyignore'
+
+permissions:
+  contents: read
+
+jobs:
+  trivy-fs-scan:
+    if: github.repository == 'open-telemetry/opentelemetry-network-build-tools'
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@93cb6efe18208431cddfb8368fd83d5badbf9bfd # v5.0.1
+      - name: Run trivy filesystem scan
+        uses: aquasecurity/trivy-action@b6643a29fecd7f34b3597bc6acb0a98b03d33ff8 # 0.33.1
+        with:
+          scan-type: 'fs'
+          scan-ref: '.'
+          skip-dirs: 'docs,cmake,ext'
+          format: 'table'
+          exit-code: '1'
+          severity: 'CRITICAL,HIGH'
+          ignore-unfixed: true
+          vuln-type: 'os,library'
+          timeout: 10m
+

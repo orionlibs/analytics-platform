@@ -1,0 +1,32 @@
+apiVersion: tempo.grafana.com/v1alpha1
+kind: TempoStack
+metadata:
+  name: simplest
+spec:
+  timeout: 70s
+  extraConfig:
+    tempo:
+      server:
+        http_server_write_timeout: 10m
+        http_server_read_timeout: 10m
+      querier:
+        search:
+          query_timeout: 180s
+      query_frontend:
+        max_retries: 3
+  storage:
+    secret:
+      name: minio
+      type: s3
+  storageSize: 200M
+  resources:
+    total:
+      limits:
+        memory: 2Gi
+        cpu: 2000m
+  template:
+    queryFrontend:
+      jaegerQuery:
+        enabled: true
+        ingress:
+          type: ingress

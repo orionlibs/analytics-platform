@@ -1,0 +1,43 @@
+{
+  "ignorePaths": [
+    "coverage/**",
+    "cypress/**",
+    "dist/**",
+    "e2e/css/**",
+    "go.sum",
+    "mage_output_file.go",
+    "node_modules/**",
+    "provisioning/**/*.yaml",
+    "src/dashboards/*.json",
+    "**/testdata/**/*.json",
+    "**/testdata/**/*.jsonc",
+    "vendor/**",
+    "cspell.config.json",
+    "package.json",
+    "yarn.lock",
+    "docker-compose*.yaml",
+    "docker-compose*.yml",
+    "provisioning/**"
+  ],
+  "ignoreRegExpList": [
+    "import\\s*\\((.|[\r\n])*?\\)",
+    "import\\s*.*\".*?\""
+  ],
+  "words": [
+    "acmecorp",
+    "datasource",
+    "datasources",
+    "testid",
+    "grafana",
+    "marcusolsson",
+    "monocart",
+    "olsson",
+    "polystat",
+    "popperjs",
+    "squarify",
+    "tippyjs",
+    "treemap",
+    "unconfigured",
+    "volkovlabs"
+  ]
+}

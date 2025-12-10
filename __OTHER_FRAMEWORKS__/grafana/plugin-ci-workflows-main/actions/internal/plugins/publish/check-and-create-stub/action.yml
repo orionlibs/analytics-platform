@@ -1,0 +1,44 @@
+name: Plugins - Check and create stub
+description: |
+  Check if a plugin stub exists in the catalog of the provided environment, which can be 'dev' or 'ops'.
+  In order for this to work, a plugin stub must be created in the production catalog first.
+  The signature type is taken from the production catalog.
+  If the plugin stub doesn't exist in prod, the action returns an error.
+
+inputs:
+  plugin-id:
+    description: |
+      Plugin ID to check and create the stub for.
+    required: true
+  environment:
+    description: |
+      Environment where the stub should be created.
+      Can be 'dev' or 'ops' (or 'staging').
+      Cannot be 'prod'.
+    required: true
+
+  gcom-publish-token:
+    description: GCOM token used to create the plugin stub.
+    required: true
+  gcloud-auth-token:
+    description: |
+      Google Cloud auth token for IAP acccess.
+      Required only for publishing to dev or ops.
+    required: false
+    default: ""
+
+runs:
+  using: composite
+  steps:
+    - name: Check and create stub.
+      run: |
+        ${{ github.action_path }}/check-and-create-stub.sh \
+          --environment "${ENVIRONMENT}" \
+          --plugin-id "${PLUGIN_ID}"
+      env:
+        GCLOUD_AUTH_TOKEN: ${{ inputs.gcloud-auth-token }}
+        GCOM_PUBLISH_TOKEN: ${{ inputs.gcom-publish-token }}
+
+        ENVIRONMENT: ${{ inputs.environment }}
+        PLUGIN_ID: ${{ inputs.plugin-id }}
+      shell: bash

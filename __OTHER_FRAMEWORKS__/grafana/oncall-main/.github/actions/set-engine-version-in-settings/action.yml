@@ -1,0 +1,27 @@
+name: Set engine version in settings file
+description: Set engine version in settings file
+inputs:
+  working_directory:
+    description: The working directory
+    required: true
+  engine_version_number:
+    description: The engine version number
+    required: true
+  settings_file_path:
+    description: The path to the settings file to set VERSION in
+    required: true
+runs:
+  using: "composite"
+  steps:
+    - name: Set engine version in settings file
+      shell: bash
+      env:
+        WORKING_DIRECTORY: ${{ inputs.working_directory }}
+        ENGINE_VERSION_NUMBER: ${{ inputs.engine_version_number }}
+        SETTINGS_FILE_PATH: ${{ inputs.settings_file_path }}
+      working-directory: ${{ env.WORKING_DIRECTORY }}
+      # yamllint disable rule:line-length
+      run: |
+        sed "0,/VERSION.*/ s/VERSION.*/VERSION = \"${{ env.ENGINE_VERSION_NUMBER }}\"/g" ${{ env.SETTINGS_FILE_PATH }} > ./settings.temp && mv settings.temp ${{ env.SETTINGS_FILE_PATH }}
+        cat ${{ env.SETTINGS_FILE_PATH }} | grep VERSION | head -1
+      # yamllint enable rule:line-length

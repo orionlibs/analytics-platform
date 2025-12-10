@@ -1,0 +1,9 @@
+.env
+.terraform/
+terraform.tfstate*
+.terraform.tfstate*
+node_modules
+screenshot.png
+dist
+.DS_Store
+extensions/xk6-judge/k6

@@ -1,0 +1,36 @@
+/*
+The following example shows how to consume the kubernetes events and write them as log messages to loki
+*/
+logging {
+  level  = coalesce(env("AGENT_LOG_LEVEL"), "info")
+  format = "logfmt"
+}
+
+module.git "event_logs" {
+  repository = "https://github.com/grafana/agent-modules.git"
+  revision   = "main"
+  path       = "modules/kubernetes/logs/events.river"
+
+  arguments {
+    forward_to = [loki.write.default.receiver]
+    git_repo = coalesce(env("GIT_REPO"), env("AGENT_REPO"), "https://github.com/grafana/agent-modules.git")
+    git_rev = coalesce(env("GIT_REV"), env("AGENT_REV"), "main")
+  }
+}
+
+loki.write "default" {
+  endpoint {
+    url = env("LOGS_OPS_URL")
+
+    basic_auth {
+        username = env("LOGS_OPS_TENANT")
+        password = env("LOGS_OPS_TOKEN")
+    }
+  }
+
+  external_labels = {
+    "cluster" = coalesce(env("CLUSTER_NAME"), env("CLUSTER"), ""),
+    "env" = coalesce(env("ENV"), ""),
+    "region" = coalesce(env("REGION"), ""),
+  }
+}

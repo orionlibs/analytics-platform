@@ -1,0 +1,57 @@
+---
+apiVersion: helm-chart-toolbox.grafana.com/v1
+kind: TestPlan
+name: namespaced
+
+subject:
+  releaseName: alloy-operator
+  path: ../../../charts/alloy-operator
+  namespace: operator
+  valuesFile: values.yaml
+
+  postInstall:
+    files: [alloys.yaml]
+
+cluster:
+  type: kind
+
+dependencies:
+  - file: namespaces.yaml
+  - preset: prometheus
+  - preset: grafana
+    overrides:
+      datasources:
+        datasources.yaml:
+          apiVersion: 1
+          datasources:
+            - name: Prometheus
+              type: prometheus
+              url: http://prometheus-server.prometheus.svc:9090
+              isDefault: true
+
+tests:
+  - type: kubernetes-objects-test
+    values:
+      checks:
+        # Check that the Alloy instance has been reconciled
+        - kind: DaemonSet
+          name: alloy-alpha
+          namespace: alpha
+        # Ensure that the Alloy instance in the non-monitored namespace has not been reconciled
+        - kind: DaemonSet
+          name: alloy-bravo
+          namespace: bravo
+          expect:
+            count: 0
+  - type: query-test
+    values:
+      tests:
+        - env:
+            PROMETHEUS_URL: http://prometheus-server.prometheus.svc:9090/api/v1/query
+          queries:
+            - query: alloy_build_info{job="integrations/self", alloy_instance="alpha"}
+              type: promql
+            - query: count(alloy_build_info{job="integrations/self", alloy_instance="bravo"}) or vector(0)
+              type: promql
+              expect:
+                value: 0

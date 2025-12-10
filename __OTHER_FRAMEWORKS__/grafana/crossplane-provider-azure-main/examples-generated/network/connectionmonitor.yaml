@@ -1,0 +1,156 @@
+apiVersion: network.azure.upbound.io/v1beta1
+kind: ConnectionMonitor
+metadata:
+  annotations:
+    meta.upbound.io/example-id: network/v1beta1/connectionmonitor
+  labels:
+    testing.upbound.io/example-name: example
+  name: example
+spec:
+  forProvider:
+    endpoint:
+    - filter:
+      - item:
+        - address: ${azurerm_virtual_machine.example.id}
+          type: AgentAddress
+        type: Include
+      name: source
+      targetResourceId: ${azurerm_virtual_machine.example.id}
+    - address: terraform.io
+      name: destination
+    location: West Europe
+    network_watcher_name: ${azurerm_network_watcher.example.name}
+    notes: examplenote
+    outputWorkspaceResourceIds:
+    - ${azurerm_log_analytics_workspace.example.id}
+    resource_group_name: ${azurerm_resource_group.example.name}
+    testConfiguration:
+    - name: tcpName
+      protocol: Tcp
+      tcpConfiguration:
+      - port: 80
+      testFrequencyInSeconds: 60
+    testGroup:
+    - destinationEndpoints:
+      - destination
+      disable: false
+      name: exampletg
+      sourceEndpoints:
+      - source
+      testConfigurationNames:
+      - tcpName
+
+---
+
+apiVersion: operationalinsights.azure.upbound.io/v1beta1
+kind: Workspace
+metadata:
+  annotations:
+    meta.upbound.io/example-id: network/v1beta1/connectionmonitor
+  labels:
+    testing.upbound.io/example-name: example
+  name: example
+spec:
+  forProvider:
+    location: West Europe
+    resourceGroupNameSelector:
+      matchLabels:
+        testing.upbound.io/example-name: example
+    sku: pergb2018
+
+---
+
+apiVersion: network.azure.upbound.io/v1beta1
+kind: NetworkInterface
+metadata:
+  annotations:
+    meta.upbound.io/example-id: network/v1beta1/connectionmonitor
+  labels:
+    testing.upbound.io/example-name: example
+  name: example
+spec:
+  forProvider:
+    ipConfiguration:
+    - name: testconfiguration1
+      privateIpAddressAllocation: Dynamic
+      subnetIdSelector:
+        matchLabels:
+          testing.upbound.io/example-name: example
+    location: West Europe
+    resourceGroupNameSelector:
+      matchLabels:
+        testing.upbound.io/example-name: example
+
+---
+
+apiVersion: network.azure.upbound.io/v1beta1
+kind: Watcher
+metadata:
+  annotations:
+    meta.upbound.io/example-id: network/v1beta1/connectionmonitor
+  labels:
+    testing.upbound.io/example-name: example
+  name: example
+spec:
+  forProvider:
+    location: West Europe
+    resourceGroupNameSelector:
+      matchLabels:
+        testing.upbound.io/example-name: example
+
+---
+
+apiVersion: azure.upbound.io/v1beta1
+kind: ResourceGroup
+metadata:
+  annotations:
+    meta.upbound.io/example-id: network/v1beta1/connectionmonitor
+  labels:
+    testing.upbound.io/example-name: example
+  name: example
+spec:
+  forProvider:
+    location: West Europe
+
+---
+
+apiVersion: network.azure.upbound.io/v1beta1
+kind: Subnet
+metadata:
+  annotations:
+    meta.upbound.io/example-id: network/v1beta1/connectionmonitor
+  labels:
+    testing.upbound.io/example-name: example
+  name: example
+spec:
+  forProvider:
+    addressPrefixes:
+    - 10.0.2.0/24
+    resourceGroupNameSelector:
+      matchLabels:
+        testing.upbound.io/example-name: example
+    virtualNetworkNameSelector:
+      matchLabels:
+        testing.upbound.io/example-name: example
+
+---
+
+apiVersion: network.azure.upbound.io/v1beta1
+kind: VirtualNetwork
+metadata:
+  annotations:
+    meta.upbound.io/example-id: network/v1beta1/connectionmonitor
+  labels:
+    testing.upbound.io/example-name: example
+  name: example
+spec:
+  forProvider:
+    addressSpace:
+    - 10.0.0.0/16
+    location: West Europe
+    resourceGroupNameSelector:
+      matchLabels:
+        testing.upbound.io/example-name: example
+
+---
+

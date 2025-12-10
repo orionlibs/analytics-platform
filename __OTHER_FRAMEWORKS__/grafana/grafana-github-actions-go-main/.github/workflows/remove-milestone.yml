@@ -1,0 +1,37 @@
+name: Remove milestone
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        required: true
+        description: Needs to match, exactly, the name of a milestone
+  workflow_call:
+    inputs:
+      version_call:
+        description: Needs to match, exactly, the name of a milestone
+        required: true
+        type: string
+    secrets:
+      token:
+        required: true
+jobs:
+  main:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Actions
+        uses: actions/checkout@v4
+        with:
+          repository: "grafana/grafana-github-actions-go"
+          ref: removemilestone
+      - name: Remove milestone from open issues (manually invoked)
+        if: ${{ github.event.inputs.version != '' }}
+        uses: ./removemilestone
+        with:
+          token: ${{ secrets.GH_BOT_ACCESS_TOKEN2 }}
+          version_call: ${{ github.event.inputs.version }}
+      - name: Remove milestone from open issues (workflow invoked)
+        if: ${{ github.event.inputs.version == '' && inputs.version_call != '' }}
+        uses: ./removemilestone
+        with:
+          version_call: ${{ inputs.version_call }}
+          token: ${{ secrets.token2 }}

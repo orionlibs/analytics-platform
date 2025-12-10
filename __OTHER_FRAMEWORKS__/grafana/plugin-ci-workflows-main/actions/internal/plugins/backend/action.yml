@@ -1,0 +1,76 @@
+name: Plugins - Backend - Test and build
+description: Tests, lints and builds the backend.
+
+inputs:
+  github-token:
+    description: GitHub token for downloading dependencies from private repos, if necessary
+    required: true
+  plugin-directory:
+    description: Directory of the plugin, if not in the root of the repository. If provided, package-manager must also be provided.
+    required: false
+    default: .
+  secrets:
+    required: false
+    type: string
+    description: The secrets to use within frontend steps
+  race-detector:
+    required: false
+    type: boolean
+    description: Whether to run the tests with the race detector
+    default: false
+
+runs:
+  using: composite
+  steps:
+    - name: Config git to use GitHub token
+      run: git config --global url."https://oauth2:${INPUT_GITHUB_TOKEN}@github.com/".insteadOf "https://github.com/"
+      env:
+        INPUT_GITHUB_TOKEN: ${{ inputs.github-token }}
+      shell: bash
+
+    - name: Get secrets from Vault
+      if: inputs.secrets != ''
+      id: get-secrets
+      uses: grafana/shared-workflows/actions/get-vault-secrets@a37de51f3d713a30a9e4b21bcdfbd38170020593 # get-vault-secrets/v1.3.0
+      with:
+        repo_secrets: ${{ inputs.secrets }}
+
+    - name: Install dependencies
+      run: go mod download
+      working-directory: ${{ inputs.plugin-directory }}
+      shell: bash
+
+    - name: Lint
+      run: golangci-lint run --timeout=5m
+      working-directory: ${{ inputs.plugin-directory }}
+      shell: bash
+
+    - name: Test
+      run: |
+        if [ "$RACE_DETECTOR" = "true" ]; then
+          mage -v testRace
+        else
+          mage -v test
+        fi
+      working-directory: ${{ inputs.plugin-directory }}
+      shell: bash
+      env:
+        RACE_DETECTOR: ${{ inputs.race-detector }}
+
+    - name: Build
+      run: mage -v buildAll
+      working-directory: ${{ inputs.plugin-directory }}
+      shell: bash
+
+    # The action should end up with a dist/ folder, but if the working directory is not the root of the repo,
+    # we need to copy the dist/ folder to the root of the repo.
+    - name: Copy dist if needed
+      run: |
+        if [ "$PLUGIN_DIRECTORY" != "." ]; then
+          mkdir -p dist
+          cp -r $PLUGIN_DIRECTORY/dist/* dist/
+        fi
+      shell: bash
+      env:
+        PLUGIN_DIRECTORY: ${{ inputs.plugin-directory }}
+      if: inputs.plugin-directory != '.'

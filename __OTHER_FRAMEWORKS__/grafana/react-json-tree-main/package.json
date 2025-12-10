@@ -1,0 +1,123 @@
+{
+  "name": "@gtk-grafana/react-json-tree",
+  "version": "0.0.12",
+  "description": "React JSON Viewer Component, Extracted from redux-devtools",
+  "keywords": [
+    "react",
+    "json viewer"
+  ],
+  "homepage": "https://github.com/gtk-grafana/react-json-tree",
+  "bugs": {
+    "url": "https://github.com/gtk-grafana/react-json-tree/issues"
+  },
+  "license": "MIT",
+  "author": "Galen Kistler <gk@galenkistler.com> (http://github.com/gtk-grafana)",
+  "contributors": [
+    {
+      "name": "Shu Uesugi",
+      "email": "shu@chibicode.com",
+      "url": "http://github.com/chibicode"
+    },
+    {
+      "name": "Alexander Kuznetsov",
+      "email": "alexkuz@gmail.com",
+      "url": "http://kuzya.org/"
+    },
+    {
+      "name": "Dave Vedder",
+      "email": "veddermatic@gmail.com",
+      "url": "http://www.eskimospy.com/"
+    },
+    {
+      "name": "Daniele Zannotti",
+      "email": "dzannotti@me.com",
+      "url": "http://www.github.com/dzannotti"
+    },
+    {
+      "name": "Mihail Diordiev",
+      "email": "zalmoxisus@gmail.com",
+      "url": "https://github.com/zalmoxisus"
+    }
+  ],
+  "type": "module",
+  "scripts": {
+    "dev": "yarn vite build --mode development --watch",
+    "build": "yarn vite build --mode production --minify",
+    "lint": "eslint . --ext ts,tsx",
+    "lint:fix": "eslint . --ext ts,tsx --fix",
+    "format": "prettier --check .",
+    "format:fix": "prettier --write .",
+    "stylelint": "stylelint **/*.css",
+    "stylelint:fix": "stylelint **/*.scss --fix",
+    "storybook": "storybook dev -p 6006",
+    "build-storybook": "storybook build",
+    "test": "vitest",
+    "test:ui": "vitest --ui",
+    "coverage": "vitest run --coverage",
+    "prepublishOnly": "vitest run && yarn run build",
+    "prepare": "husky"
+  },
+  "module": "./dist/main.js",
+  "files": [
+    "dist"
+  ],
+  "types": "./dist/src/main.d.ts",
+  "peerDependencies": {
+    "react": "^18.2.0",
+    "react-dom": "^18.2.0"
+  },
+  "devDependencies": {
+    "@chromatic-com/storybook": "3.2.5",
+    "@eslint/js": "9.21.0",
+    "@mdx-js/rollup": "^3.1.0",
+    "@storybook/addon-essentials": "8.6.3",
+    "@storybook/addon-interactions": "8.6.3",
+    "@storybook/addon-links": "8.6.3",
+    "@storybook/addon-onboarding": "8.6.3",
+    "@storybook/blocks": "8.6.3",
+    "@testing-library/react": "16.2.0",
+    "@types/node": "22.13.8",
+    "@types/react": "^19.0.10",
+    "@vitejs/plugin-react": "4.3.4",
+    "@vitejs/plugin-react-swc": "^3.8.0",
+    "@vitest/coverage-v8": "3.0.7",
+    "@vitest/ui": "3.0.7",
+    "autoprefixer": "10.4.20",
+    "clsx": "2.1.1",
+    "eslint": "9.21.0",
+    "eslint-config-prettier": "10.0.2",
+    "eslint-plugin-react-hooks": "5.2.0",
+    "eslint-plugin-react-refresh": "0.4.19",
+    "eslint-plugin-storybook": "0.11.3",
+    "glob": "11.0.1",
+    "globals": "16.0.0",
+    "jsdom": "26.0.0",
+    "prettier": "3.5.2",
+    "react": "^18.2.0",
+    "react-dom": "^18.2.0",
+    "react-test-renderer": "^18.2.0",
+    "sass-embedded": "^1.85.1",
+    "storybook": "8.6.3",
+    "stylelint": "16.15.0",
+    "stylelint-config-standard": "37.0.0",
+    "terser": "^5.39.0",
+    "typescript": "5.7.3",
+    "typescript-eslint": "8.25.0",
+    "vite": "6.3.4",
+    "vite-plugin-css-injected-by-js": "^3.5.2",
+    "vite-plugin-dts": "4.5.1",
+    "vite-plugin-externals": "^0.6.2",
+    "vite-plugin-lib-inject-css": "2.2.1",
+    "vitest": "3.0.7",
+    "husky": "^9.1.7"
+  },
+  "main": "main.js",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/gtk-grafana/react-json-tree.git"
+  },
+  "private": false,
+  "directories": {
+    "example": "examples"
+  }
+}

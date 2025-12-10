@@ -1,0 +1,30 @@
+version = "2"
+
+[linters]
+enable = [
+  "bodyclose",
+  "dogsled",
+  "errcheck",
+  "gochecknoinits",
+  "goconst",
+  "gocritic",
+  "goprintffuncname",
+  "gosec",
+  "govet",
+  "ineffassign",
+  "misspell",
+  "nakedret",
+  "rowserrcheck",
+  "copyloopvar",
+  "staticcheck",
+  "unconvert",
+  "unused",
+  "whitespace",
+  "gocyclo",
+  "unparam",
+  "dogsled",
+  "asciicheck",
+  "errorlint",
+  "sqlclosecheck",
+  "thelper",
+]

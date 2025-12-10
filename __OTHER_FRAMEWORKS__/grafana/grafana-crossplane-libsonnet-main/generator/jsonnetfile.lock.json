@@ -1,0 +1,106 @@
+{
+  "version": 1,
+  "dependencies": [
+    {
+      "source": {
+        "git": {
+          "remote": "https://github.com/Duologic/crossplane-namespaced-libsonnet.git",
+          "subdir": ""
+        }
+      },
+      "version": "8e5e345e7933f3e7c19e950710d5c648eb16e1c8",
+      "sum": "hfuTy8C/KtXUZ26WxkKRN5C/AlbYeIQ0Wt9EPC3bdi4="
+    },
+    {
+      "source": {
+        "git": {
+          "remote": "https://github.com/Duologic/jsonnet-parser.git",
+          "subdir": ""
+        }
+      },
+      "version": "349569e180192547cb37cb94b3caea05384a81ff",
+      "sum": "0N0SeOSZeD1DaVp7Avj9WpTRVt3tdPrAjxZ0qWr/xrU="
+    },
+    {
+      "source": {
+        "git": {
+          "remote": "https://github.com/crdsonnet/astsonnet.git",
+          "subdir": ""
+        }
+      },
+      "version": "0c82db246c00af8a25ead5240d82db195febee60",
+      "sum": "zgyJG+0zLt/9OreKeHzJD4NaEltwwMYJ5O5obKBk35I="
+    },
+    {
+      "source": {
+        "git": {
+          "remote": "https://github.com/crdsonnet/crdsonnet.git",
+          "subdir": "crdsonnet"
+        }
+      },
+      "version": "f2f3c043f329edd4dd59ba89128258a59ee3363e",
+      "sum": "2nG91akk1UMbxn99gyQ1A29zn/5jiHM+0ovsw+DgCYM="
+    },
+    {
+      "source": {
+        "git": {
+          "remote": "https://github.com/crdsonnet/validate-libsonnet.git",
+          "subdir": ""
+        }
+      },
+      "version": "a78ca15fbfece3110c4807d1f059132ece01d97b",
+      "sum": "qYLH56MqvmgxE4YMNeTbuJ1XSsCpl1sumHN5x8IQv2I="
+    },
+    {
+      "source": {
+        "git": {
+          "remote": "https://github.com/jsonnet-libs/crossplane-libsonnet.git",
+          "subdir": "crossplane/1.17"
+        }
+      },
+      "version": "4a23ed218573867f36482f8e61f5fc1e53e2b3ba",
+      "sum": "82xry+Tem3DEdhzvdxfUPsTYCqiQuNgXpBmOlcWLai8="
+    },
+    {
+      "source": {
+        "git": {
+          "remote": "https://github.com/jsonnet-libs/crossplane-libsonnet.git",
+          "subdir": "function-cel-filter/0.1"
+        }
+      },
+      "version": "4a23ed218573867f36482f8e61f5fc1e53e2b3ba",
+      "sum": "fiDqkkc58FFgl84AIglAXFW8ab0Ix1+ByItZPs552V8="
+    },
+    {
+      "source": {
+        "git": {
+          "remote": "https://github.com/jsonnet-libs/crossplane-libsonnet.git",
+          "subdir": "function-patch-and-transform/0.7"
+        }
+      },
+      "version": "4a23ed218573867f36482f8e61f5fc1e53e2b3ba",
+      "sum": "+u8oE6qegNSf1FqLwvznBHPlS8a9D/pJTOTksO27iFE="
+    },
+    {
+      "source": {
+        "git": {
+          "remote": "https://github.com/jsonnet-libs/docsonnet.git",
+          "subdir": "doc-util"
+        }
+      },
+      "version": "6ac6c69685b8c29c54515448eaca583da2d88150",
+      "sum": "BrAL/k23jq+xy9oA7TWIhUx07dsA/QLm3g7ktCwe//U="
+    },
+    {
+      "source": {
+        "git": {
+          "remote": "https://github.com/jsonnet-libs/xtd.git",
+          "subdir": ""
+        }
+      },
+      "version": "6b473999814b9eeede12a65177a529428a3a8e74",
+      "sum": "LfbgcJbilu4uBdKYZSvmkoOTPwEAzg10L3/VqKAIWtA="
+    }
+  ],
+  "legacyImports": false
+}

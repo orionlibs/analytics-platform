@@ -1,0 +1,11 @@
+go 1.19
+
+use (
+	./lib/go/macros
+	./lib/go/anyframer
+	./lib/go/restds
+	./plugins/yesoreyeram-blank-datasource
+	./plugins/yesoreyeram-hello-datasource
+	./plugins/yesoreyeram-petstore-datasource
+	./plugins/yesoreyeram-vercel-datasource
+)

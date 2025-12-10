@@ -1,0 +1,60 @@
+{
+  "name": "@grafana/openapi-to-k6",
+  "version": "0.3.2",
+  "description": "A CLI tool to generate helper modules for K6 from OpenAPI schema",
+  "main": "dist/cli.js",
+  "bin": {
+    "openapi-to-k6": "dist/cli.js"
+  },
+  "scripts": {
+    "build": "tsc",
+    "dev": "DISABLE_ANALYTICS=true ts-node src/cli.ts",
+    "dev:inspect": "DISABLE_ANALYTICS=true node --inspect-brk --require ts-node/register src/cli.ts",
+    "test": "vitest run --coverage",
+    "lint": "eslint --ext .ts,.tsx .",
+    "lint:fix": "eslint --ext .ts,.tsx . --fix",
+    "format": "prettier --ignore-unknown --write \"./**/*\"",
+    "update-examples": "for dir in ./examples/*/; do (npm run dev -- \"$dir/schema.json\" \"$dir/single/\" -m single --include-sample-script && npm run dev -- \"$dir/schema.json\" \"$dir/split/\" -m split --include-sample-script && npm run dev -- \"$dir/schema.json\" \"$dir/tags/\" -m tags --include-sample-script); done",
+    "prepare": "husky"
+  },
+  "author": "Grafana Labs",
+  "repository": "http://github.com/grafana/openapi-to-k6",
+  "license": "AGPL-3.0",
+  "dependencies": {
+    "@faker-js/faker": "^9.2.0",
+    "@types/k6": "^0.57.0",
+    "axios": "^1.7.7",
+    "chalk": "^4.1.2",
+    "commander": "^12.1.0",
+    "handlebars": "^4.7.8",
+    "openapi-typescript": "^7.4.1",
+    "orval": "^7.5.0",
+    "prettier": "^3.3.3",
+    "uuid": "^10.0.0"
+  },
+  "devDependencies": {
+    "@types/uuid": "10.0.0",
+    "@typescript-eslint/eslint-plugin": "8.46.2",
+    "@vitest/coverage-v8": "2.1.9",
+    "eslint": "8.57.1",
+    "eslint-config-prettier": "10.1.8",
+    "eslint-import-resolver-typescript": "4.4.4",
+    "eslint-plugin-import": "2.32.0",
+    "eslint-plugin-prettier": "5.5.4",
+    "eslint-plugin-unused-imports": "4.3.0",
+    "husky": "9.1.7",
+    "lint-staged": "16.2.6",
+    "prettier": "3.6.2",
+    "ts-node": "10.9.2",
+    "typescript": "5.9.3",
+    "vite-tsconfig-paths": "5.1.4",
+    "vitest": "2.1.9"
+  },
+  "lint-staged": {
+    "*.{js,jsx,ts,tsx}": [
+      "eslint --fix",
+      "prettier --ignore-unknown --write",
+      "bash -c 'tsc --noEmit'"
+    ]
+  }
+}

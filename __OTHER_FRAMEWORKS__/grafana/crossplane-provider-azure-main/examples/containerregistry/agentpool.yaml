@@ -1,0 +1,23 @@
+apiVersion: containerregistry.azure.upbound.io/v1beta1
+kind: AgentPool
+metadata:
+  name: example
+spec:
+  forProvider:
+    containerRegistryName: upbound
+    location: West Europe
+    resourceGroupNameRef:
+      name: example-containerreg
+
+---
+
+
+apiVersion: azure.upbound.io/v1beta1
+kind: ResourceGroup
+metadata:
+  name: example-containerreg
+spec:
+  forProvider:
+    location: West Europe
+    tags:
+      provisioner: crossplane

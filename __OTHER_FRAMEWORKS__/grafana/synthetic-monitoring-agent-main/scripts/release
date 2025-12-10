@@ -1,0 +1,129 @@
+#!/bin/sh
+
+set -e
+
+must_find_cmd() {
+	cmd=$1
+
+	if command -v "${cmd}" > /dev/null 2>&1 ; then
+		echo "${cmd}"
+		return
+	elif [ -x "$PWD/scripts/go/bin/${cmd}" ] ; then
+		echo "$PWD/scripts/go/bin/${cmd}"
+		return
+	else
+		echo "E: '${cmd}' is needed to run this script. Abort." >&2
+		exit 1
+	fi
+}
+
+git=$(must_find_cmd git)
+git_chglog=$(must_find_cmd git-chglog)
+
+next_version=$1
+
+cd "$("${git}" rev-parse --show-toplevel)" || exit 2
+
+if test ! -e CHANGELOG.md ; then
+	echo "E: Expecting a CHANGELOG.md file in $PWD, none found. Abort."
+	exit 3
+fi
+
+current_version() {
+	"${git}" describe --tags HEAD | cut -d- -f1 | tr -d v
+}
+
+next_version_patch() {
+	parts=$(current_version)
+	major=$(echo "${parts}" | cut -d. -f1)
+	minor=$(echo "${parts}" | cut -d. -f2)
+	patch=$(echo "${parts}" | cut -d. -f3)
+	echo "${major}.${minor}.$((patch+1))"
+}
+
+next_version_minor() {
+	parts=$(current_version)
+	major=$(echo "${parts}" | cut -d. -f1)
+	minor=$(echo "${parts}" | cut -d. -f2)
+	echo "${major}.$((minor+1)).0"
+}
+
+next_version_major() {
+	parts=$(current_version)
+	major=$(echo "${parts}" | cut -d. -f1)
+	echo "$((major+1)).0.0"
+}
+
+if test -z "${next_version}" ; then
+	cv=$(current_version)
+	next_patch=$(next_version_patch)
+	next_minor=$(next_version_minor)
+	next_major=$(next_version_major)
+	cat <<-EOT
+	I: Current version: v${cv}
+	I: Next fix: v${next_patch}
+	I: Next feature: v${next_minor}
+	I: Next breaking change: v${next_major}
+
+	I: Changes since current version:
+
+	EOT
+
+	"${git}" --no-pager log --pretty=tformat:'    %C(auto)%h %d %s' "v${cv}...HEAD"
+
+	cat <<-EOT
+
+	E: Next version argument required. Abort.
+	EOT
+	exit 4
+fi
+
+commit_msg=$(mktemp)
+
+cleanup() {
+	rm -f "${commit_msg}"
+}
+
+trap cleanup EXIT
+
+last_subject=$(git log --format=%s --max-count=1 | grep -E "^Release ${next_version}( \(#[0-9]+\))?\$" || true)
+
+if test -z "${last_subject}" ; then
+	# Need to create release notes.
+	cur_version=$("${git}" describe --tags | cut -d- -f1)
+
+	"${git_chglog}" --next-tag "${next_version}" > CHANGELOG.md
+
+	"${git}" add CHANGELOG.md
+
+	"${git}" switch --create "release-${next_version}"
+
+	cat > "${commit_msg}" <<-EOT
+	Release ${next_version}
+
+	$("${git}" log --oneline --reverse "${cur_version}".. | cut -d' ' -f2- | sed -e 's,^,* ,')
+	EOT
+
+	"${git}" commit --signoff --file="${commit_msg}"
+
+	cat <<-EOT
+
+	A commit has been created to update the CHANGELOG.md file and prepare a
+	release for version ${next_version}.
+
+	Please open a PR and once that is merged, run this script again with the
+	same version number as argument.
+	EOT
+else
+	# Need to create tag.
+	"${git}" show --pretty=format:"%B" --no-patch > "${commit_msg}"
+
+	"${git}" tag --annotate --file="${commit_msg}" "${next_version}"
+
+	cat <<-EOT
+	An annotated tag has been created for version ${next_version}.
+
+	You must push this tag to the remote repository in order to trigger the
+	release process.
+	EOT
+fi

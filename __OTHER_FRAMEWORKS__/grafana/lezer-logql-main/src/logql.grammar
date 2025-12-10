@@ -1,0 +1,560 @@
+@top LogQL { Expr }
+
+@precedence {
+  add @left,
+  eql @left,
+  and @left,
+  or @left,
+  mul @left,
+  pow @right
+}
+
+Expr {
+  LogExpr |
+  MetricExpr
+}
+
+LogExpr {
+  Selector |
+  Selector PipelineExpr |
+  "(" LogExpr ")"
+}
+
+Selector {
+  "{" Matchers "}"
+}
+
+PipelineExpr {
+  PipelineStage |
+  PipelineExpr PipelineStage
+}
+
+Matchers {
+  Matcher |
+  Matchers "," Matcher
+}
+
+PipelineStage {
+  LineFilters | 
+  Pipe LogfmtParser |
+  Pipe LabelParser |
+  Pipe JsonExpressionParser |
+  Pipe LogfmtExpressionParser |
+  Pipe LabelFilter |
+  Pipe LineFormatExpr |
+  Pipe LabelFormatExpr |
+  Pipe DecolorizeExpr |
+  Pipe DropLabelsExpr |
+  Pipe KeepLabelsExpr
+}
+
+Matcher {
+  Identifier !eql Eq String |
+  Identifier !eql Neq String |
+  Identifier !eql Re String |
+  Identifier !eql Nre String
+}
+
+OrFilter {
+  String |
+  FilterOp "(" String ")" |
+  String !or Or OrFilter
+}
+
+LineFilters {
+  LineFilter |
+  LineFilter !or Or OrFilter |
+  LineFilters LineFilter
+}
+
+LineFilter {
+  Filter String | 
+  Filter FilterOp "(" String ")" |
+  Filter String !or Or OrFilter
+}
+
+Filter {
+  !eql PipeExact |
+  !eql PipeMatch |
+  !eql PipePattern |
+  !eql Npa |
+  !eql Nre |
+  !eql Neq
+}
+
+FilterOp {
+  Ip
+}
+
+LabelParser {
+  Json |
+  Regexp String |
+  Unpack |
+  Pattern String
+}
+
+JsonExpressionParser {
+  Json LabelExtractionExpressionList
+}
+
+LogfmtParser {
+  Logfmt |
+  Logfmt LogfmtParserFlags
+}
+
+LogfmtExpressionParser {
+  Logfmt LogfmtParserFlags LabelExtractionExpressionList |
+  Logfmt LabelExtractionExpressionList
+}
+
+LabelFilter {
+  Matcher |
+  IpLabelFilter |
+  UnitFilter |
+  NumberFilter |
+  "(" LabelFilter ")" |
+  LabelFilter !and And LabelFilter |
+  LabelFilter !and "," LabelFilter |
+  LabelFilter !or Or LabelFilter
+}
+
+LineFormatExpr {
+  LineFormat String
+}
+
+LabelFormatExpr {
+  LabelFormat !and LabelsFormat
+}
+
+DecolorizeExpr {
+  Decolorize
+}
+
+DropLabel {
+  Identifier |
+  Matcher
+}
+
+DropLabels {
+  DropLabel |
+  DropLabels !and "," DropLabel
+}
+
+DropLabelsExpr {
+  Drop DropLabels
+}
+
+KeepLabel {
+  Identifier |
+  Matcher
+}
+
+KeepLabels {
+  KeepLabel |
+  KeepLabels !and "," KeepLabel
+}
+
+KeepLabelsExpr {
+  Keep KeepLabels
+}
+
+LabelExtractionExpressionList {
+  LabelExtractionExpression |
+  LabelExtractionExpressionList !and "," LabelExtractionExpression
+}
+
+LogfmtParserFlags {
+  ParserFlag |
+  LogfmtParserFlags ParserFlag
+}
+
+IpLabelFilter {
+  Identifier Eq Ip "(" String ")" |
+  Identifier Neq Ip "(" String ")"
+}
+
+UnitFilter {
+  DurationFilter |
+  BytesFilter
+}
+
+NumberFilter {
+  Identifier !eql Gtr LiteralExpr |
+  Identifier !eql Gte LiteralExpr |
+  Identifier !eql Lss LiteralExpr |
+  Identifier !eql Lte LiteralExpr |
+  Identifier !eql Neq LiteralExpr |
+  Identifier !eql Eq LiteralExpr |
+  Identifier !eql Eql LiteralExpr
+}
+
+LabelsFormat {
+  LabelFormatMatcher |
+  LabelsFormat "," LabelFormatMatcher
+}
+
+LabelFormatMatcher {
+  Identifier !eql Eq Identifier |
+  Identifier !eql Eq String
+}
+
+LabelExtractionExpression {
+  Identifier !eql Eq String |
+  Identifier
+}
+
+DurationFilter {
+  Identifier !eql Gtr Duration |
+  Identifier !eql Gte Duration |
+  Identifier !eql Lss Duration |
+  Identifier !eql Lte Duration |
+  Identifier !eql Neq Duration |
+  Identifier !eql Eq Duration |
+  Identifier !eql Eql Duration
+}
+
+BytesFilter {
+  Identifier !eql Gtr Bytes |
+  Identifier !eql Gte Bytes |
+  Identifier !eql Lss Bytes |
+  Identifier !eql Lte Bytes |
+  Identifier !eql Neq Bytes |
+  Identifier !eql Eq Bytes |
+  Identifier !eql Eql Bytes
+}
+
+
+MetricExpr {
+  RangeAggregationExpr |
+  VectorAggregationExpr |
+  BinOpExpr |
+  LiteralExpr |
+  LabelReplaceExpr |
+  VectorExpr |
+  "(" MetricExpr ")"
+}
+
+RangeAggregationExpr {
+  RangeOp "(" LogRangeExpr ")" |
+  RangeOp "(" Number "," LogRangeExpr ")" |
+  RangeOp "(" LogRangeExpr ")" Grouping |
+  RangeOp "(" Number "," LogRangeExpr ")" Grouping
+}
+
+VectorAggregationExpr {
+  VectorOp "(" MetricExpr ")" |
+  VectorOp Grouping "(" MetricExpr ")" |
+  VectorOp "(" MetricExpr ")" Grouping |
+  VectorOp "(" Number "," MetricExpr ")" |
+  VectorOp "(" Number "," MetricExpr ")" Grouping |
+  VectorOp Grouping "(" Number "," MetricExpr ")"
+}
+
+BinOpExpr {
+  Expr !or Or BinOpModifier Expr |
+  Expr !and And BinOpModifier Expr | 
+  Expr !and Unless BinOpModifier Expr | 
+  Expr !add Add BinOpModifier Expr |
+  Expr !add Sub BinOpModifier Expr |
+  Expr !mul Mul BinOpModifier Expr |
+  Expr !mul Div BinOpModifier Expr |
+  Expr !mul Mod BinOpModifier Expr |
+  Expr !pow Pow BinOpModifier Expr |
+  Expr !eql Eql BinOpModifier Expr |
+  Expr !eql Neq BinOpModifier Expr |
+  Expr !eql Gtr BinOpModifier Expr |
+  Expr !eql Gte BinOpModifier Expr |
+  Expr !eql Lss BinOpModifier Expr |
+  Expr !eql Lte BinOpModifier Expr 
+}
+
+LiteralExpr {
+  Number |
+  Add Number |
+  Sub Number
+}
+
+LabelReplaceExpr {
+  LabelReplace "(" MetricExpr "," String "," String "," String "," String ")"
+}
+
+VectorExpr {
+  Vector "(" Number ")"
+}
+
+RangeOp {
+  CountOverTime |
+  Rate |
+  RateCounter |
+  BytesOverTime |
+  BytesRate |
+  AvgOverTime |
+  SumOverTime |
+  MinOverTime |
+  MaxOverTime |
+  StddevOverTime |
+  StdvarOverTime |
+  QuantileOverTime |
+  FirstOverTime |
+  LastOverTime |
+  AbsentOverTime
+}
+
+LogRangeExpr {
+  Selector Range |
+  Selector Range OffsetExpr |
+  "(" Selector ")" Range |
+  "(" Selector ")" Range OffsetExpr |
+  Selector Range UnwrapExpr |
+  Selector Range OffsetExpr UnwrapExpr |
+  "(" Selector ")" Range UnwrapExpr |
+  "(" Selector ")" Range OffsetExpr UnwrapExpr |
+  Selector UnwrapExpr Range |
+  Selector UnwrapExpr Range OffsetExpr |
+  "(" Selector UnwrapExpr ")" Range |
+  "(" Selector UnwrapExpr ")" Range OffsetExpr |
+  Selector PipelineExpr Range |
+  Selector PipelineExpr Range OffsetExpr |
+  "(" Selector PipelineExpr ")" Range |
+  "(" Selector PipelineExpr ")" Range OffsetExpr |
+  Selector Range PipelineExpr |
+  Selector Range OffsetExpr PipelineExpr |
+  Selector Range PipelineExpr UnwrapExpr |
+  Selector PipelineExpr UnwrapExpr Range |
+  Selector Range OffsetExpr PipelineExpr UnwrapExpr |
+  "(" LogRangeExpr ")"
+}
+
+VectorOp {
+  Sum |
+  Avg |
+  Count |
+  Max |
+  Min |
+  Stddev |
+  Stdvar |
+  Bottomk |
+  Topk |
+  Sort |
+  Sort_Desc
+}
+
+
+Grouping {
+  By "(" Labels ")" |
+  Without "(" Labels ")" |
+  By "(" ")" |
+  Without "(" ")"
+}
+
+BinOpModifier {
+  Bool?
+  (
+    OnOrIgnoringModifier
+    (
+      (GroupLeft | GroupRight)
+      (!mul GroupingLabels)? // TODO: Is the "!mul" here correct? Inserted it to resolve a shift/reduce conflict because we always want to count opening parenthesis after this to be counted toward this modifier, not toward a next sub-expression.
+    )?
+  )?
+}
+
+OnOrIgnoringModifier {
+  Ignoring GroupingLabels |
+  On GroupingLabels
+}
+
+GroupingLabels {
+  "(" GroupingLabelList ")" |
+  "(" GroupingLabelList "," ")" |
+  "(" ")"
+}
+
+GroupingLabelList {
+  GroupingLabelList "," GroupingLabel |
+  GroupingLabel
+}
+
+GroupingLabel {
+  LabelName
+}
+
+
+OffsetExpr {
+  Offset Duration
+}
+
+Range {
+  "[" Duration "]"
+}
+
+UnwrapExpr {
+  Pipe Unwrap Identifier |
+  Pipe Unwrap ConvOp "("  Identifier ")" |
+  UnwrapExpr Pipe LabelFilter
+}
+
+Labels {
+  Identifier |
+  Labels "," Identifier
+}
+
+ConvOp {
+  BytesConv |
+  DurationConv |
+  DurationSecondsConv
+}
+
+
+@skip { whitespace | LineComment }
+
+@tokens {
+  whitespace { std.whitespace+ }
+  int { std.digit+ }
+  float { std.digit+ ("." std.digit+)? }
+  LineComment { "#" ![\n]* }
+
+  String {
+    '"' (![\\\n"] | "\\" _)* '"' |
+    "`" ![`]* "`"
+  }
+
+  ParserFlag {
+    "--strict" | "--keep-empty"
+  }
+
+  Number {
+    (std.digit+ ("." std.digit*)? | "." std.digit+) (("e" | "E") ("+" | "-")? std.digit+)? |
+    "0x" (std.digit | $[a-fA-F])+
+  }
+
+  Identifier { 
+    (std.asciiLetter | "_" | ":") (std.asciiLetter | std.digit | "_" | ":" )* 
+  }
+
+    LabelName { (std.asciiLetter | "_") (std.asciiLetter | std.digit | "_")* }
+  Duration {
+    // Each line below is just the same regex repeated over and over, but each time with one of the units made non-optional,
+    // to ensure that at least one <number>+<unit> pair is provided and an empty string is not recognized as a valid duration.
+    Sub? (
+      ( ( int "y" ) ( int "w" )? ( int "d" )? ( float "h" )? ( float "m" )? ( float "s" )? ( float "ms" )? ( float "µs" | float "us" )? ( float "ns" )? ) |
+      ( ( int "y" )? ( int "w" ) ( int "d" )? ( float "h" )? ( float "m" )? ( float "s" )? ( float "ms" )? ( float "µs" | float "us" )? ( float "ns" )? ) |
+      ( ( int "y" )? ( int "w" )? ( int "d" ) ( float "h" )? ( float "m" )? ( float "s" )? ( float "ms" )? ( float "µs" | float "us" )? ( float "ns" )? ) |
+      ( ( int "y" )? ( int "w" )? ( int "d" )? ( float "h" ) ( float "m" )? ( float "s" )? ( float "ms" )? ( float "µs" | float "us" )? ( float "ns" )? ) |
+      ( ( int "y" )? ( int "w" )? ( int "d" )? ( float "h" )? ( float "m" ) ( float "s" )? ( float "ms" )? ( float "µs" | float "us" )? ( float "ns" )? ) |
+      ( ( int "y" )? ( int "w" )? ( int "d" )? ( float "h" )? ( float "m" )? ( float "s" ) ( float "ms" )? ( float "µs" | float "us" )? ( float "ns" )? ) |
+      ( ( int "y" )? ( int "w" )? ( int "d" )? ( float "h" )? ( float "m" )? ( float "s" )? ( float "ms" ) ( float "µs" | float "us" )? ( float "ns" )? ) |
+      ( ( int "y" )? ( int "w" )? ( int "d" )? ( float "h" )? ( float "m" )? ( float "s" )? ( float "ms" )? ( float "µs" | float "us" ) ( float "ns" )? ) |
+      ( ( int "y" )? ( int "w" )? ( int "d" )? ( float "h" )? ( float "m" )? ( float "s" )? ( float "ms" )? ( float "µs" | float "us" )? ( float "ns" ) ) 
+    )
+  }
+  
+  @precedence { Duration, Bytes, Number }
+
+  // only accept `B, kB, MB, GB, TB, PB, KB, KiB, MiB, GiB, TiB, PiB`
+  // https://github.com/grafana/loki/blob/main/pkg/logql/syntax/lex.go#L382
+  Bytes {
+    ( float "B" ) |   
+    ( float "KB" ) |
+    ( float "KiB" ) |
+    ( float "kB" ) |
+    ( float "MB" ) |
+    ( float "GB" ) |
+    ( float "TB" ) |
+    ( float "PB" ) |
+    ( float "MiB" ) |
+    ( float "GiB" ) |
+    ( float "TiB" ) |
+    ( float "PiB" )
+  }
+
+  // Operator
+  Eq   { "=" }
+  Neq  { "!=" }
+  Re   { "=~" }
+  Nre  { "!~" }
+  Pipe { "|" }
+  Lte  { "<=" }
+  Lss  { "<" }
+  Gte  { ">=" }
+  Gtr  { ">" }
+  Eql  { "==" }
+  PipeExact { "|=" }
+  PipeMatch { "|~" }
+  PipePattern { "|>" }
+  Npa { "!>" }
+  Add { "+" }
+  Mul { "*" }
+  Mod { "%" }
+  Div { "/" }
+  Sub { "-" }
+  Pow { "^" }
+}
+
+@external specialize {Identifier} specializeIdentifier from "./tokens" {
+  Json,
+  Logfmt,
+  Unpack,
+  Pattern,
+  Regexp,
+  Unwrap,
+  LabelFormat,
+  LineFormat,
+  LabelReplace
+  Vector
+  Offset,
+  Bool,
+  On,
+  Ignoring,
+  GroupLeft,
+  GroupRight,
+  Decolorize,
+  Drop,
+  Keep
+}
+
+@external extend {Identifier} extendIdentifier from "./tokens" {
+  By,
+  Without,
+  And,
+  Or, 
+  Unless,
+  Sum,
+  Avg,
+  Count,
+  Max,
+  Min,
+  Stddev,
+  Stdvar,
+  Bottomk,
+  Topk,
+  Sort,
+  Sort_Desc
+}
+
+// Range operations
+CountOverTime { condFn<"count_over_time"> }
+Rate { condFn<"rate"> }
+RateCounter { condFn<"rate_counter"> }
+BytesOverTime { condFn<"bytes_over_time"> }
+BytesRate { condFn<"bytes_rate"> }
+AvgOverTime { condFn<"avg_over_time"> }
+SumOverTime { condFn<"sum_over_time"> }
+MinOverTime { condFn<"min_over_time"> }
+MaxOverTime { condFn<"max_over_time"> }
+StdvarOverTime { condFn<"stdvar_over_time"> }
+StddevOverTime { condFn<"stddev_over_time"> }
+QuantileOverTime { condFn<"quantile_over_time"> }
+FirstOverTime { condFn<"first_over_time"> }
+LastOverTime { condFn<"last_over_time"> }
+AbsentOverTime { condFn<"absent_over_time"> }
+
+// Conversion functions used with unwrap
+BytesConv { condFn<"bytes"> }
+DurationConv { condFn<"duration"> }
+DurationSecondsConv { condFn<"duration_seconds"> }
+
+// Ip function
+Ip { condFn<"ip"> }
+
+// Conditional function names (only parsed as function names when used as such).
+condFn<term> { @extend<Identifier, term> }

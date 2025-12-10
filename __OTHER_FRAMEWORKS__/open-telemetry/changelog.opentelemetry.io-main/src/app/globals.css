@@ -1,0 +1,52 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+    --background: #ffffff;
+    --foreground: #121212; /* Darker for better contrast */
+    --link-color: #0051c3; /* WCAG AA compliant link color */
+    --link-color-hover: #003584;
+}
+
+@media (prefers-color-scheme: dark) {
+    :root {
+        --background: #121212;
+        --foreground: #f8f8f8; /* Lighter for better contrast */
+        --link-color: #60a5fa; /* WCAG AA compliant link color for dark mode */
+        --link-color-hover: #93c5fd;
+    }
+}
+
+body {
+    color: var(--foreground);
+    background: var(--background);
+    font-family:
+        var(--font-geist-sans),
+        system-ui,
+        -apple-system,
+        sans-serif;
+    line-height: 1.5;
+}
+
+/* Add focus styles for keyboard navigation */
+*:focus-visible {
+    outline: 3px solid #2563eb;
+    outline-offset: 2px;
+}
+
+@layer utilities {
+    .text-balance {
+        text-wrap: balance;
+    }
+}
+
+/* Reduced motion preferences */
+@media (prefers-reduced-motion: reduce) {
+    * {
+        animation-duration: 0.01ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 0.01ms !important;
+        scroll-behavior: auto !important;
+    }
+}

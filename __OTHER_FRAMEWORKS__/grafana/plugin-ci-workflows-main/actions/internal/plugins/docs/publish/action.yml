@@ -1,0 +1,25 @@
+name: Plugins - Docs - Publish
+description: Publishes docs to the website
+
+inputs:
+  id:
+    description: Plugin ID
+    required: true
+  version:
+    description: Plugin version
+    required: true
+  github-token:
+    description: GitHub token for pushing to the website repository
+    required: true
+
+runs:
+  using: composite
+  steps:
+    - name: Publish docs
+      run: |
+        ${{ github.action_path }}/script.sh ${PLUGIN_ID} ${PLUGIN_VERSION}
+      env:
+        GITHUB_TOKEN: ${{ inputs.github-token }}
+        PLUGIN_ID: ${{ inputs.id }}
+        PLUGIN_VERSION: ${{ inputs.version }}
+      shell: bash

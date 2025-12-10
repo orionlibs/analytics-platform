@@ -1,0 +1,32 @@
+apiVersion: notificationhubs.azure.upbound.io/v1beta1
+kind: NotificationHub
+metadata:
+  annotations:
+    meta.upbound.io/example-id: notificationhubs/v1beta1/notificationhub
+  labels:
+    testing.upbound.io/example-name: example
+  name: example
+spec:
+  forProvider:
+    location: West Europe
+    namespaceName: ${azurerm_notification_hub_namespace.example.name}
+    resourceGroupNameSelector:
+      matchLabels:
+        testing.upbound.io/example-name: example
+
+---
+
+apiVersion: azure.upbound.io/v1beta1
+kind: ResourceGroup
+metadata:
+  annotations:
+    meta.upbound.io/example-id: notificationhubs/v1beta1/notificationhub
+  labels:
+    testing.upbound.io/example-name: example
+  name: example
+spec:
+  forProvider:
+    location: West Europe
+
+---
+

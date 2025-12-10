@@ -1,0 +1,7 @@
+node_modules
+dist
+out-tsc
+/test-results/
+/playwright-report/
+/blob-report/
+/playwright/.cache/

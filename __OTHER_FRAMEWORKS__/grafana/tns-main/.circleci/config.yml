@@ -1,0 +1,123 @@
+version: 2
+
+workflows:
+  version: 2
+  test-build-deploy:
+    jobs:
+    - test
+    - build
+    - staticcheck-go
+    - lint-jsonnet
+    - publish:
+        requires:
+        - test
+        - build
+        - staticcheck-go
+        filters:
+          branches:
+            only: main
+
+defaults: &defaults
+  docker:
+    - image: golang:1.23.2-bullseye
+  working_directory: /go/src/github.com/grafana/tns
+
+jobs:
+  test:
+    <<: *defaults
+    steps:
+      - checkout
+
+      - run:
+          name: Run Unit Tests
+          command: |
+            GO111MODULE=on go test ./...
+
+  staticcheck-go:
+    <<: *defaults
+    steps:
+      - checkout
+      - run:
+          name: staticcheck-go
+          command: |
+            go install honnef.co/go/tools/cmd/staticcheck@latest
+            staticcheck ./...
+
+  lint-jsonnet:
+    <<: *defaults
+    docker:
+      - image: grafana/tns-lint:6daf0b2
+    steps:
+      - checkout
+      - run:
+          name: Lint Jsonnet
+          command: |
+            make lint-jsonnet
+
+  build:
+    <<: *defaults
+    steps:
+      - checkout
+      - setup_remote_docker
+
+      - run:
+          name: Install Docker client
+          command: |
+            set -x
+            VER="17.03.0-ce"
+            curl -L -o /tmp/docker-$VER.tgz https://download.docker.com/linux/static/stable/x86_64/docker-$VER.tgz
+            tar -xz -C /tmp -f /tmp/docker-$VER.tgz
+            mv /tmp/docker/* /usr/bin
+
+      - run:
+          name: Build Images
+          command: |
+            make
+
+      - run:
+          name: Save Images
+          command: |
+            mkdir images/
+            docker save grafana/tns-loadgen:latest -o ./images/loadgen
+            docker save grafana/tns-app:latest -o ./images/app
+            docker save grafana/tns-db:latest -o ./images/db
+
+      - save_cache:
+          key: v1-tns-{{ .Branch }}-{{ .Revision }}
+          paths:
+          - images/
+
+  publish:
+    <<: *defaults
+    steps:
+      - checkout
+      - setup_remote_docker
+
+      - restore_cache:
+          key: v1-tns-{{ .Branch }}-{{ .Revision }}
+
+      - run:
+          name: Install Docker client
+          command: |
+            set -x
+            VER="17.03.0-ce"
+            curl -L -o /tmp/docker-$VER.tgz https://download.docker.com/linux/static/stable/x86_64/docker-$VER.tgz
+            tar -xz -C /tmp -f /tmp/docker-$VER.tgz
+            mv /tmp/docker/* /usr/bin
+
+      - run:
+          name: Load Images
+          command: |
+            docker load -i ./images/loadgen
+            docker load -i ./images/app
+            docker load -i ./images/db
+
+      - run:
+          name: Push Images
+          command: |
+            if [ -n "$DOCKER_USER" ]; then
+              docker login -u "$DOCKER_USER" -p "$DOCKER_PASS" &&
+              docker push grafana/tns-loadgen:latest
+              docker push grafana/tns-app:latest
+              docker push grafana/tns-db:latest
+            fi

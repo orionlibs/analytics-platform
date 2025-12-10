@@ -1,0 +1,49 @@
+name: Test
+
+on:
+  workflow_dispatch:
+  workflow_run: # zizmor: ignore[dangerous-triggers] The artifact origin is hard-coded, and repo's full name checked.
+    workflows: [ "Release" ]
+    types:
+      - completed
+
+permissions:
+  contents: read
+
+defaults:
+  run:
+    shell: bash
+
+jobs:
+  test:
+    if: ${{ github.event.workflow_run.repository.full_name == github.repository && github.event.workflow_run.conclusion == 'success' }}
+    strategy:
+      fail-fast: true
+      matrix:
+        platform: [ ubuntu-22.04, ubuntu-24.04-arm, ubuntu-latest, windows-latest, windows-2022, macos-latest ]
+    runs-on: ${{ matrix.platform }}
+    steps:
+      - name: Download Go tip
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh release download ${{ matrix.platform }} --repo grafana/gotip --pattern 'go.zip'
+      - name: Install Go tip
+        run: | # zizmor: ignore[github-env] Only uses $HOME, and the artifact is from the repo hard-coded above.
+          set -x
+          unzip go.zip -d $HOME/sdk
+          echo "GOROOT=$HOME/sdk/gotip" >> "$GITHUB_ENV"
+          echo "GOPATH=$HOME/go" >> "$GITHUB_ENV"
+          echo "$HOME/go/bin" >> "$GITHUB_PATH"
+          echo "$HOME/sdk/gotip/bin" >> "$GITHUB_PATH"
+      - name: Test Go
+        run: |
+          set -x
+          echo "$PATH"
+          which go
+          go_version_output=$(go version)
+          echo "$go_version_output"
+          if ! echo "$go_version_output" | grep -qE 'go[0-9.]+-devel'; then
+            echo "Go version is not devel"
+            exit 1
+          fi

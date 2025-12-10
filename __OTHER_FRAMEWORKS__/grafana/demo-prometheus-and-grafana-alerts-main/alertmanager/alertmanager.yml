@@ -1,0 +1,28 @@
+global:
+  smtp_smarthost: smtp.gmail.com:587
+  smtp_auth_password_file: '/etc/alertmanager/smtp_auth_password'
+  smtp_from: your_mail@gmail.com
+  smtp_auth_username: your_mail@gmail.com
+  smtp_auth_identity: your_mail@gmail.com
+
+templates:
+- '/etc/alertmanager/templates/*.tmpl'
+
+route:
+  receiver: "team-X-mail"
+  group_by: [alertname]
+  group_wait: 10s
+  group_interval: 30s
+  repeat_interval: 1h
+
+receivers:
+  - name: "team-X-webhook"
+    webhook_configs:
+      - url: "https://your_webhook_url"
+        send_resolved: true
+  - name: 'team-X-mail'
+    email_configs:
+      - send_resolved: true
+        to: your_mail@gmail.com
+        html: ''
+        text: '{{ template "custom.summary" . }}'

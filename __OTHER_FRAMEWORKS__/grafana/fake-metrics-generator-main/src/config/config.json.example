@@ -1,0 +1,12 @@
+{
+    "collectDefaultMetrics": true,
+    "labels": {
+        "perMetric": [2, 10],
+        "valueVariations": 5
+    },
+    "metrics": {
+        "quantity": 50,
+        "timeSeries": [5, 25]
+    },
+    "persistBetweenRuns": true
+}

@@ -1,0 +1,27 @@
+{
+    "smithy": "1.0",
+    "shapes": {
+        "ns.foo#SomeService": {
+            "type": "service",
+            "version": "2018-03-17",
+            "traits": {
+                "aws.protocols#restJson1": {},
+                "aws.auth#sigv4": {
+                    "name": "someservice"
+                },
+                "aws.apigateway#authorizer": "sigv4",
+                "aws.apigateway#authorizers": {
+                    "sigv4": {
+                        "scheme": "aws.auth#sigv4",
+                        "type": "request",
+                        "uri": "arn:foo:baz",
+                        "credentials": "arn:foo:bar",
+                        "identitySource": "mapping.expression",
+                        "identityValidationExpression": "[A-Z]+",
+                        "resultTtlInSeconds": 100
+                    }
+                }
+            }
+        }
+    }
+}

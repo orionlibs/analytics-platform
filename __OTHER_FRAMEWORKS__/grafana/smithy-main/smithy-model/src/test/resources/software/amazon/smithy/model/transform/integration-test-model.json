@@ -1,0 +1,130 @@
+{
+    "smithy": "1.0",
+    "shapes": {
+        "ns.foo#MyService": {
+            "type": "service",
+            "version": "2017-01-17",
+            "operations": [
+                {
+                    "target": "ns.foo#MyOperation"
+                }
+            ],
+            "resources": [
+                {
+                    "target": "ns.foo#MyResource"
+                }
+            ]
+        },
+        "ns.foo#MyOperation": {
+            "type": "operation",
+            "input": {
+                "target": "ns.foo#MyOperationInput"
+            },
+            "output": {
+                "target": "ns.foo#MyOperationOutput"
+            },
+            "errors": [
+                {
+                    "target": "ns.foo#MyOperationError"
+                }
+            ],
+            "traits": {
+                "smithy.api#readonly": {}
+            }
+        },
+        "ns.foo#MyOperationInput": {
+            "type": "structure"
+        },
+        "ns.foo#MyOperationOutput": {
+            "type": "structure",
+            "members": {
+                "id": {
+                    "target": "ns.foo#MyResourceIdentifier",
+                    "traits": {
+                        "smithy.api#required": {}
+                    }
+                }
+            },
+            "traits": {
+                "smithy.api#references": [
+                    {
+                        "resource": "ns.foo#MyResource",
+                        "ids": {
+                            "id": "id"
+                        }
+                    }
+                ]
+            }
+        },
+        "ns.foo#MyOperationError": {
+            "type": "structure",
+            "traits": {
+                "smithy.api#error": "client"
+            }
+        },
+        "ns.foo#MyResource": {
+            "type": "resource",
+            "identifiers": {
+                "id": {
+                    "target": "ns.foo#MyResourceIdentifier"
+                }
+            },
+            "create": {
+                "target": "ns.foo#CreateMyResource"
+            },
+            "operations": [
+                {
+                    "target": "ns.foo#MyResourceOperation"
+                }
+            ]
+        },
+        "ns.foo#MyResourceIdentifier": {
+            "type": "string"
+        },
+        "ns.foo#CreateMyResource": {
+            "type": "operation",
+            "output": {
+                "target": "ns.foo#CreateMyResourceOutput"
+            }
+        },
+        "ns.foo#CreateMyResourceOutput": {
+            "type": "structure",
+            "members": {
+                "id": {
+                    "target": "ns.foo#MyResourceIdentifier"
+                }
+            }
+        },
+        "ns.foo#MyResourceOperation": {
+            "type": "operation",
+            "input": {
+                "target": "ns.foo#MyResourceOperationInput"
+            },
+            "traits": {
+                "smithy.api#readonly": {}
+            }
+        },
+        "ns.foo#MyResourceOperationInput": {
+            "type": "structure",
+            "members": {
+                "id": {
+                    "target": "ns.foo#MyResourceIdentifier",
+                    "traits": {
+                        "smithy.api#required": {}
+                    }
+                },
+                "otherValue": {
+                    "target": "ns.foo#MyResourceOperationInputString"
+                }
+            }
+        },
+        "ns.foo#MyResourceOperationInputString": {
+            "type": "string",
+            "traits": {
+                "smithy.api#tags": [
+                    "foo"
+                ]
+            }
+        }
+    }
+}

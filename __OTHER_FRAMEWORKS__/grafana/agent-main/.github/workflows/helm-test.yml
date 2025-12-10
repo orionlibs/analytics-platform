@@ -1,0 +1,95 @@
+name: Test Helm chart
+on: pull_request
+permissions:
+  contents: read
+jobs:
+  regenerate-docs:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4
+        with:
+          persist-credentials: false
+
+      - name: Regenerate docs
+        run: |
+          docker run --rm \
+            -v "$(pwd)/operations/helm/charts/grafana-agent:/helm-docs" \
+            -u "$(id -u)" \
+            jnorwood/helm-docs
+          if ! git diff --exit-code; then
+            echo "Helm chart documentation is not up to date. Please run 'make generate-helm-docs' and commit changes!" >&2
+            exit 1
+          fi
+
+  regenerate-tests:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4
+        with:
+          persist-credentials: false
+
+      - name: Install Helm
+        uses: azure/setup-helm@b9e51907a09c216f16ebe8536097933489208112 # v4
+        with:
+          version: v3.10.3
+
+      - name: Regenerate tests
+        run: |
+          make generate-helm-tests
+          if [ ! -z "$(git status --porcelain)" ]; then
+            echo "Helm chart tests are not up to date. Please run 'make generate-helm-tests' and commit changes!" >&2
+            exit 1
+          fi
+
+  lint-test:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Install Helm
+        uses: azure/setup-helm@b9e51907a09c216f16ebe8536097933489208112 # v4
+        with:
+          version: v3.10.3
+
+      - name: Install Python
+        uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5
+        with:
+          python-version: '3.9'
+          check-latest: true
+
+      - name: Install chart-testing
+        uses: helm/chart-testing-action@e6669bcd63d7cb57cb4380c33043eebe5d111992 # v2.6.1
+
+      - name: Determine changed charts
+        id: list-changed
+        run: |
+          changed=$(ct list-changed --config ./operations/helm/ct.yaml)
+          if [[ -n "$changed" ]]; then
+            echo "changed=true" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Lint charts
+        run: ct lint --config ./operations/helm/ct.yaml
+
+      - name: Create kind cluster
+        uses: helm/kind-action@ae94020eaf628e9b9b9f341a10cc0cdcf5c018fb # v1.11.0
+        if: steps.list-changed.outputs.changed == 'true'
+
+      - name: Add dependency chart repos
+        if: steps.list-changed.outputs.changed == 'true'
+        run: |
+          helm repo add prometheus-community https://prometheus-community.github.io/helm-charts
+
+      - name: Install Prometheus Operator CRDs
+        if: steps.list-changed.outputs.changed == 'true'
+        run: |
+          helm install my-prometheus-operator-crds prometheus-community/prometheus-operator-crds --version 6.0.0
+
+      - name: Test charts
+        run: ct install --config ./operations/helm/ct.yaml

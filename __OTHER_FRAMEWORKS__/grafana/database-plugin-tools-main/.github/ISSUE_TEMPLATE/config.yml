@@ -1,0 +1,4 @@
+contact_links:
+  - name: Usage question or support
+    url: https://community.grafana.com/c/plugin-development/30
+    about: Join our community

@@ -1,0 +1,75 @@
+{
+  "name": "@grafana/incident-node",
+  "description": "Client wrapper for Grafana Incident's Public API",
+  "author": "Grafana",
+  "version": "1.33.1",
+  "license": "MIT",
+  "module": "dist/index.mjs",
+  "main": "dist/index.js",
+  "typings": "dist/index.d.ts",
+  "exports": {
+    "./package.json": "./package.json",
+    ".": {
+      "import": {
+        "types": "./dist/index.d.mts",
+        "default": "./dist/index.mjs"
+      },
+      "require": {
+        "types": "./dist/index.d.ts",
+        "default": "./dist/index.js"
+      }
+    }
+  },
+  "files": [
+    "dist",
+    "src"
+  ],
+  "engines": {
+    "node": ">=14"
+  },
+  "scripts": {
+    "start": "tsup --config=tsup.config.ts --watch",
+    "watch": "pnpm start",
+    "build": "tsup --config=tsup.config.ts --env.NODE_ENV production",
+    "clean": "rm -rf dist",
+    "size": "size-limit",
+    "lint": "true",
+    "format": "prettier -c ./src",
+    "format:fix": "prettier -w ./src",
+    "type-check": "tsc --noEmit"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/grafana/incident-node.git"
+  },
+  "homepage": "https://github.com/grafana/incident-node",
+  "keywords": [
+    "grafana",
+    "incident",
+    "api",
+    "node"
+  ],
+  "size-limit": [
+    {
+      "path": "dist/incident-api-node.cjs.production.min.js",
+      "limit": "25 KB"
+    },
+    {
+      "path": "dist/incident-api-node.esm.js",
+      "limit": "25 KB"
+    }
+  ],
+  "devDependencies": {
+    "@size-limit/preset-small-lib": "^8.2.4",
+    "@types/node": "^20.12.7",
+    "husky": "^8.0.3",
+    "prettier": "^3.0.2",
+    "size-limit": "^8.2.4",
+    "tslib": "^2.5.2",
+    "tsup": "^8.0.2",
+    "typescript": "^5.0.4"
+  },
+  "dependencies": {
+    "zod": "^3.23"
+  }
+}

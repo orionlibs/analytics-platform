@@ -1,0 +1,92 @@
+{
+  "Package": "arrays",
+  "Objects": {
+    "ArrayOfStrings": {
+      "Name": "ArrayOfStrings",
+      "Comments": [
+        "List of tags, maybe?"
+      ],
+      "SelfRef": {
+        "ReferredPkg": "arrays",
+        "ReferredType": "ArrayOfStrings"
+      },
+      "Type": {
+        "Kind": "array",
+        "Array": {
+          "ValueType": {
+            "Kind": "scalar",
+            "Scalar": {
+              "ScalarKind": "string"
+            }
+          }
+        }
+      }
+    },
+    "someStruct": {
+      "Name": "someStruct",
+      "SelfRef": {
+        "ReferredPkg": "arrays",
+        "ReferredType": "someStruct"
+      },
+      "Type": {
+        "Kind": "struct",
+        "Struct": {
+          "Fields": [
+            {
+              "Name": "FieldAny",
+              "Required": true,
+              "Type": {
+                "Kind": "scalar",
+                "Scalar": {
+                  "ScalarKind": "any"
+                }
+              }
+            }
+          ]
+        }
+      }
+    },
+    "ArrayOfRefs": {
+      "Name": "ArrayOfRefs",
+      "SelfRef": {
+        "ReferredPkg": "arrays",
+        "ReferredType": "ArrayOfRefs"
+      },
+      "Type": {
+        "Kind": "array",
+        "Array": {
+          "ValueType": {
+            "Kind": "ref",
+            "Ref": {
+              "ReferredPkg": "arrays",
+              "ReferredType": "someStruct"
+            }
+          }
+        }
+      }
+    },
+    "ArrayOfArrayOfNumbers": {
+      "Name": "ArrayOfArrayOfNumbers",
+      "SelfRef": {
+        "ReferredPkg": "arrays",
+        "ReferredType": "ArrayOfArrayOfNumbers"
+      },
+      "Type": {
+        "Kind": "array",
+        "Array": {
+          "ValueType": {
+            "Kind": "array",
+            "Array": {
+              "ValueType": {
+                "Kind": "scalar",
+                "Scalar": {
+                  "ScalarKind": "int64"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}

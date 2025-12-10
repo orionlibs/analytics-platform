@@ -1,0 +1,131 @@
+{
+  "Package": "grafanatest",
+  "Metadata": {},
+  "EntryPointType": {
+    "Kind": "",
+    "Nullable": false
+  },
+  "Objects": {
+    "Array": {
+      "Name": "Array",
+      "Type": {
+        "Kind": "array",
+        "Nullable": false,
+        "Default": [
+          "anything"
+        ],
+        "Array": {
+          "ValueType": {
+            "Kind": "scalar",
+            "Nullable": false,
+            "Scalar": {
+              "ScalarKind": "string"
+            }
+          }
+        }
+      },
+      "SelfRef": {
+        "ReferredPkg": "grafanatest",
+        "ReferredType": "Array"
+      }
+    },
+    "Boolean": {
+      "Name": "Boolean",
+      "Type": {
+        "Kind": "scalar",
+        "Nullable": false,
+        "Default": true,
+        "Scalar": {
+          "ScalarKind": "bool"
+        }
+      },
+      "SelfRef": {
+        "ReferredPkg": "grafanatest",
+        "ReferredType": "Boolean"
+      }
+    },
+    "Enum": {
+      "Name": "Enum",
+      "Type": {
+        "Kind": "enum",
+        "Nullable": false,
+        "Default": "bar",
+        "Enum": {
+          "Values": [
+            {
+              "Type": {
+                "Kind": "scalar",
+                "Nullable": false,
+                "Scalar": {
+                  "ScalarKind": "string"
+                }
+              },
+              "Name": "foo",
+              "Value": "foo"
+            },
+            {
+              "Type": {
+                "Kind": "scalar",
+                "Nullable": false,
+                "Scalar": {
+                  "ScalarKind": "string"
+                }
+              },
+              "Name": "bar",
+              "Value": "bar"
+            }
+          ]
+        }
+      },
+      "SelfRef": {
+        "ReferredPkg": "grafanatest",
+        "ReferredType": "Enum"
+      }
+    },
+    "Float": {
+      "Name": "Float",
+      "Type": {
+        "Kind": "scalar",
+        "Nullable": false,
+        "Default": 32.32,
+        "Scalar": {
+          "ScalarKind": "float32"
+        }
+      },
+      "SelfRef": {
+        "ReferredPkg": "grafanatest",
+        "ReferredType": "Float"
+      }
+    },
+    "Integer": {
+      "Name": "Integer",
+      "Type": {
+        "Kind": "scalar",
+        "Nullable": false,
+        "Default": 32,
+        "Scalar": {
+          "ScalarKind": "int64"
+        }
+      },
+      "SelfRef": {
+        "ReferredPkg": "grafanatest",
+        "ReferredType": "Integer"
+      }
+    },
+    "String": {
+      "Name": "String",
+      "Type": {
+        "Kind": "scalar",
+        "Nullable": false,
+        "Default": "default value",
+        "Scalar": {
+          "ScalarKind": "string"
+        }
+      },
+      "SelfRef": {
+        "ReferredPkg": "grafanatest",
+        "ReferredType": "String"
+      }
+    }
+  }
+}

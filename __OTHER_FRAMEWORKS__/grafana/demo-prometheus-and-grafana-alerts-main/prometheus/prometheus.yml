@@ -1,0 +1,16 @@
+global:
+  scrape_interval: 1s
+  evaluation_interval: 5s
+
+alerting:
+  alertmanagers:
+    - static_configs:
+        - targets:
+            - 'alertmanager:9093'
+
+rule_files:
+  - 'rules/1.basic.yml'
+  #- 'rules/2.absent.yml'
+  #- 'rules/3.group.yml'
+  #- 'rules/4.templating.yml'
+  # restart prometheus

@@ -1,0 +1,174 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Description: >
+  AWS ALB Logs to Grafana Cloud Loki:
+
+  Send ALB access logs to Grafana Cloud Loki.
+
+Parameters:
+  WriteAddress:
+    Description: The Grafana Cloud Loki URL that logs will be forwarded to.
+    Type: String
+    Default: ""
+  ReservedConcurrency:
+    Description: The maximum of concurrent executions you want to reserve for the function.
+    Type: Number
+    Default: 2
+  Username:
+    Description: The basic auth username for Grafana Cloud Loki.
+    Type: String
+    Default: ""
+  Password:
+    Description: The basic auth password for Grafana Cloud Loki (your Grafana.com API Key).
+    Type: String
+    Default: ""
+    NoEcho: true
+  ExtraLabels:
+    Description: Comma separated list of extra labels, in the format 'name1,value1,name2,value2,...,nameN,valueN' to add to entries forwarded by lambda-promtail.
+    Type: String
+    Default: ""
+  S3BucketName:
+    Description: The name of the bucket containing the 'lambda-promtail.zip' file.
+    Type: String
+    Default: ""
+  S3KeyName:
+    Description: The path to the 'lambda-promtail.zip' file.
+    Type: String
+    Default: "lambda-promtail.zip"
+  AccessLogsS3Bucket:
+    Description: The S3 bucket to listen for event notifications from.
+    Type: String
+    Default: ""
+  AccessLogsS3PrefixKey:
+    Description: An optional prefix in the S3 bucket to listen for event notifications from.
+    Type: String
+    Default: ""
+
+Metadata:
+  AWS::CloudFormation::Interface:
+    ParameterGroups:
+    - Label:
+        default: "Grafana Cloud Loki configuration"
+      Parameters:
+      - WriteAddress
+      - Username
+      - Password
+    - Label:
+        default: "Lambda function configuration"
+      Parameters:
+      - S3BucketName
+      - S3KeyName
+      - ReservedConcurrency
+    - Label:
+        default: "ALB Logs configuration"
+      Parameters:
+      - AccessLogsS3Bucket
+      - AccessLogsS3PrefixKey
+    - Label:
+        default: "Additional configuration"
+      Parameters:
+      - ExtraLabels
+
+Resources:
+  LambdaPromtailRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service:
+                - lambda.amazonaws.com
+            Action:
+              - sts:AssumeRole
+      Description: "Grafana Cloud ALB Logs integration role"
+      Policies:
+        - PolicyName: logs
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Effect: Allow
+                Action:
+                  - logs:CreateLogGroup
+                  - logs:CreateLogStream
+                  - logs:PutLogEvents
+                Resource: arn:aws:logs:*:*:*
+        - PolicyName: s3
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Effect: Allow
+                Action:
+                  - s3:GetObject
+                Resource: 
+                  Fn::Sub: arn:aws:s3:::${AccessLogsS3Bucket}/*
+      RoleName: GrafanaLabsALBLogsIntegration
+
+  LambdaPromtailFunction:
+    Type: AWS::Lambda::Function
+    Properties:
+      FunctionName: GrafanaCloudALBLogsForwarder
+      Code:
+        S3Bucket: !Ref S3BucketName
+        S3Key: !Ref S3KeyName
+      Runtime: provided.al2023
+      Handler: main
+      MemorySize: 128
+      Timeout: 60
+      Role: !GetAtt LambdaPromtailRole.Arn
+      ReservedConcurrentExecutions: !Ref ReservedConcurrency
+      Environment:
+        Variables:
+          WRITE_ADDRESS: !Ref WriteAddress
+          USERNAME: !Ref Username
+          PASSWORD: !Ref Password
+          EXTRA_LABELS: !Ref ExtraLabels
+    DependsOn: LambdaPromtailRole
+
+  LambdaPromtailVersion:
+    Type: AWS::Lambda::Version
+    Properties:
+      FunctionName: !Ref LambdaPromtailFunction
+
+  LambdaPromtailEventInvokeConfig:
+    Type: AWS::Lambda::EventInvokeConfig
+    Properties:
+      FunctionName: !Ref LambdaPromtailFunction
+      MaximumRetryAttempts: 2
+      Qualifier: !GetAtt LambdaPromtailVersion.Version
+
+  # EventBridge rule that routes S3 object created events, from the access logs bucket, into the main lambda
+  EventRule:
+    Type: AWS::Events::Rule
+    Properties:
+      Description: EventRule
+      State: ENABLED
+      EventPattern: # https://docs.aws.amazon.com/eventbridge/latest/userguide/eb-event-patterns.html#eb-filtering-data-
+        source:
+          - aws.s3
+        detail-type:
+          - "Object Created"
+        detail:
+          bucket:
+            name:
+              - !Ref AccessLogsS3Bucket
+          object:
+            key:
+              - prefix: !Ref AccessLogsS3PrefixKey
+      Targets:
+        - Arn: !GetAtt LambdaPromtailFunction.Arn
+          Id: LambdaPromtailTarget
+
+  # Permission that allows EventBridge rule to trigger the lambda forwarder
+  EventRuleLambdaPermission:
+    Type: AWS::Lambda::Permission
+    Properties:
+      FunctionName: !GetAtt LambdaPromtailFunction.Arn
+      Action: lambda:InvokeFunction
+      Principal: events.amazonaws.com
+      SourceArn: !GetAtt EventRule.Arn
+
+Outputs:
+  LambdaPromtailFunction:
+    Description: "Lambda Promtail Function ARN"
+    Value: !GetAtt LambdaPromtailFunction.Arn

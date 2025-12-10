@@ -1,0 +1,38 @@
+{
+  "name": "tsqtsq",
+  "version": "1.1.0",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "files": [
+    "dist",
+    "index.js"
+  ],
+  "exports": "./dist/index.js",
+  "license": "AGPL-3.0-only",
+  "description": "A reusable and composable query library for Prometheus",
+  "keywords": [
+    "prometheus",
+    "promql",
+    "typescript",
+    "query",
+    "javascript"
+  ],
+  "author": "Grafana Labs",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/grafana/tsqtsq.git"
+  },
+  "devDependencies": {
+    "@types/jest": "^30.0.0",
+    "esbuild": "^0.27.0",
+    "jest": "^30.0.0",
+    "ts-jest": "^29.2.4",
+    "typescript": "^5.7.2"
+  },
+  "scripts": {
+    "test": "jest",
+    "test:watch": "jest --watch",
+    "build": "tsc",
+    "deploy": "npm run build && npm publish"
+  }
+}

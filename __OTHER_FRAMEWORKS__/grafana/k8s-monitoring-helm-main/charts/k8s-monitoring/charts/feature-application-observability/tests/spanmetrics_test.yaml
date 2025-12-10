@@ -1,0 +1,24 @@
+# yamllint disable rule:document-start rule:line-length rule:trailing-spaces
+suite: Test - Application Observability - Spanmetrics connector
+templates:
+  - configmap.yaml
+tests:
+  - it: creates the pipeline with the spanmetrics connector
+    set:
+      deployAsConfigMap: true
+      connectors:
+        spanMetrics:
+          enabled: true
+          dimensions:
+            - name: "http.status_code"
+            - name: "http.method"
+              default: "GET"
+      receivers:
+        otlp:
+          grpc:
+            enabled: true
+    asserts:
+      - isKind:
+          of: ConfigMap
+      - matchSnapshot:
+          path: data["module.alloy"]

@@ -1,0 +1,67 @@
+version: 2
+project_name: opentelemetry-collector-releases
+env:
+  - COSIGN_YES=true
+  - LD_FLAGS=-s -w
+  - BUILD_FLAGS=-trimpath
+  - CONTAINER_IMAGE_EPHEMERAL_TAG={{ if .IsNightly }}nightly{{ else }}latest{{ end }}
+  - GOPROXY=https://proxy.golang.org,direct
+  - CGO_ENABLED=0
+release:
+  replace_existing_artifacts: true
+builds:
+  - id: otelcol-contrib-linux
+    goos:
+      - linux
+    goarch:
+      - "386"
+      - amd64
+      - arm
+      - arm64
+      - ppc64le
+      - riscv64
+      - s390x
+    goarm:
+      - "7"
+    dir: _build
+    binary: otelcol-contrib
+    ldflags:
+      - '{{ .Env.LD_FLAGS }}'
+    flags:
+      - '{{ .Env.BUILD_FLAGS }}'
+  - id: otelcol-contrib-darwin
+    goos:
+      - darwin
+    goarch:
+      - amd64
+      - arm64
+    dir: _build
+    binary: otelcol-contrib
+    ldflags:
+      - '{{ .Env.LD_FLAGS }}'
+    flags:
+      - '{{ .Env.BUILD_FLAGS }}'
+  - id: otelcol-contrib-windows
+    goos:
+      - windows
+    goarch:
+      - "386"
+      - amd64
+      - arm64
+    dir: _build
+    binary: otelcol-contrib
+    ldflags:
+      - '{{ .Env.LD_FLAGS }}'
+    flags:
+      - '{{ .Env.BUILD_FLAGS }}'
+archives:
+  - formats:
+      - binary
+monorepo:
+  tag_prefix: v
+partial:
+  by: target
+nightly:
+  version_template: '{{ incpatch .Version}}-nightly.{{ .ShortCommit }}'
+  tag_name: nightly-otelcol-contrib
+  keep_single_release: true

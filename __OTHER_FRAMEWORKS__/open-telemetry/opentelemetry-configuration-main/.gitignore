@@ -1,0 +1,32 @@
+# IntelliJ IDEA
+.idea
+*.iml
+
+# VS Code
+.vscode
+.classpath
+.project
+.settings/
+
+# OS X
+.DS_Store
+
+# Emacs
+*~
+\#*\#
+
+# Vim
+.swp
+
+# Node.js files for tools (e.g. markdown-toc)
+node_modules/
+package-lock.json
+
+# Output directory after applying env substitution
+out
+schema_out
+
+# validator binary
+otel_config_validator
+validator/schema
+validator/.tools

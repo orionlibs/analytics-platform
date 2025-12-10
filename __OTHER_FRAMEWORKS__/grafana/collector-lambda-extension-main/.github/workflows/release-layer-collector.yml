@@ -1,0 +1,159 @@
+---
+name: "Release Collector Lambda layer"
+
+on:
+  push:
+    branches:
+      - 'main'
+    paths:
+      - 'opentelemetry-lambda'
+  workflow_dispatch:
+
+permissions: {}
+
+jobs:
+  infer-version:
+    runs-on: ubuntu-latest
+    outputs:
+      COLLECTOR_VERSION: ${{ steps.get-upstream-version.outputs.COLLECTOR_VERSION }}
+      UPSTREAM_VERSION: ${{ steps.get-upstream-version.outputs.UPSTREAM_VERSION }}
+    steps:
+      - uses: actions/checkout@1af3b93b6815bc44a9784bd300feb67ff0d1eeb3 # v6
+        with:
+          submodules: recursive
+          persist-credentials: false
+
+      - name: get upstream version
+        id: get-upstream-version
+        run: |
+          COLLECTOR_VERSION=$(grep 'go.opentelemetry.io/collector/otelcol v' ${{ github.workspace }}/opentelemetry-lambda/collector/go.mod | awk '{print $2; exit}')
+          echo "UPSTREAM_VERSION=$COLLECTOR_VERSION" >> $GITHUB_OUTPUT
+          echo "COLLECTOR_VERSION=$COLLECTOR_VERSION+grafana" >> $GITHUB_OUTPUT
+          
+  create-release:
+    permissions:
+      id-token: write
+      contents: write
+    runs-on: ubuntu-latest
+    needs: infer-version
+    steps:
+      - uses: actions/checkout@1af3b93b6815bc44a9784bd300feb67ff0d1eeb3 # v6
+        with:
+          persist-credentials: false
+      - name: Create Release
+        run: gh release create ${{needs.infer-version.outputs.COLLECTOR_VERSION}} --draft --title ${{needs.infer-version.outputs.COLLECTOR_VERSION}}
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  build-layer:
+    runs-on: ubuntu-latest
+    needs: [infer-version, create-release]
+    strategy:
+      matrix:
+        architecture:
+          - amd64
+          - arm64
+    permissions:
+      id-token: write
+      contents: write
+    steps:
+      - uses: actions/checkout@1af3b93b6815bc44a9784bd300feb67ff0d1eeb3 # v6
+        with:
+          submodules: recursive
+          persist-credentials: false
+
+      - uses: actions/setup-go@44694675825211faa026b3c33043df3e48a5fa00 # v6
+        with:
+          go-version: '^1.23.1'
+
+      - name: copy config overlay
+        run: cp -r collector/* opentelemetry-lambda/collector/
+
+      - name: build
+        run: make -C opentelemetry-lambda/collector package GOARCH=${{ matrix.architecture }}
+
+      - uses: actions/upload-artifact@330a01c490aca151604b8cf639adc76d48f6c5d4 # v5
+        with:
+          name: opentelemetry-collector-layer-${{ matrix.architecture }}.zip
+          path: ${{ github.workspace }}/opentelemetry-lambda/collector/build/opentelemetry-collector-layer-${{ matrix.architecture }}.zip
+
+      - name: Add Binary to Release
+        run: |
+          gh release upload --repo ${GH_REPO} ${{needs.infer-version.outputs.COLLECTOR_VERSION}} ${{ github.workspace }}/opentelemetry-lambda/collector/build/opentelemetry-collector-layer-${{ matrix.architecture }}.zip
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_REPO: ${{ github.repository }}
+
+  publish-layer:
+    permissions:
+      id-token: write
+      contents: write
+    uses: ./.github/workflows/layer-publish.yml
+    needs: [infer-version,build-layer]
+    strategy:
+      matrix:
+        architecture:
+          - amd64
+          - arm64
+        aws_region:
+          - ap-northeast-1
+          - ap-northeast-2
+          - ap-south-1
+          - ap-southeast-1
+          - ap-southeast-2
+          - ca-central-1
+          - eu-central-1
+          - eu-north-1
+          - eu-west-1
+          - eu-west-2
+          - eu-west-3
+          - sa-east-1
+          - us-east-1
+          - us-east-2
+          - us-west-1
+          - us-west-2
+    with:
+      artifact-name: opentelemetry-collector-layer-${{ matrix.architecture }}.zip
+      layer-name: opentelemetry-collector-grafana
+      component-version: ${{needs.infer-version.outputs.UPSTREAM_VERSION}}
+      architecture: ${{ matrix.architecture }}
+      release-group: prod
+      aws_region: ${{ matrix.aws_region }}
+
+  update-release:
+    runs-on: ubuntu-latest
+    needs: [publish-layer,infer-version]
+    permissions:
+      id-token: write
+      contents: write
+    steps:
+      - uses: actions/checkout@1af3b93b6815bc44a9784bd300feb67ff0d1eeb3 # v6
+        with:
+          submodules: recursive
+          persist-credentials: false
+      - uses: actions/download-artifact@018cc2cf5baa6db3ef3c5f8a56943fffe632ef53 # v6
+        with:
+          path: artifacts/
+      - name: Assemble ARNs
+        env:
+          UPSTREAM_VERSION: '${{ needs.infer-version.outputs.UPSTREAM_VERSION }}'
+        run: |
+
+          LAMBDA_COMMIT=$(git rev-parse HEAD:./opentelemetry-lambda)
+
+          echo '## Contains' > notes.txt
+          echo "opentelemetry-collector [$UPSTREAM_VERSION](https://github.com/open-telemetry/opentelemetry-collector/releases/tag/$UPSTREAM_VERSION)" >> notes.txt
+          echo "opentelemetry-collector-contrib [$UPSTREAM_VERSION](https://github.com/open-telemetry/opentelemetry-collector-contrib/releases/tag/$UPSTREAM_VERSION)" >> notes.txt
+          echo "opentelemetry-lambda [$LAMBDA_COMMIT](https://github.com/open-telemetry/opentelemetry-lambda/tree/$LAMBDA_COMMIT)" >> notes.txt
+
+          echo '## Published ARNs' >> notes.txt
+          echo '```' >> notes.txt
+          cat artifacts/*/arn*.txt | sort >> notes.txt
+          echo '```' >> notes.txt
+      - name: Add Binary to Release
+        run: |
+          gh release edit --repo ${GH_REPO} ${{needs.infer-version.outputs.COLLECTOR_VERSION}} -F notes.txt
+          gh release edit --repo ${GH_REPO} ${{needs.infer-version.outputs.COLLECTOR_VERSION}} --draft=false
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_REPO: ${{ github.repository }}

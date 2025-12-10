@@ -1,0 +1,9 @@
+package main
+
+import (
+{{ range . }}
+	_ "{{.}}"
+{{ end }}
+)
+
+func main() {}

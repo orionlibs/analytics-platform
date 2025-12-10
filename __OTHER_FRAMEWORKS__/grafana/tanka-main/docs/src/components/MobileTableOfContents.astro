@@ -1,0 +1,82 @@
+---
+import { Icon } from '@astrojs/starlight/components';
+import TableOfContentsList from './TableOfContentsList.astro';
+import type { Props } from '@astrojs/starlight/props';
+
+const { toc, slug } = Astro.props;
+---
+
+{
+  toc && (
+    <mobile-starlight-toc
+      data-min-h={toc.minHeadingLevel}
+      data-max-h={toc.maxHeadingLevel}
+    >
+      <nav class="fixed inset-x-0 top-[calc(var(--sl-nav-height)_-_1px)] z-50 border-t border-gray-300 bg-gray-100 md:left-[var(--sl-content-inline-start,0)] dark:border-gray-900 dark:bg-gray-800">
+        <details id="starlight__mobile-toc">
+          <summary
+            id="starlight__on-this-page--mobile"
+            class="flex h-[--sl-mobile-toc-height] items-center gap-2 border-b border-gray-300 p-4 text-xs dark:border-gray-900"
+          >
+            <div class="in-open:!border-accent-600 flex shrink-0 items-center justify-between gap-4 rounded-lg border border-gray-300 bg-white px-3 py-2 text-gray-600 select-none hover:border-gray-400 hover:text-gray-900 in-open:!text-gray-900 dark:border-gray-700 dark:bg-gray-900 dark:text-inherit dark:hover:text-white dark:in-open:!text-white">
+              {Astro.locals.t('tableOfContents.onThisPage')}
+              <Icon
+                name={'right-caret'}
+                class="size-4 duration-200 in-open:rotate-90 motion-safe:transition-transform rtl:rotate-180"
+              />
+            </div>
+            <span
+              id="display-current"
+              class="truncate text-gray-900 dark:text-white"
+            />
+          </summary>
+          <div class="overflow-y-auto overscroll-contain border border-gray-300 border-t-gray-200 bg-white shadow-md dark:border-gray-900 dark:bg-gray-900">
+            <TableOfContentsList toc={toc.items} isMobile basePath={slug} />
+          </div>
+        </details>
+      </nav>
+    </mobile-starlight-toc>
+  )
+}
+
+<script>
+  import { StarlightTOC } from './starlight-toc';
+
+  class MobileStarlightTOC extends StarlightTOC {
+    override set current(link: HTMLAnchorElement) {
+      super.current = link;
+      const display = this.querySelector('#display-current') as HTMLSpanElement;
+      if (display) display.textContent = link.textContent;
+    }
+
+    constructor() {
+      super();
+      const details = this.querySelector('details');
+      if (!details) return;
+      const closeToC = () => {
+        details.open = false;
+      };
+      // Close the table of contents whenever a link is clicked.
+      details.querySelectorAll('a').forEach((a) => {
+        a.addEventListener('click', closeToC);
+      });
+      // Close the table of contents when a user clicks outside of it.
+      window.addEventListener('click', (e) => {
+        if (!details.contains(e.target as Node)) closeToC();
+      });
+      // Or when they press the escape key.
+      window.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape' && details.open) {
+          const hasFocus = details.contains(document.activeElement);
+          closeToC();
+          if (hasFocus) {
+            const summary = details.querySelector('summary');
+            if (summary) summary.focus();
+          }
+        }
+      });
+    }
+  }
+
+  customElements.define('mobile-starlight-toc', MobileStarlightTOC);
+</script>

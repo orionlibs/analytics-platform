@@ -1,0 +1,28 @@
+---
+name: helm-ci
+on:
+  workflow_dispatch:
+  pull_request:
+    paths:
+      - "charts/meta-monitoring/**"
+
+permissions:
+  contents: read
+
+env:
+  CT_CONFIGFILE: charts/meta-monitoring/ct.yaml
+
+jobs:
+  call-lint:
+    name: Lint Helm Chart
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683  # v4
+        with:
+          persist-credentials: false
+
+      - name: Lint Yaml
+        run: make helm-lint

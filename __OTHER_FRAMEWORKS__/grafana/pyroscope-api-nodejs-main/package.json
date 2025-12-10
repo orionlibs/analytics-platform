@@ -1,0 +1,111 @@
+{
+  "name": "@pyroscope/api",
+  "version": "0.1.1",
+  "author": "Grafana Labs",
+  "license": "Apache-2.0",
+  "description": "Pyroscope API",
+  "repository": "https://github.com/grafana/pyroscope-api-nodejs.git",
+  "files": [
+    "dist/**/*.js",
+    "dist/**/*.js.map",
+    "dist/**/*.d.ts",
+    "dist/**/*.mjs"
+  ],
+  "publishConfig": {
+    "access": "public"
+  },
+  "dependencies": {
+    "@bufbuild/protobuf": "~1.7.1",
+    "@connectrpc/connect": "~1.3.0",
+    "@connectrpc/connect-query": "~1.1.3",
+    "@connectrpc/connect-web": "~1.3.0",
+    "@tanstack/react-query": "^5.17.19"
+  },
+  "scripts": {
+    "build": "tsup",
+    "dev": "tsup --watch",
+    "format": "prettier --write \"./**/*.{js,jsx,ts,tsx,css,less,pcss,scss,json,md,yaml,yml}\" --list-different",
+    "generate": "yarn exec buf generate",
+    "type-check": "tsc --noEmit"
+  },
+  "devDependencies": {
+    "@bufbuild/buf": "^1.51.0",
+    "@bufbuild/protoc-gen-es": "^1.7.1",
+    "@connectrpc/protoc-gen-connect-query": "^1.1.3",
+    "fork-ts-checker-webpack-plugin": "^7.2.13",
+    "prettier": "^3.1.0",
+    "tsup": "^8.4.0"
+  },
+  "exports": {
+    "./settings/v1/collection_rules-CollectionRulesService_connectquery": {
+      "types": "./dist/settings/v1/collection_rules-CollectionRulesService_connectquery.d.ts",
+      "import": "./dist/settings/v1/collection_rules-CollectionRulesService_connectquery.mjs",
+      "require": "./dist/settings/v1/collection_rules-CollectionRulesService_connectquery.js"
+    },
+    "./settings/v1/collection_rules_pb": {
+      "types": "./dist/settings/v1/collection_rules_pb.d.ts",
+      "import": "./dist/settings/v1/collection_rules_pb.mjs",
+      "require": "./dist/settings/v1/collection_rules_pb.js"
+    },
+    "./settings/v1/recording_rules-RecordingRulesService_connectquery": {
+      "types": "./dist/settings/v1/recording_rules-RecordingRulesService_connectquery.d.ts",
+      "import": "./dist/settings/v1/recording_rules-RecordingRulesService_connectquery.mjs",
+      "require": "./dist/settings/v1/recording_rules-RecordingRulesService_connectquery.js"
+    },
+    "./settings/v1/setting_pb": {
+      "types": "./dist/settings/v1/setting_pb.d.ts",
+      "import": "./dist/settings/v1/setting_pb.mjs",
+      "require": "./dist/settings/v1/setting_pb.js"
+    },
+    "./settings/v1/recording_rules_pb": {
+      "types": "./dist/settings/v1/recording_rules_pb.d.ts",
+      "import": "./dist/settings/v1/recording_rules_pb.mjs",
+      "require": "./dist/settings/v1/recording_rules_pb.js"
+    },
+    "./settings/v1/setting-SettingsService_connectquery": {
+      "types": "./dist/settings/v1/setting-SettingsService_connectquery.d.ts",
+      "import": "./dist/settings/v1/setting-SettingsService_connectquery.mjs",
+      "require": "./dist/settings/v1/setting-SettingsService_connectquery.js"
+    },
+    "./types/v1/types_pb": {
+      "types": "./dist/types/v1/types_pb.d.ts",
+      "import": "./dist/types/v1/types_pb.mjs",
+      "require": "./dist/types/v1/types_pb.js"
+    },
+    "./google/v1/profile_pb": {
+      "types": "./dist/google/v1/profile_pb.d.ts",
+      "import": "./dist/google/v1/profile_pb.mjs",
+      "require": "./dist/google/v1/profile_pb.js"
+    },
+    "./adhocprofiles/v1/adhocprofiles-AdHocProfileService_connectquery": {
+      "types": "./dist/adhocprofiles/v1/adhocprofiles-AdHocProfileService_connectquery.d.ts",
+      "import": "./dist/adhocprofiles/v1/adhocprofiles-AdHocProfileService_connectquery.mjs",
+      "require": "./dist/adhocprofiles/v1/adhocprofiles-AdHocProfileService_connectquery.js"
+    },
+    "./adhocprofiles/v1/adhocprofiles_pb": {
+      "types": "./dist/adhocprofiles/v1/adhocprofiles_pb.d.ts",
+      "import": "./dist/adhocprofiles/v1/adhocprofiles_pb.mjs",
+      "require": "./dist/adhocprofiles/v1/adhocprofiles_pb.js"
+    },
+    "./querier/v1/querier_pb": {
+      "types": "./dist/querier/v1/querier_pb.d.ts",
+      "import": "./dist/querier/v1/querier_pb.mjs",
+      "require": "./dist/querier/v1/querier_pb.js"
+    },
+    "./querier/v1/querier-QuerierService_connectquery": {
+      "types": "./dist/querier/v1/querier-QuerierService_connectquery.d.ts",
+      "import": "./dist/querier/v1/querier-QuerierService_connectquery.mjs",
+      "require": "./dist/querier/v1/querier-QuerierService_connectquery.js"
+    },
+    "./vcs/v1/vcs_pb": {
+      "types": "./dist/vcs/v1/vcs_pb.d.ts",
+      "import": "./dist/vcs/v1/vcs_pb.mjs",
+      "require": "./dist/vcs/v1/vcs_pb.js"
+    },
+    "./vcs/v1/vcs-VCSService_connectquery": {
+      "types": "./dist/vcs/v1/vcs-VCSService_connectquery.d.ts",
+      "import": "./dist/vcs/v1/vcs-VCSService_connectquery.mjs",
+      "require": "./dist/vcs/v1/vcs-VCSService_connectquery.js"
+    }
+  }
+}

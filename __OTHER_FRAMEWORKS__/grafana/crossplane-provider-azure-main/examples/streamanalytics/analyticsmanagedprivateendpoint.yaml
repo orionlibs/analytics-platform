@@ -1,0 +1,13 @@
+apiVersion: streamanalytics.azure.upbound.io/v1beta1
+kind: ManagedPrivateEndpoint
+metadata:
+  annotations:
+    upjet.upbound.io/manual-intervention: "This resource requires manual intervention."
+  name: example
+spec:
+  forProvider:
+    resourceGroupNameRef:
+      name: example-resources
+    streamAnalyticsClusterName: example
+    subresourceName: blob
+    targetResourceId: <targetresourceid>

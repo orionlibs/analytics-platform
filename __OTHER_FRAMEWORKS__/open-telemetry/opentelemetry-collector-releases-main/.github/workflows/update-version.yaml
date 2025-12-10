@@ -1,0 +1,38 @@
+name: Update Version in Distributions and Prepare PR
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  update-version:
+    runs-on: ubuntu-24.04
+    
+    permissions:
+      contents: write # required for pushing changes
+      pull-requests: write # required for creating PR
+
+    steps:
+      - uses: actions/create-github-app-token@7e473efe3cb98aa54f8d4bac15400b15fad77d94 # v2.2.0
+        id: otelbot-token
+        with:
+          app-id: ${{ vars.OTELBOT_COLLECTOR_RELEASES_APP_ID }}
+          private-key: ${{ secrets.OTELBOT_COLLECTOR_RELEASES_PRIVATE_KEY }}
+
+      - name: Set up commit author name and email
+        id: committer
+        run: |
+          git config --global user.name "otelbot"
+          git config --global user.email "197425009+otelbot@users.noreply.github.com"
+
+      - name: Checkout repository
+        uses: actions/checkout@93cb6efe18208431cddfb8368fd83d5badbf9bfd # v5.0.1
+        with:
+          token: ${{ steps.otelbot-token.outputs.token }}
+
+      - name: Run bump-versions.sh
+        run: |
+          .github/workflows/scripts/bump-versions.sh --commit --pull-request
+        env:
+          GH_TOKEN: ${{ steps.otelbot-token.outputs.token }}

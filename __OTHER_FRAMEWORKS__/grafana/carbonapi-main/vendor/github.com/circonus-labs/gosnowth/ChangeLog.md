@@ -1,0 +1,576 @@
+# Changelog
+
+We document mentionable user facing changes to the gosnowth library here. We
+structure these changes according to gosnowth releases. Release versions adhere
+to [Semantic Versioning](http://semver.org/) rules.
+
+## [Next Release]
+
+## [v1.14.0] - 2023-05-19
+
+* refactor!: Modifies the FindTagsResult values returned by the FindTags()
+functions so that they do not include a separate FindCount value, but use the
+count and estimate fields on the FindTagsResult when the query is count only.
+* feat: Includes accurate values in FindTagsResult.Estimate when results
+from a FindTags() query return estimated results from IRONdb. This can be
+used to determine that a timeout occurred during processing by IRONdb.
+
+## [v1.13.9] - 2023-03-31
+
+* fix: Ensures PromQLMetadataQuery() only returns metrics with valid PromQL
+types and that can be expressed as PromQL types.
+
+## [v1.13.8] - 2023-03-21
+
+* add: Adds PromQL support for metadata queries via PromQLMetadataQuery().
+
+## [v1.13.7] - 2023-03-17
+
+* add: Adds PromQL support for series queries via PromQLSeriesQuery().
+* add: Adds PromQL support for label names queries via PromQLLabelQuery().
+* add: Adds PromQL support for label values queries via
+PromQLLabelValuesQuery().
+* add: Adds conversion of PromQL series selectors into IRONdb tag queries via
+ConvertSeriesSelector().
+
+## [v1.13.6] - 2023-03-14
+
+* upd: Adds support for fractional seconds for PromQL queries for compatibility.
+PromQL fractional seconds are truncated when converting to CAQL queries.
+
+## [v1.13.5] - 2023-03-14
+
+* add: Adds support for PromQL instant queries.
+
+## [v1.13.4] - 2023-03-10
+
+* fix: Restores some quote handling for metric name parsing but corrects the
+bug that was causing removal of quotes from quoted values.
+
+## [v1.13.3] - 2023-03-10
+
+* fix: Removes quote handling from the metric name parser. This handling is
+correct for tag queries, but not for canonical name parsing.
+
+## [v1.13.2] - 2023-03-09
+
+* add: Adds a configuration item, DenyHosts, to allow a list of hosts to
+always be considered inactive, regardless of topology discovery.
+
+## [v1.13.1] - 2023-02-23
+
+* upd: Modifies the PromQLResponse and PromQLError types to support more types
+of PromQL data values.
+* upd: Updates unit tests and examples to use NewClient().
+* upd: Ensures default values are set for snowth client timeouts.
+
+## [v1.13.0] - 2023-02-23
+
+* fix: Corrects a bug that could cause snowth client creation to fail if a
+single cluster node does not respond within the context timeout.
+* upd: Removes the Config.Discover option and the deprecated NewSnowthClient()
+function. These were not used and were previously replaced by NewClient() and
+the WatchAndUpdate() functionality.
+
+## [v1.12.5] - 2023-02-21
+
+* upd: Adds a PromQLError type, which duplicates the PromQL response envelope,
+but also functions as a Go error type.
+
+## [v1.12.3] - 2023-02-17
+
+* upd: Changes the mechanism of UpdateCheckTags() to mitigate a race condition
+that can occur if check tags are being rapidly changed. It will now always
+attempt to add the full set of check tags being submitted rather than only the
+ones that snowth thinks do not already exist.
+
+## [v1.12.2] - 2023-02-17
+
+* upd: Improve trace ID placement in log entries to ensure it is not truncated
+by request bodies in some debug logs.
+
+## [v1.12.1] - 2023-02-15
+
+* upd: Removes the WatchFunc functionality as this is not used anymore.
+* upd: Improves error handling when no active nodes are available.
+
+## [v1.12.0] - 2023-02-14
+
+* add: Adds support for PromQL queries via the new snowth PromQL support.
+* upd: Improves CAQLError values to include more information from snowth.
+Access to the message previously in CAQLError.UserError.Message must now be
+retrieved via the CAQLError.Message() method instead.
+
+## [v1.11.4] - 2023-01-26
+
+* fix: Ensures that snowth nodes loaded by the topology discovery process are
+properly populated with all stats information, and are correctly added as
+inactive servers if they are not responding to network requests.
+
+## [v1.11.3] - 2022-11-30
+
+* upd: Updates the WatchAndUpdate() functionality of SnowthClient to correctly
+update cluster topology and node active status on a configured interval.
+
+## [v1.11.2] - 2022-08-18
+
+* upd: Removes all use of the deprecated ioutil package, includes some code
+cleanup and adds additional linters.
+* upd: Updates the minumum go build version to 1.17.
+
+## [v1.11.1] - 2022-07-29
+
+* upd: Simplifies to gosnowth.Config type to no longer implement unneeded
+thread safety and JSON marshaling functionality. No longer uses getters and
+setters to access configuration properties.
+* add: Allows a CtxKeyTraceID value to be set when configuring a gosnowth
+SnowthClient. This will be used to retrieve a trace ID from the context passed
+into gosnowth functions, allowing gosnowth log entries to contain the same
+trace ID being used by the caller of the gosnowth function. If this is not
+configured, or the context does not contain a trace ID, gosnowth will still
+generate its own trace ID using the previous behavior.
+
+## [v1.11.0] - 2022-07-21
+
+* upd: Changes the DF4 data types to include fields that were missing for
+`head.error` and `head.warning`. Adds functionality to allow extracting typed
+data from DF4 data values.
+
+## [v1.10.11] - 2022-07-15
+
+* fix: Corrects a bug in how check tag encoding is handled that was preventing
+UpdateCheckTags() from correctly updating check tags requiring base64 encoding.
+
+## [v1.10.10] - 2022-06-15
+
+* upd: Changes the method used to stop retrying when contexts are canceled
+or reach timeout. This is to support upcoming changes in go v1.19.
+
+## [v1.10.9] - 2022-06-14
+
+* upd: Improves request handling so that requests are not retried for 4XX
+status codes returned from snowth.
+
+## [v1.10.8] - 2022-06-14
+
+* fix: Corrects a bug that was causing gosnowth to retry requests that should
+not be retried because they failed due to context cancelation or due to a
+user facing error.
+* upd: Improves the gosnowth debug logging for readability and allows the
+traceID to be used to track requests across multiple retries.
+
+## [v1.10.7] - 2022-06-13
+
+* upd: Bump github.com/openhistogram/circonusllhist from 0.2.1 to 0.3.0 by @dependabot in #69
+* upd: Bump github.com/google/uuid from 1.1.1 to 1.3.0 by @dependabot in #68
+* upd: Bump github.com/google/flatbuffers from 1.12.0 to 2.0.6+incompatible by @dependabot in #67
+
+## [v1.10.6] - 2022-06-10
+
+* fix: Corrects a bug that was causing the process to fail that randomly
+retries other nodes in a snowth cluster when there are connection issues.
+
+## [v1.10.5] - 2022-05-03
+
+* fix: Fixes the metric name parser to correctly use curly brackets when
+parsing measurement tags.
+* fix: Fixes connection retries to always try the specified node first then
+randomly pick from active cluster nodes for retries.
+* fix: Fixes broken examples code.
+
+## [v1.10.4] - 2022-04-14
+
+* upd: NewClient() now requires a context when being called. This allows for
+context terminations to happen during the process of creating and initializing
+a new SnowthClient.
+
+## [v1.10.3] - 2022-04-12
+
+* upd: Adds retry number and trace ID to request debug log entries.
+* upd: Randomizes the IRONdb cluster nodes that will be retried in cases of
+network connection failure.
+
+## [v1.10.2] - 2021-12-03
+
+* add: Added metric name parsing functionality via the ParseMetricName function
+and its associated types.
+
+## [v1.10.1] - 2021-11-15
+
+* add: Added support for start and end time strings to the tags API.
+
+## [v1.10.0] - 2021-06-14
+
+* add: Added functions implementing access to the IRONdb read graphite API:
+GraphiteFindMetrics(), GraphiteFindTags(), and GraphiteGetDatapoints().
+* add: Added functions implementing access to the IRONdb find /tag_cats, and
+find /tag_vals API's.
+
+## [v1.9.0] - 2021-05-10
+
+* add: Added functions to allow interactivity with IRONdb check tag metadata.
+These functions allow for retireval, deletion, and updating of IRONdb check tag
+metadata.
+
+## [v1.8.1] - 2021-05-05
+
+* upd: Requests to IRONdb will now include a X-Snowth-Timeout header. The value
+will be 1 second less than the total request timeout configuration value.
+
+## [v1.8.0] - 2021-04-13
+
+* add: Incorporates a `SnowthClient.WriteNNTBSFlatbuffer()` API for writing
+flatbuffer NNTBS data to IRONdb.
+
+## [v1.7.2] - 2021-02-18
+
+* fix: Cleans up functions that are not part of the library API.
+* upd: Updates documentation.
+
+## [v1.7.1] - 2021-02-17
+
+* upd: Updates documentation and corrects errors.
+* add: Adds new examples and benchmarks for flat buffer data submission.
+* add: Adds new examples for fetch and CAQL queries.
+
+## [v1.7.0] - 2021-02-18
+
+* upd: Removed dependecy on old eternal error handling package.
+* add: Added benchmarks for flatbuffer raw write operations.
+* add: Added read and write numeric values API to replace old NNT API.
+
+## [v1.6.2] - 2020-12-23
+
+* fix: Changed the type of the `_count_only` results type.
+
+## [v1.6.1] - 2020-12-23
+
+* upd: Added support for `_count_only` requests using the FindTags functions.
+
+## [v1.5.6] - 2020-12-17
+
+* Fixes a bug causing gosnowth to sometimes return an error when encountering
++/-inf values in DF4 data responses from IRONdb.
+* Improves the LocateMetric unit tests to include testing the FindMetric
+node hashing logic.
+
+## [v1.5.5] - 2020-12-04
+
+* Remove `CheckName` and `Category` fields from `FindTagsItem`. These fields
+will no longer be returned from IRONdb find calls.
+* Add `NNTBS` field to `NodeState` struct.
+
+## [v1.5.4] - 2020-06-20
+
+* Supports DF4 responses that contain data values of [+/-]inf or NaN.
+
+## [v1.5.3] - 2020-05-07
+
+* Fixes an issue with node deactivation upon retry and adds the node discovery
+process to the watch function so that deactivated nodes can become active
+again when they become reachable again.
+
+## [v1.5.2] - 2020-05-01
+
+* Adds additional debug logging, if configured, to support better tracking of
+IRONdb request retries.
+* Fixes a bug that would cause failures on POST requests to IRONdb if the
+request needed to be retried on more than one node.
+
+## [v1.5.1] - 2020-04-30
+
+* Adds an option, not used by default, to retry requests to IRONdb that fail
+for reasons that might be resolved by retrying. The number of attempts can be
+set using the SnowthClient.SetRetries() method. Delay will increase between
+each successive retry attempt.
+* Adds an option, off by default, but can be set with
+SnowthClient.SetConnectRetries(), that allows the client to retry requests 
+to IRONdb that fail due to network errors on other available nodes, up to a 
+specified number of times. This can be used in conjuction with
+SnowthClient.SetRetries() or on its own.
+* Added a `Limit` field to `FindTagsOptions` struct for specifying the maximum
+number of metric results returned from the IRONdb find call.
+
+## [v1.5.0] - 2020-04-16
+
+* Adds linting configuration to the project and includes linting cleanup.
+* Changes the API for most of the library functions to make the parameter
+specifying a snowth node variadic and optional. This is possible because
+gosnowth can now correctly determine which node to use itself.
+* Adds internal implementation of topology location services matching the
+logic used by snowth clusters.
+
+## [v1.4.6] - 2020-03-06
+
+* Adds support for the Explain parameter and results for CAQL requests.
+* Adds support for tracing and dumping request payload to stdout for diagnostic
+purposes.
+
+## [v1.4.5] - 2020-01-10
+
+### Added
+
+- Added a new FindTagsLatest type and a new 'Latest' field to the `FindTagsItem`
+type to support `SnowthClient.FindTags()` returning the latest data values when
+requested from the IRONdb find call.
+
+### Changed
+
+- Changed the signature of the `SnowthClient.FindTags()` and
+`SnowthClient.FindTagsContext()` methods to accept a `*FindTagsOptions`
+argument. This argument contains the values for the supported IRONdb find
+operation query parameters.
+
+## [v1.4.4] - 2019-11-21
+
+### Added
+
+- Added SnowthClient.DoRequest() to issue a custom HTTP request to IRONdb.
+- Added SnowthClient.RebuildActivity() to request a rebuild of IRONdb activity
+tracking data for a list of metrics supplied in the new type RebuildActivityRequest.
+- Added SnowthClient.WriteRawMetricList() convenience function to support writing
+raw metric data directly to IRONdb via FlatBuffers Objects.
+
+### Changed
+
+- Changed the signature for SnowthClient.WriteRaw() to return the status
+result of the /raw operation with the new type IRONdbPutResponse.
+
+### Fixed
+
+- Bug (severe): An issue was fixed that resulted in panics when rollup result
+data, containing null values in specific places, was decoded from JSON format.
+Created: 2019-09-16. Fixed: 2019-11-15.
+
+## [v1.4.3] - 2019-09-20
+
+### Changed
+
+- Modified the internal structure of the RollupValue and RollupAllValue data
+types, which are returned by the SnowthClient.ReadRollupValues() and
+SnowthClient.ReadRollupAllValues() methods, to better express results returned
+by IRONdb that contain `null` data values.
+- Modified the internal structure of the TextValue data type, which is returned
+by the SnowthClient.ReadTextValues() methods, to better express results returned
+by IRONdb that contain `null` data values.
+
+## [v1.4.2] - 2019-09-20
+
+### Changed
+
+- Changed the signature for the SnowthClient.GetCAQLQuery() methods to use the
+new CAQLQuery type as a parameter. This allows all available parameters to be
+used when executing CAQL queries.
+- Added the CAQLError type which may be returned by the
+SnowthClient.GetCAQLQuery() methods as an error if the error returned from the
+corresponding IRONdb API call can be represented from this type. This allows
+retrieval of extended error information when CAQL query requests fail.
+- The SnowthClient.GetCAQLQuery() methods now send CAQL query requests to IRONdb
+via a POST request. This prevents potential problems with query string encoding.
+
+## [v1.4.1] - 2019-09-19
+
+### Fixed
+
+- Bug (moderate): The encoding used for CAQL queries was causing a parsing error
+when the queries contained spaces. Created: 2019-09-15 Fixed: 2019-09-19.
+
+## [v1.4.0] - 2019-09-15
+
+### Added
+
+- Adds the FetchQuery type and the SnowthClient.FetchValues and
+SnowthClient.FetchValuesContext() methods to support fetching data, in the DF4
+format, using the IRONdb /fetch API.
+- New functionality has been added to read histogram data using the SnowthClient
+ReadHistogramValues() and ReadHistogramValuesContext() methods. The new
+HistogramValue type has been added to represent the histogram data returned by
+the new methods.
+- New ReadRollupAllValues() and ReadRollupAllValuesContext() methods have been
+added to SnowthClient. These methods return slices of RollupAllValue values
+representing IRONdb rollup response data in the legacy / type=all format.
+- Adds new SnowthClient methods for listing Lua extensions and calling any Lua
+extension via the IRONdb extension APIs: SnowthClient.GetLuaExtensions() and
+SnowthClient.ExecLuaExtension().
+- Adds specific support for performing CAQL queries using the Lua extension with
+the SnowthClient.GetCAQLQuery() method.
+- Adds support for a Go data structure representation of the DF4 data format.
+This is needed to represent CAQL query results and will also allow for future
+support for IRONdb /fetch API requests.
+
+### Changed
+
+- The RollupValues type has been replaced by the RollupValue and RollupAllValue
+types. These types are better able to represent all possible rollup data formats
+that can be returned by IRONdb. This is an API breaking change that modifies the
+signature of the SnowthClient ReadRollupValues() and ReadRollupValuesContext()
+methods.
+- The SnowthClient ReadTextValues() and ReadTextValuesContext() have updated
+signatures to match the parameters of the other data retrieval methods. This is
+an API breaking change for these methods.
+- These new types allow true support for IRONdb formatted timestamps for rollup
+data retrieval methods by changing previous Timestamp integer field to a field
+named Time containing a Go time.Time value. This is translated to/from the
+IRONdb timestamp format during JSON encoding/decoding and the IRONdb timestamp
+can be retrieved (as as string) by calling the Timestamp() method on values of
+the new types.
+- The new methods also support retrieving all types of rollup data. They are no
+longer restricted to only the average type data.
+
+## [v1.3.2] - 2019-08-26
+
+### Changed
+
+- The integer size of the activity data and account ID data in the FindTagsItem
+structure returned by calls to FindTags() have been changed from `int32` to
+`int64`. As has the type of the account ID parameter in calls to FindTags().
+- The integer size in the rollup values returned by calls to GetNodeState() have
+been changed from `uint32` to `uint64`.
+
+### Fixed
+
+- Bug (severe): It is possible for some types of IRONdb data to deserialize into
+values that overflow the 32-bit variables used to hold them. Created: 2019-07-01
+Fixed: 2019-08-27.
+
+## [v1.3.1] - 2019-08-26
+
+### Changed
+
+- The signature of the FindTags() and FindTagsContext() methods have changed.
+This is a breaking change to the API. The results are now returned wrapped in
+a \*FindTagsResults value. This allows the total results count value returned
+by the IRONdb request to be returned to the gosnowth user. Upgrading to this
+release will require modifying any use of these methods in your code to reflect
+this change.
+- The internal functionality of the client do() method has been modified. It no
+longer attempts to decode the contents of a response within this method. It
+returns the response body data back to the caller to be handled there.
+Additionally, it now also passes response headers back to the caller, so that
+if they contain any needed information, it can now be used.
+
+## [v1.2.1] - 2019-07-01
+
+### Added
+
+- A new field has been added to the FindTagsItem structure returned by calls to
+SnowthClient.FindTags(). The field is called Activity (JSON: `activity`), and
+contains the activity data returned by the IRONdb find tags API.
+
+## [v1.2.0] - 2019-06-25
+
+### Added
+
+- Adds SnowthClient.GetStats() functionality. This retrieves metrics and stats
+data about an IRONdb node via the /stats.json API endpoint.
+- The Stats type is defined to hold the metric data returned by the GetStats()
+operation. It stores the data in a map[string]interface{}, allowing the metrics
+exposed by IRONdb to change without breaking gosnowth.
+- Helper methods are defined on the Stats type to check and retrieve commonly
+used information, such as IRONdb version and identification information.
+- Adds an assignable middleware function that can run during the
+SnowthClient.WatchAndUpdate() process. This allows downstream users of this
+library to implement inspections and activate or deactivate node use according
+to node information.
+
+### Changed
+
+- The code that creates and updates SnowthNode values has been changed to pull
+information via GetStats() instead of GetState(), so that additional information
+about the version of IRONdb running on a node can be obtained using the
+SnowthNode value.
+
+## [v1.1.3] - 2019-04-03
+
+### Added
+
+- Adds support for new check tags data returned from IRONdb to the
+SnowthClient.FindTags() methods.
+
+## [v1.1.2] - 2019-03-13
+
+### Added
+
+- Adds context aware versions of all methods exposed by SnowthClient values.
+These methods all contain a context.Context value as the first parameter, and
+have the same name as their non-context variant with Context appended to the
+end. These methods allow full support for IRONdb request cancellation via
+context timeout or cancellation.
+- Implements a Config type that can be used to pass configuration data when
+creating new SnowthClient values. The examples provided in the [/examples]
+folder demonstrate use of a Config type to configure SnowthClient values.
+
+### Changed
+
+- Includes account and check information in the data sent to IRONdb when
+writing to histogram endpoints.
+
+### Fixed
+
+- Bug: Code in SnowthClient.WatchAndUpdate() could fire continuously, without
+any delay, once started. Created: 2019-03-12. Fixed: 2019-03-13.
+
+[Next Release]: https://github.com/circonus-labs/gosnowth
+[v1.14.0]: https://github.com/circonus-labs/gosnowth/releases/tag/v1.14.0
+[v1.13.9]: https://github.com/circonus-labs/gosnowth/releases/tag/v1.13.9
+[v1.13.8]: https://github.com/circonus-labs/gosnowth/releases/tag/v1.13.8
+[v1.13.7]: https://github.com/circonus-labs/gosnowth/releases/tag/v1.13.7
+[v1.13.6]: https://github.com/circonus-labs/gosnowth/releases/tag/v1.13.6
+[v1.13.5]: https://github.com/circonus-labs/gosnowth/releases/tag/v1.13.5
+[v1.13.4]: https://github.com/circonus-labs/gosnowth/releases/tag/v1.13.4
+[v1.13.3]: https://github.com/circonus-labs/gosnowth/releases/tag/v1.13.3
+[v1.13.2]: https://github.com/circonus-labs/gosnowth/releases/tag/v1.13.2
+[v1.13.1]: https://github.com/circonus-labs/gosnowth/releases/tag/v1.13.1
+[v1.13.0]: https://github.com/circonus-labs/gosnowth/releases/tag/v1.13.0
+[v1.12.5]: https://github.com/circonus-labs/gosnowth/releases/tag/v1.12.5
+[v1.12.4]: https://github.com/circonus-labs/gosnowth/releases/tag/v1.12.4
+[v1.12.3]: https://github.com/circonus-labs/gosnowth/releases/tag/v1.12.3
+[v1.12.2]: https://github.com/circonus-labs/gosnowth/releases/tag/v1.12.2
+[v1.12.1]: https://github.com/circonus-labs/gosnowth/releases/tag/v1.12.1
+[v1.12.0]: https://github.com/circonus-labs/gosnowth/releases/tag/v1.12.0
+[v1.11.4]: https://github.com/circonus-labs/gosnowth/releases/tag/v1.11.4
+[v1.11.3]: https://github.com/circonus-labs/gosnowth/releases/tag/v1.11.3
+[v1.11.2]: https://github.com/circonus-labs/gosnowth/releases/tag/v1.11.2
+[v1.11.1]: https://github.com/circonus-labs/gosnowth/releases/tag/v1.11.1
+[v1.11.0]: https://github.com/circonus-labs/gosnowth/releases/tag/v1.11.0
+[v1.10.11]: https://github.com/circonus-labs/gosnowth/releases/tag/v1.10.11
+[v1.10.10]: https://github.com/circonus-labs/gosnowth/releases/tag/v1.10.10
+[v1.10.9]: https://github.com/circonus-labs/gosnowth/releases/tag/v1.10.9
+[v1.10.8]: https://github.com/circonus-labs/gosnowth/releases/tag/v1.10.8
+[v1.10.7]: https://github.com/circonus-labs/gosnowth/releases/tag/v1.10.7
+[v1.10.6]: https://github.com/circonus-labs/gosnowth/releases/tag/v1.10.6
+[v1.10.5]: https://github.com/circonus-labs/gosnowth/releases/tag/v1.10.5
+[v1.10.4]: https://github.com/circonus-labs/gosnowth/releases/tag/v1.10.4
+[v1.10.3]: https://github.com/circonus-labs/gosnowth/releases/tag/v1.10.3
+[v1.10.2]: https://github.com/circonus-labs/gosnowth/releases/tag/v1.10.2
+[v1.10.1]: https://github.com/circonus-labs/gosnowth/releases/tag/v1.10.1
+[v1.10.0]: https://github.com/circonus-labs/gosnowth/releases/tag/v1.10.0
+[v1.9.0]: https://github.com/circonus-labs/gosnowth/releases/tag/v1.9.0
+[v1.8.1]: https://github.com/circonus-labs/gosnowth/releases/tag/v1.8.1
+[v1.8.0]: https://github.com/circonus-labs/gosnowth/releases/tag/v1.8.0
+[v1.7.2]: https://github.com/circonus-labs/gosnowth/releases/tag/v1.7.2
+[v1.7.1]: https://github.com/circonus-labs/gosnowth/releases/tag/v1.7.1
+[v1.7.0]: https://github.com/circonus-labs/gosnowth/releases/tag/v1.7.0
+[v1.6.2]: https://github.com/circonus-labs/gosnowth/releases/tag/v1.6.2
+[v1.6.1]: https://github.com/circonus-labs/gosnowth/releases/tag/v1.6.1
+[v1.5.6]: https://github.com/circonus-labs/gosnowth/releases/tag/v1.5.6
+[v1.5.5]: https://github.com/circonus-labs/gosnowth/releases/tag/v1.5.5
+[v1.5.4]: https://github.com/circonus-labs/gosnowth/releases/tag/v1.5.4
+[v1.5.3]: https://github.com/circonus-labs/gosnowth/releases/tag/v1.5.3
+[v1.5.2]: https://github.com/circonus-labs/gosnowth/releases/tag/v1.5.2
+[v1.5.1]: https://github.com/circonus-labs/gosnowth/releases/tag/v1.5.1
+[v1.5.0]: https://github.com/circonus-labs/gosnowth/releases/tag/v1.5.0
+[v1.4.6]: https://github.com/circonus-labs/gosnowth/releases/tag/v1.4.6
+[v1.4.5]: https://github.com/circonus-labs/gosnowth/releases/tag/v1.4.5
+[v1.4.4]: https://github.com/circonus-labs/gosnowth/releases/tag/v1.4.4
+[v1.4.3]: https://github.com/circonus-labs/gosnowth/releases/tag/v1.4.3
+[v1.4.2]: https://github.com/circonus-labs/gosnowth/releases/tag/v1.4.2
+[v1.4.1]: https://github.com/circonus-labs/gosnowth/releases/tag/v1.4.1
+[v1.4.0]: https://github.com/circonus-labs/gosnowth/releases/tag/v1.4.0
+[v1.3.2]: https://github.com/circonus-labs/gosnowth/releases/tag/v1.3.2
+[v1.3.1]: https://github.com/circonus-labs/gosnowth/releases/tag/v1.3.1
+[v1.2.1]: https://github.com/circonus-labs/gosnowth/releases/tag/v1.2.1
+[v1.2.0]: https://github.com/circonus-labs/gosnowth/releases/tag/v1.2.0
+[v1.1.3]: https://github.com/circonus-labs/gosnowth/releases/tag/v1.1.3
+[v1.1.2]: https://github.com/circonus-labs/gosnowth/releases/tag/v1.1.2
+[/examples]: https://github.com/circonus-labs/gosnowth/tree/master/examples

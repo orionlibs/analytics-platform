@@ -1,0 +1,126 @@
+name: "Grafana Create Plugin Update"
+description: "Runs create-plugin update within a Grafana plugin and opens a PR with the changes"
+
+inputs:
+  token:
+    description: "Token for the repository. Can be passed in using `{{ secrets.GITHUB_TOKEN }}`."
+    required: true
+  base:
+    description: "Sets the pull request base branch"
+    required: false
+    default: "main"
+  node-version:
+    description: "Version of node"
+    required: false
+    default: "20"
+
+runs:
+  using: "composite"
+  steps:
+    - name: Setup Node.js
+      uses: actions/setup-node@2028fbc5c25fe9cf00d9f06a71cc4710d4507903 # v6.0.0
+      with:
+        node-version: "${{ inputs.node-version }}"
+
+    - name: Get latest version of create-plugin package
+      id: get-latest-version
+      run: |
+        echo "latest_version=$(npx -y @grafana/create-plugin@latest version | sed 's/.*@//' | sed 's/ *$//' | sed '/^$/d')" >> "$GITHUB_OUTPUT"
+      shell: bash
+
+    - name: Checkout Repository
+      uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
+      with:
+        persist-credentials: false
+        ref: ${{ inputs.base }}
+
+    - name: Get version from .config/.cprc.json
+      id: get-config-version
+      run: |
+        echo "config_version=$(jq -r '.version' .config/.cprc.json)" >> "$GITHUB_OUTPUT"
+      shell: bash
+
+    - name: Compare versions
+      id: compare-versions
+      run: |
+        if [ "$LATEST_VERSION" != "$CONFIG_VERSION" ]; then
+          LATEST_MAJOR=$(echo "$LATEST_VERSION" | cut -d. -f1)
+          echo "update_needed=true" >> "$GITHUB_OUTPUT"
+          echo "major_version=$LATEST_MAJOR" >> "$GITHUB_OUTPUT"
+        else
+          echo "update_needed=false" >> "$GITHUB_OUTPUT"
+        fi
+      shell: bash
+      env:
+        LATEST_VERSION: ${{ steps.get-latest-version.outputs.latest_version }}
+        CONFIG_VERSION: ${{ steps.get-config-version.outputs.config_version }}
+
+    - name: Install dependencies
+      if: steps.compare-versions.outputs.update_needed == 'true'
+      run: ${{ github.action_path }}/pm.sh install
+      shell: bash
+
+    - name: Create branch
+      if: steps.compare-versions.outputs.update_needed == 'true'
+      run: |
+        git config --local user.name grafana-plugins-platform-bot[bot]
+        git config --local user.email 144369747+grafana-plugins-platform-bot[bot]@users.noreply.github.com
+
+        git checkout -b update-grafana-create-plugin-${LATEST_VERSION}
+      shell: bash
+      env:
+        LATEST_VERSION: ${{ steps.get-latest-version.outputs.latest_version }}
+        GITHUB_TOKEN: ${{ inputs.token }}
+
+    - name: Update the configs
+      if: steps.compare-versions.outputs.update_needed == 'true'
+      run: |
+        ${{ github.action_path }}/pm.sh update
+        ${{ github.action_path }}/pm.sh install
+      shell: bash
+
+    # Create Plugin v6 update command uses a --commit flag which will automatically commit the changes
+    # for versions before v6 we need to commit the changes manually
+    - name: Commit changes and push
+      if: steps.compare-versions.outputs.update_needed == 'true'
+      run: |
+        git config --global --type bool push.autoSetupRemote true
+        if [ "$LATEST_MAJOR" -lt 6 ]; then
+          git add .
+          git commit -m "chore: update configuration to create-plugin $LATEST_VERSION"
+        fi
+        git push https://x-access-token:${GITHUB_TOKEN}@github.com/${{ github.repository }}
+      shell: bash
+      env:
+        LATEST_VERSION: ${{ steps.get-latest-version.outputs.latest_version }}
+        LATEST_MAJOR: ${{ steps.compare-versions.outputs.major_version }}
+        GITHUB_TOKEN: ${{ inputs.token }}
+
+    - name: Create or Update PR
+      if: steps.compare-versions.outputs.update_needed == 'true'
+      env:
+        GH_TOKEN: ${{ inputs.token }}
+        LATEST_VERSION: ${{ steps.get-latest-version.outputs.latest_version }}
+        CONFIG_VERSION: ${{ steps.get-config-version.outputs.config_version }}
+        BASE: ${{ inputs.base }}
+      run: |
+        PR_NUMBER=$(gh pr list --base $BASE --head update-grafana-create-plugin-${LATEST_VERSION} --json number -q '.[0].number')
+
+        PR_TITLE="chore: bump @grafana/create-plugin configuration to $LATEST_VERSION"
+
+        PR_BODY=$(cat <<EOF
+        Bumps [\`@grafana/create-plugin\`](https://github.com/grafana/plugin-tools/tree/main/packages/create-plugin) configuration from $CONFIG_VERSION to $LATEST_VERSION.
+
+        **Notes for reviewer:**
+        This is an auto-generated PR which ran \`@grafana/create-plugin update\`.
+        Please consult the create-plugin [CHANGELOG.md](https://github.com/grafana/plugin-tools/blob/main/packages/create-plugin/CHANGELOG.md) to understand what may have changed.
+        Please review the changes thoroughly before merging.
+        EOF
+        )
+
+        if [ -z "$PR_NUMBER" ]; then
+          gh pr create --base $BASE --head update-grafana-create-plugin-${LATEST_VERSION} --title "$PR_TITLE" --body "$PR_BODY"
+        else
+          gh pr edit $PR_NUMBER --title "$PR_TITLE" --body "$PR_BODY"
+        fi
+      shell: bash

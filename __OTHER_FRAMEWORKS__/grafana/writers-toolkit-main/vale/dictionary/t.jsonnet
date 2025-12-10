@@ -1,0 +1,22 @@
+local word = import './word.jsonnet';
+[
+  word.new('TCP', '', 'noun') { abbreviation: true, elaboration: 'Transmission Control Protocol', established_abbreviation: true },
+  word.new('Telegraf', '', 'noun') { description: 'An open-source agent for collecting, processing, aggregating, and writing metrics and logs, originally developed by InfluxData.' },
+  word.new('templated', '', 'adjective'),
+  word.new('Team Sync', '', 'noun') { description: 'Sync your auth providers teams and teams in Grafana.', product: true },
+  word.new('Tempo', '', 'noun') { product: true, swaps: { tempo: 'Tempo' } },
+  word.new('Thanos', '', 'noun') { product: true },
+  word.new('Threema', '', 'noun') { description: 'https://threema.ch/en', product: true, swaps: { threema: 'Threema' } },
+  word.new('Timestream', '', 'noun') { Amazon: true, product: true },
+  word.new('TLS', '', 'noun') { abbreviation: true, description: 'A cryptographic protocol designed to provide secure communications over network.', elaboration: 'Transport Layer Security', established_abbreviation: true },
+  word.new('toolset', 'S', 'noun'),
+  word.new('tooltip', 'S', 'noun'),
+  word.new('tracepoint', 'S', 'noun'),
+  word.new('TraceQL', '', 'noun') { swaps: { 'trace(?:ql|QL)': 'TraceQL' } },
+  word.new('traceroute', 'S', 'noun'),
+  word.new('Traces Drilldown', '', 'noun') { product: true },
+  word.new('trendline', 'S', 'noun') { description: 'A transformation that infers data points not represented using linear regression' },
+  word.new('triage', 'D', 'verb'),
+  word.new('TSDB', 'S', 'noun') { abbreviation: true, elaboration: 'time-series database', established_abbreviation: true },
+  word.new('TTL', 'S', 'noun') { abbreviation: true, elaboration: 'time to live' },
+]

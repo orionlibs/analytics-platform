@@ -1,0 +1,1 @@
+(Critical) failed to get otelcol config: cannot unmarshal the configuration: decoding failed due to the following error(s):\n\n'' has invalid keys: bad-key

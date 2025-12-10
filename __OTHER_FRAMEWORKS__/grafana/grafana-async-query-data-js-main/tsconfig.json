@@ -1,0 +1,9 @@
+{
+  "extends": "./.config/tsconfig.json",
+  "compilerOptions": {
+    "declarationDir": "./compiled",
+    "declaration": true,
+    "emitDeclarationOnly": true,
+    "isolatedModules": true
+  }
+}

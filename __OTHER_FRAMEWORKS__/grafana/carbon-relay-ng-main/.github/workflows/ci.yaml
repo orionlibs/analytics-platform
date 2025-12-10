@@ -1,0 +1,152 @@
+name: CI
+
+on:
+  push:
+    branches:
+      - main
+    tags:
+      - v[0-9]+.[0-9]+.[0-9]+**
+  pull_request:
+
+permissions:
+  contents: write # zizmor: ignore[excessive-permissions]
+  id-token: write # zizmor: ignore[excessive-permissions]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@f43a0e5ff2bd294095638e18286ca9a3d1956744 # v3
+        with:
+          persist-credentials: false
+      - uses: actions/setup-go@19bb51245e9c80abacb2e91cc42b33fa478b8639 # v4 # zizmor: ignore[cache-poisoning]
+        with:
+          go-version: 1.21.8
+      - run: make test
+
+  build:
+    needs: test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@f43a0e5ff2bd294095638e18286ca9a3d1956744 # v3
+        with:
+          persist-credentials: false
+      - uses: actions/setup-go@19bb51245e9c80abacb2e91cc42b33fa478b8639 # v4 # zizmor: ignore[cache-poisoning]
+        with:
+          go-version: 1.21.8
+      - uses: ruby/setup-ruby@dffc446db9ba5a0c4446edb5bca1c5c473a806c5 # v1.235.0
+        with:
+          ruby-version: 3.3
+      - name: Install FPM and dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install rpm
+          gem install fpm
+      - name: Install go-bindata
+        run: go install github.com/go-bindata/go-bindata/...@latest
+      - run: make LINUX_PACKAGE_GOARCH=amd64 build-linux
+      - run: make LINUX_PACKAGE_GOARCH=arm64 build-linux
+      - run: make build-win
+      - run: make build-darwin
+      - run: make build-bsd
+      - name: Make packages
+        run: make packages
+      - name: Build Docker image
+        run: |
+          make docker
+          docker save -o build/carbon-relay-ng.tar grafana/carbon-relay-ng
+      - name: Store version
+        run: git describe --tags --always | sed 's/^v//' > build/version.txt
+      - name: Upload package artifacts
+        if: github.event_name == 'push'
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          include-hidden-files: true
+          name: package-artifacts
+          path: build
+
+  # Release, runs on tags only
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    if: github.event_name == 'push'
+    steps:
+      - uses: actions/checkout@f43a0e5ff2bd294095638e18286ca9a3d1956744 # v3
+        with:
+          persist-credentials: false
+      - name: Download package artifacts
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
+        with:
+          name: package-artifacts
+          path: build
+      - uses: ruby/setup-ruby@dffc446db9ba5a0c4446edb5bca1c5c473a806c5 # v1.235.0
+        with:
+          ruby-version: 3.3
+      - name: Install package_cloud
+        run: gem install package_cloud
+      - name: Set PACKAGECLOUD_TOKEN
+        uses: grafana/shared-workflows/actions/get-vault-secrets@2d5a0678eb32b0fd6655b4f7a3a7ec72eaf530ca
+        with:
+          repo_secrets: |
+            PACKAGECLOUD_TOKEN=packagecloud:token
+      - name: Push packages
+        run: |
+          version=$(cat build/version.txt)
+          repo=raintank/raintank
+          [[ ! "$version" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]] && repo=raintank/testing
+          package_cloud push $repo/ubuntu/trusty build/deb-upstart/carbon-relay-ng-*.deb
+          package_cloud push $repo/ubuntu/xenial build/deb-systemd/carbon-relay-ng-*.deb
+          package_cloud push $repo/debian/jessie build/deb-systemd/carbon-relay-ng-*.deb
+          package_cloud push $repo/debian/stretch build/deb-systemd/carbon-relay-ng-*.deb
+          package_cloud push $repo/debian/buster build/deb-systemd/carbon-relay-ng-*.deb
+          package_cloud push $repo/el/6 build/centos-6/carbon-relay-ng-*.el6.*.rpm
+          package_cloud push $repo/el/7 build/centos-7/carbon-relay-ng-*.el7.*.rpm
+      - name: Load Docker image
+        run: docker load -i build/carbon-relay-ng.tar
+      - name: Login to DockerHub
+        uses: grafana/shared-workflows/actions/dockerhub-login@2d5a0678eb32b0fd6655b4f7a3a7ec72eaf530ca
+      - name: Push Docker image
+        run: |
+          set -e
+          version=$(cat build/version.txt)
+          docker push grafana/carbon-relay-ng:$version
+          # only versions without a hyphen - e.g. actual releases - are tagged as latest.
+          # in-between-release versions are tagged as main.
+          tag=latest
+          [[ ! "$version" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]] && tag=main
+          docker push grafana/carbon-relay-ng:$tag
+          # To preserve compatibility, also push the "master" tag we built in
+          # build_docker.sh.
+          if [[ "$tag" == "main" ]] ; then
+            docker push grafana/carbon-relay-ng:master
+          fi
+      - name: Read version
+        id: version
+        run: echo "tag=$(cat build/version.txt)" >> $GITHUB_OUTPUT
+      - run: cp build/bin/* .
+      - name: Push image to GAR
+        # Only for real releases not push to main.
+        if: github.ref_type == 'tag'
+        uses: grafana/shared-workflows/actions/push-to-gar-docker@96e4673a3d86dbbd332f3251c21a4c1299baa714 # v0.6.1
+        with:
+          tags: |-
+            "${{ steps.version.outputs.tag }}"
+          context: .
+          image_name: carbon-relay-ng
+          environment: prod
+
+  github_binaries:
+    if: github.ref_type == 'tag'
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@f43a0e5ff2bd294095638e18286ca9a3d1956744 # v3
+        with:
+          persist-credentials: false
+      - uses: actions/setup-go@19bb51245e9c80abacb2e91cc42b33fa478b8639 # v4 # zizmor: ignore[cache-poisoning]
+        with:
+          go-version: 1.21.8
+      - name: Run goreleaser
+        run: curl -sfL https://goreleaser.com/static/run | bash
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

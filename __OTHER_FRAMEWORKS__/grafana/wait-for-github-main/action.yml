@@ -1,0 +1,93 @@
+name: Wait for GitHub
+description: Wait for things to happen on GitHub
+inputs:
+  token:
+    description: "GitHub token"
+    required: false
+    default: ${{ github.token }}
+  app-id:
+    description: "GitHub App ID"
+    required: false
+  app-installation-id:
+    description: "GitHub App installation ID"
+    required: false
+  app-private-key:
+    description: "GitHub App private key"
+    required: false
+  exclude-checks:
+    description: 'The comma-separated names of the checks to exclude statuses of. Only used when wait-for is "ci"'
+    required: false
+  timeout:
+    description: "Timeout in golang duration format"
+    required: false
+    default: 5m
+  interval:
+    description: "Recheck interval (poll this often) in golang duration format"
+    required: false
+    default: 30s
+  wait-for:
+    description: 'What to wait for. Valid values: "ci" (wait for CI to finish), "pr" (wait for PR to be merged)'
+    required: true
+  owner:
+    description: "GitHub repo owner"
+    required: false
+    default: ${{ github.repository_owner }}
+  repo:
+    description: "GitHub repo name"
+    required: false
+    default: ${{ github.event.repository.name }}
+  ref:
+    description: "Git ref to check"
+    required: true
+  checks-to-wait-for:
+    description: 'The comma-separated names of the checks to wait for. Only used when wait-for is "ci"'
+    required: false
+
+runs:
+  using: composite
+
+  steps:
+    - name: Check repository out
+      uses: actions/checkout@1af3b93b6815bc44a9784bd300feb67ff0d1eeb3 # v6.0.0
+      env:
+        action_repo: ${{ github.action_repository }}
+        action_ref: ${{ github.action_ref }}
+      with:
+        path: ${{ github.workspace }}/action-checkout
+        repository: ${{ env.action_repo }}
+        ref: ${{ env.action_ref }}
+
+    - name: Set up Go
+      uses: actions/setup-go@4dc6199c7b1a012772edbd06daecab0f50c9053c # v6.1.0
+      with:
+        go-version-file: ${{ github.workspace }}/action-checkout/go.mod
+
+    - name: Run
+      shell: sh
+      env:
+        GITHUB_TOKEN: ${{ inputs.token }}
+        GITHUB_CI_CHECKS: ${{ inputs.checks-to-wait-for }}
+        GITHUB_CI_EXCLUDE: ${{ inputs.exclude-checks }}
+        GITHUB_APP_ID: ${{ inputs.app-id }}
+        GITHUB_APP_INSTALLATION_ID: ${{ inputs.app-installation-id }}
+        GITHUB_APP_PRIVATE_KEY: ${{ inputs.app-private-key }}
+        INPUT_REF: ${{ inputs.ref }}
+        INPUT_REPO: ${{ inputs.repo }}
+        INPUT_OWNER: ${{ inputs.owner }}
+        INPUT_TIMEOUT: ${{ inputs.timeout }}
+        INPUT_INTERVAL: ${{ inputs.interval }}
+        INPUT_WAIT_FOR: ${{ inputs.wait-for }}
+      run: |
+        cd "${{ github.workspace }}/action-checkout"
+
+        go run github.com/grafana/wait-for-github/cmd/wait-for-github \
+           --log-level \
+           debug \
+           --timeout \
+           "${INPUT_TIMEOUT}" \
+           --recheck-interval \
+           "${INPUT_INTERVAL}" \
+           "${INPUT_WAIT_FOR}" \
+           "${INPUT_OWNER}" \
+           "${INPUT_REPO}" \
+           "${INPUT_REF}"

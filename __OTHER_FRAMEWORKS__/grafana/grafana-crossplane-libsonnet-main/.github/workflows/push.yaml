@@ -1,0 +1,54 @@
+name: Push
+
+on:
+  push:
+    branches:
+      - main
+      - release-*
+  pull_request: {}
+  workflow_dispatch:
+    inputs:
+      version:
+        description: Package version (e.g. v0.1.0)
+        required: false
+
+env:
+  REGISTRY: ghcr.io
+
+  # The package version to push. The default is 0.0.0-gitsha.
+  XPKG_VERSION: ${{ inputs.version }}
+
+jobs:
+  build:
+    runs-on: ubuntu-24.04
+
+    permissions:
+      contents: read
+      packages: write
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+        with:
+          persist-credentials: false
+      - name: setup Crossplane cli
+        uses: crossplane-contrib/setup-crossplane-action@cb8aac3f1246b19f101e7f85fd0a38623b4d5ad3 # v0.1.1
+
+      - name: Log in to the GitHub Container registry
+        uses: docker/login-action@5e57cd118135c172c3672efd75eb46360885c0ef # v3.6.0
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      # If a version wasn't explicitly passed as a workflow_dispatch input we
+      # default to version v0.0.0-<git-commit-date>-<git-short-sha>, for example
+      # v0.0.0-20231101115142-1091066df799. This is a simple implementation of
+      # Go's pseudo-versions: https://go.dev/ref/mod#pseudo-versions.
+      - name: Set Default Multi-Platform Package Version
+        if: env.XPKG_VERSION == ''
+        run: echo "XPKG_VERSION=v0.0.0-$(date -d@$(git show -s --format=%ct) +%Y%m%d%H%M%S)-$(git rev-parse --short=12 HEAD)" >> $GITHUB_ENV
+
+      - name: Push xpkg
+        if: env.XPKG_VERSION != ''
+        run: make push

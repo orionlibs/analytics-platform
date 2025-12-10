@@ -1,0 +1,31 @@
+name: Deploy Javadoc
+
+on:
+  push:
+    branches:
+      - main
+
+permissions:
+  contents: write # pushes to the gh-pages branch
+
+jobs:
+  publish:
+    runs-on: ubuntu-x64
+    steps:
+      - uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: actions/setup-java@b6e674f4b717d7b0ae3baee0fbe79f498905dfde # v1
+        with:
+          java-version: 11
+      - name: Generate Javadoc
+        run: ./gradlew javaDoc 
+      - name: Deploy 🚀
+        uses: JamesIves/github-pages-deploy-action@6c2d9db40f9296374acc17b90404b6e8864128c8 # v4.7.3
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          branch: gh-pages
+          clean: true
+          folder: agent/build/docs/javadoc
+          target-folder: javadoc

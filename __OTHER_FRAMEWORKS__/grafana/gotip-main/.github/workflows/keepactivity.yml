@@ -1,0 +1,47 @@
+# This GitHub Workflow is used because, by default, the GitHub policy is to
+# disable workflows for those repositories without activity within the last 60 days.
+#
+# So, this repository usually falls into that category, because we rarely update it.
+# But, we want to keep the GitHub Workflow active to continue building the latest
+# Go releases. So, we push an empty commit once a month (so it keeps active).
+
+name: Keep activity
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: '0 0 1 * *'
+
+permissions:
+  contents: read
+
+defaults:
+  run:
+    shell: bash
+
+jobs:
+  push-empty-commit:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Set up Git
+        run: |
+          set x
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+      - name: Create empty commit
+        run: |
+          set x
+          git commit --allow-empty -m "Chore: Keep it active"
+      - name: Set authenticated remote URL
+        run: |
+          git remote set-url origin https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}
+      - name: Push empty commit
+        run: |
+          set x
+          git push origin HEAD

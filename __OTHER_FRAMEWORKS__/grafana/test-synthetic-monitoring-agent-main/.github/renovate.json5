@@ -1,0 +1,54 @@
+{
+  "$schema": "https://docs.renovatebot.com/renovate-schema.json",
+  "extends": [
+    "config:best-practices",
+    ":semanticCommitsDisabled"
+  ],
+
+  "branchPrefix": "grafanarenovatebot/",
+  "gitAuthor": "GrafanaRenovateBot <renovategrafana@grafana.com>",
+  // Used when renovate runs as a github app.
+  // https://docs.renovatebot.com/configuration-options/#platformcommit
+  "platformCommit": true,
+  "dependencyDashboard": false,
+  "forkProcessing": "disabled",
+
+  // TODO: We should be able to use the defaults if we turn dependabot off.
+  "enabledManagers": ["custom.regex", "gomod"],
+  "gomod": {
+    "enabled": true
+  },
+
+  "postUpdateOptions": [
+    "gomodTidyE"
+  ],
+
+  "customManagers": [
+    {
+      // Update k6 version in Dockerfiles.
+      "customType": "regex",
+      "datasourceTemplate": "github-releases",
+      "depNameTemplate": "grafana/k6",
+      "fileMatch": [".*\\.mk"],
+      "matchStrings": [
+        "(?:^|\\n)[ \\t]*K6_VERSION\\s*:=\\s*(?<currentValue>\\S+)[ \\t]*(?:$|\\n)"
+      ]
+    },
+    {
+      // Update grafana-build-tools tags across the repository.
+      "customType": "regex",
+      "depNameTemplate": "ghcr.io/grafana/grafana-build-tools",
+      "datasourceTemplate": "docker",
+      "versioningTemplate": "semver",
+      "fileMatch": [
+        "^\\.github/workflows/.*\\.ya?ml$",
+        "(^|/)Makefile$",
+        ".*\\.jsonnet$",
+        ".*\\.mk$"
+      ],
+      "matchStrings": [
+        "ghcr.io/grafana/grafana-build-tools:(?<currentValue>\\S+)"
+      ]
+    }
+  ]
+}

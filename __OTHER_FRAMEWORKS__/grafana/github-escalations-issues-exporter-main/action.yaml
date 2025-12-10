@@ -1,0 +1,3 @@
+name: 'Github escalation issues exporter'
+description: 'Those who track incidents/escalations using GitHub can use this action to export issue related data to further on compute incident metrics (i.e. MTTA, MTTRs etc)'
+author: "GrafanaLabs"

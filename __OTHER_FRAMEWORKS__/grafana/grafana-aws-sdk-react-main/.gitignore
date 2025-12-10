@@ -1,0 +1,23 @@
+node_modules/
+coverage/
+ci/
+cypress/report.json
+cypress/screenshots/actual
+cypress/videos/
+dist/
+compiled/
+
+yarn-error.log
+.idea/
+.DS_Store
+
+.eslintcache
+
+# yarn
+.pnp.*
+.yarn/*
+!.yarn/patches
+!.yarn/plugins
+!.yarn/releases
+!.yarn/sdks
+!.yarn/versions

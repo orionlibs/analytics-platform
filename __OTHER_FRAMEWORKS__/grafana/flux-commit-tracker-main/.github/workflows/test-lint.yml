@@ -1,0 +1,112 @@
+on:
+  push:
+    branches:
+      - main
+
+  pull_request:
+
+  merge_group:
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+
+    steps:
+      - name: Harden the runner (Audit all outbound calls)
+        uses: step-security/harden-runner@95d9a5deda9de15063e7595e9719c11c38c90ae2 # v2.13.2
+        with:
+          egress-policy: audit
+
+      - uses: actions/checkout@1af3b93b6815bc44a9784bd300feb67ff0d1eeb3 # v6.0.0
+        with:
+          persist-credentials: false
+
+      - name: Set up Go
+        uses: actions/setup-go@4dc6199c7b1a012772edbd06daecab0f50c9053c # v6.1.0
+        with:
+          go-version-file: go.mod
+
+      - name: golangci-lint
+        uses: golangci/golangci-lint-action@e7fa5ac41e1cf5b7d48e45e42232ce7ada589601 # v9.1.0
+
+      - name: Run tests
+        run: |
+          go test -v ./...
+
+  lint:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      security-events: write
+
+    steps:
+      - name: Harden the runner (Audit all outbound calls)
+        uses: step-security/harden-runner@95d9a5deda9de15063e7595e9719c11c38c90ae2 # v2.13.2
+        with:
+          egress-policy: audit
+
+      - uses: actions/checkout@1af3b93b6815bc44a9784bd300feb67ff0d1eeb3 # v6.0.0
+        with:
+          persist-credentials: false
+
+      - name: Lint markdown
+        uses: DavidAnson/markdownlint-cli2-action@30a0e04f1870d58f8d717450cc6134995f993c63 # v21.0.0
+        with:
+          config: .markdownlint.yaml
+
+      - name: Get actionlint release
+        id: get-actionlint-release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          eval "$(gh api \
+            /repos/rhysd/actionlint/releases/latest \
+            --jq '.assets[] |
+              select (.name | endswith("_linux_amd64.tar.gz")) |
+              "node_id=\(.node_id | @sh); browser_download_url=\(.browser_download_url | @sh)"')"
+
+          echo "node_id=${node_id}" | tee -a "${GITHUB_OUTPUT}"
+          echo "browser_download_url=${browser_download_url}" | tee -a "${GITHUB_OUTPUT}"
+
+          mkdir -p ~/.local/bin
+          echo "${HOME}/.local/bin" | tee -a "${GITHUB_PATH}"
+
+      - name: Cache actionlint
+        id: cache-actionlint
+        uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0
+        with:
+          path: ~/.local/bin/actionlint
+          key: actionlint-${{ steps.get-actionlint-release.outputs.node_id }}
+
+      - name: Download actionlint
+        id: get_actionlint
+        if: steps.cache-actionlint.outputs.cache-hit != 'true'
+        env:
+          RELEASE: ${{ steps.get-actionlint-release.outputs.browser_download_url }}
+        run: |
+          curl -sSL "${RELEASE}" \
+            | tar -C ~/.local/bin/ -xzf - actionlint
+
+          chmod +x ~/.local/bin/actionlint
+
+      - name: Check workflow files
+        run: actionlint -color
+
+      - name: Install the latest version of uv
+        uses: astral-sh/setup-uv@1e862dfacbd1d6d858c55d9b792c756523627244 # v7.1.4
+
+      - name: Run zizmor
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: uvx zizmor --format sarif . > results.sarif
+
+      - name: Upload SARIF file
+        uses: github/codeql-action/upload-sarif@fdbfb4d2750291e159f0156def62b853c2798ca2 # v4.31.5
+        with:
+          sarif_file: results.sarif
+          category: zizmor

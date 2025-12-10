@@ -1,0 +1,56 @@
+{
+  "$schema": "https://docs.renovatebot.com/renovate-schema.json",
+  "extends": [
+    "github>grafana/sm-renovate//presets/grafana.json5",
+    "github>grafana/sm-renovate//presets/synthetic-monitoring.json5",
+    "github>grafana/sm-renovate//presets/alpine-packages.json5"
+  ],
+  "ignorePresets": [
+    "github>grafana/grafana-renovate-config//presets/shared-workflows",
+    "github>grafana/grafana-renovate-config//presets/automerge"
+  ],
+  "packageRules": [
+    {
+      // Update alpine itself and all dependencies in the same PR. This ensures consistency, e.g. renovate does not
+      // attempt to update chromium without updating alpine if an update for the latter is also available, as that PR
+      // would fail.
+      "matchFileNames": [
+        "Dockerfile"
+      ],
+      "groupName": "Dockerfile",
+      // Allow renovate to automatically merge PRs created for these packages. Renovate automatically checks CI/CD
+      // status and will _not_ automerge PRs which have failures.
+      "automerge": true,
+    },
+  ],
+  "customManagers": [
+    {
+      // Update alpine tag, which is stored in an ARG for easy greppability.
+      "customType": "regex",
+      "depNameTemplate": "alpine",
+      "datasourceTemplate": "docker",
+      "managerFilePatterns": [
+        "Dockerfile"
+      ],
+      "matchStrings": [
+        "ALPINE_VERSION=(?<currentValue>[^@\\s]+)(?:@(?<currentDigest>\\S+))?"
+      ]
+    },
+    {
+      // Update chromium version from alpine packages.
+      "customType": "regex",
+      "managerFilePatterns": [
+        "Dockerfile",
+      ],
+      "matchStrings": [
+        "CHROMIUM_VERSION=(?<currentValue>[-.\\w]+)"
+      ],
+      "depNameTemplate": "chromium-swiftshader",
+      "versioningTemplate": "loose", // The most lenient versioning renovate supports.
+      // We use two different datasources for main and community, as alpine serves them in different URLs.
+      "datasourceTemplate": "custom.alpine-community",
+      // Extracted "versions" include the package name, so here we strip that prefix using a regex.
+      "extractVersionTemplate": "chromium-swiftshader-(?<version>.+).apk",
+    },
+  ]
+}

@@ -1,0 +1,237 @@
+name: update
+
+env:
+  BASE_URL: "https://registry.k6.io"
+
+on:
+  workflow_dispatch:
+    inputs:
+      force_changed:
+        description: Force "changed" state
+        type: boolean
+
+  push:
+    branches:
+      - main
+  schedule:
+    - cron: "40 */2 * * *"
+
+permissions: {}
+
+jobs:
+  generate:
+    runs-on: ubuntu-latest
+    permissions:
+      actions: write
+    env:
+      GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      XDG_CACHE_HOME: ${{ github.workspace }}/build/cache
+      HTDOCS_DIR: ${{ github.workspace }}/build/htdocs
+      BUILD_DIR: ${{ github.workspace }}/build
+    outputs:
+      changed: ${{ steps.generate.outputs.changed }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          repository: ${{ github.event.pull_request.head.repo.full_name }}
+          ref: ${{ github.event.pull_request.head.ref }}
+          persist-credentials: false
+
+      - name: Setup k6registry
+        uses: ./.github/actions/k6registry_setup
+
+      - name: Cache Restore
+        uses: actions/cache/restore@v4
+        with:
+          path: ${{ env.XDG_CACHE_HOME }}
+          key: xdg-cache
+
+      - name: Prepare
+        run: |
+          # create work directory
+          mkdir -p ${HTDOCS_DIR}
+
+          # copy static files
+          cp -rp public/* ${HTDOCS_DIR}
+
+          # get the registry schema
+          k6registry schema > ${HTDOCS_DIR}/registry.schema.json
+
+          # copy api specs
+          cp -p openapi.yaml ${HTDOCS_DIR}
+
+          # create cache used for saving k6registry working files (if not exists)
+          mkdir -p ${XDG_CACHE_HOME}
+
+      - name: Generate registry
+        id: generate
+        env:
+          GITHUB_TOKEN: ${{github.token}}
+        run: |
+          k6registry -v --lint --ignore-lint-errors registry.yaml --out "${HTDOCS_DIR}/registry.json"
+
+          # check if changed from current published version
+          if ! curl -fsSL "${BASE_URL}/registry.json" | diff -q "${HTDOCS_DIR}/registry.json" - >/dev/null 2>&1; then
+            echo "changed=true" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Setup gomplate
+        uses: jason-dour/action-setup-gomplate@81b9ca6f49d6594a118d19f0d05f6fd05372e64c # v1.1.0
+        env:
+          GITHUB_TOKEN: ${{github.token}}
+
+      - name: Update API
+        if: ${{ steps.generate.outputs.changed == 'true'  || inputs.force_changed }}
+        run: |
+          ./generate-api-files.sh -b "${HTDOCS_DIR}"
+
+      - name: Cache Clean
+        if: ${{ ( github.ref_name == 'main' && steps.generate.outputs.changed == 'true' ) || inputs.force_changed }}
+        run: |
+          gh extension install actions/gh-actions-cache
+          if gh cache list --key xdg-cache | grep -q  xdg-cache; then
+            gh actions-cache delete xdg-cache --confirm
+          fi
+
+      - name: Cache Save
+        uses: actions/cache/save@v4
+        if: ${{ ( github.ref_name == 'main' && steps.generate.outputs.changed == 'true' ) || inputs.force_changed }}
+        with:
+          path: ${{ env.XDG_CACHE_HOME }}
+          key: xdg-cache
+
+      - name: Upload Site
+        uses: actions/upload-artifact@v4
+        if: ${{ ( github.ref_name == 'main' && steps.generate.outputs.changed == 'true') || inputs.force_changed }}
+        with:
+          path: ${{ env.HTDOCS_DIR }}
+          name: "htdocs"
+          overwrite: true
+
+  publish:
+    runs-on: ubuntu-latest
+    permissions:
+      pages: write
+      contents: write
+      id-token: write
+
+    needs:
+      - generate
+    if: ${{ ( github.ref_name == 'main' && needs.generate.outputs.changed == 'true' ) || inputs.force_changed }}
+    env:
+      GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      HTDOCS_DIR: ${{ github.workspace }}/htdocs
+    steps:
+      - name: Download Site
+        uses: actions/download-artifact@v4
+        with:
+          path: ${{ env.HTDOCS_DIR }}
+          name: "htdocs"
+
+      - name: Configure Pages
+        uses: actions/configure-pages@v5
+
+      - name: Upload Pages Artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: ${{ env.HTDOCS_DIR }}
+
+      - name: Deploy Pages
+        uses: actions/deploy-pages@v4
+
+  wiki:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    needs:
+      - generate
+    if: ${{ ( github.ref_name == 'main' && needs.generate.outputs.changed == 'true' ) || inputs.force_changed }}
+    env:
+      GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      HTDOCS_DIR: ${{ github.workspace }}/htdocs
+      WIKI_WORK_DIR: ${{ github.workspace }}/wiki.work
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+
+      - name: Checkout Wiki
+        uses: actions/checkout@v4
+        with:
+          repository: ${{ github.repository }}.wiki
+          path: ${{ env.WIKI_WORK_DIR }}
+          persist-credentials: true
+
+      - name: Download Site
+        uses: actions/download-artifact@v4
+        with:
+          path: ${{ env.HTDOCS_DIR }}
+          name: "htdocs"
+
+      - name: Setup gomplate
+        uses: jason-dour/action-setup-gomplate@81b9ca6f49d6594a118d19f0d05f6fd05372e64c # v1.1.0
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Generate
+        run: >
+          rm -rf ${WIKI_WORK_DIR}/* &&
+          gomplate -c registry=${HTDOCS_DIR}/registry.json
+          -c metrics=${HTDOCS_DIR}/metrics.json
+          -c official_metrics=${HTDOCS_DIR}/tier/official-metrics.json
+          -c schema=${HTDOCS_DIR}/registry.schema.json
+          --input-dir wiki
+          --output-map="${WIKI_WORK_DIR}/{{.in|strings.TrimSuffix \".tpl\"}}"
+
+      - name: Push
+        run: |
+          cd ${WIKI_WORK_DIR}
+          git config --local user.email 'github-actions[bot]@users.noreply.github.com'
+          git config --local user.name 'github-actions[bot]'
+          git add .
+          if git commit -m "Update due to registry changes" 2>/dev/null >/dev/null; then
+            git push
+          fi
+
+  notify:
+    strategy:
+      matrix:
+        repo:
+          - k6-extension-registry-wayback
+          - k6-extension-list
+          - k6-docs
+
+    runs-on: ubuntu-latest
+    permissions:
+      actions: write
+      id-token: write
+    env:
+      EVENT_TYPE: extension-registry-changed
+    needs:
+      - generate
+      - publish
+    if: ${{ ( github.ref_name == 'main' && needs.generate.outputs.changed == 'true' ) || inputs.force_changed }}
+    steps:
+      - uses: grafana/shared-workflows/actions/get-vault-secrets@get-vault-secrets-v1.1.0
+        with:
+          # Secrets placed in the ci/repo/grafana/<repo>/<path> path in Vault
+          # Also stored in 1Password as "k6 Cloud CI/CD Secrets" (Vault is write-only)
+          repo_secrets: |
+            K6_EXTENSION_REGISTRY_CHANGE_NOTIFIER_ID=k6-extension-reg-change-notifier:app_id
+            K6_EXTENSION_REGISTRY_CHANGE_NOTIFIER_PEM=k6-extension-reg-change-notifier:private_key
+      - name: Generate a token
+        id: generate-token
+        uses: actions/create-github-app-token@v1
+        with:
+          app-id: ${{ env.K6_EXTENSION_REGISTRY_CHANGE_NOTIFIER_ID }}
+          private-key: ${{ env.K6_EXTENSION_REGISTRY_CHANGE_NOTIFIER_PEM }}
+          owner: ${{ github.repository_owner }}
+      - name: Dispatch event
+        continue-on-error: true
+        uses: peter-evans/repository-dispatch@ff45666b9427631e3450c54a1bcbee4d9ff4d7c0 # v3.0.0
+        with:
+          token: ${{ steps.generate-token.outputs.token }}
+          repository: ${{ github.repository_owner }}/${{ matrix.repo }}
+          event-type: ${{ env.EVENT_TYPE }}

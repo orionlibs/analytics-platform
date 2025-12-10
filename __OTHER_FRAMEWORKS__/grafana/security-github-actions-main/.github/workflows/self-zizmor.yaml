@@ -1,0 +1,54 @@
+name: zizmor GitHub Actions static analysis
+on:
+  push:
+  pull_request:
+    types:
+      - edited
+      - opened
+      - ready_for_review
+      - synchronize
+      - reopened
+  merge_group:
+    types: [checks_requested]
+jobs:
+  zizmor-check:
+    name: Check whether there are things to scan
+    permissions:
+      contents: read
+    runs-on: ${{ !github.event.repository.private && 'ubuntu-latest' || 'ubuntu-arm64-small' }}
+    outputs:
+      found-files: ${{ steps.zizmor-check.outputs.found-files }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5
+      - name: Run zizmor
+        id: zizmor-check
+        shell: bash
+        run: |
+          FOUND_FILES=false
+          SEARCH=$(find . -path "**/.github/workflows/*.yml" -o -path "**/.github/workflows/*.yaml" -o -path "**/action.yml" -o -path "**/action.yaml")
+          if [ -n "$SEARCH" ]; then
+              FOUND_FILES=true
+          fi
+          echo "found-files=${FOUND_FILES}" >> $GITHUB_OUTPUT
+  zizmor:
+    name: Run zizmor from current branch (self test)
+
+    permissions:
+      actions: read
+      contents: read
+      id-token: write
+      pull-requests: write
+      security-events: write
+
+    needs:
+      - zizmor-check
+    if: ${{ needs.zizmor-check.outputs.found-files == 'true' }}
+
+    uses: grafana/shared-workflows/.github/workflows/reusable-zizmor.yml@835ea6d866784d0db603612bfbb354d152b62f5c
+    with:
+      runs-on: ${{ !github.event.repository.private && 'ubuntu-latest' || 'ubuntu-arm64-small' }}
+      fail-severity: high
+      min-severity: high
+      min-confidence: low
+      extra-args: --offline

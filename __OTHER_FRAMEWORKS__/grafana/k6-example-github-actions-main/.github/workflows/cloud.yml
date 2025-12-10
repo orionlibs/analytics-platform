@@ -1,0 +1,19 @@
+name: Cloud Workflow
+on: [push]
+
+jobs:
+  build:
+    name: Run k6 cloud test
+    runs-on: ubuntu-latest
+    environment: test
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v2
+
+      - name: Run k6 cloud test
+        uses: grafana/k6-action@v0.2.0
+        with:
+          filename: cloud/script.js
+          cloud: true
+          token: ${{ secrets.K6_CLOUD_API_TOKEN }}

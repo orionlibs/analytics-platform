@@ -1,0 +1,58 @@
+folders:
+  conversion_path: "./conversions"
+  deployment_path: "./deployments"
+conversion_defaults:
+  target: loki
+  format: default
+  skip_unsupported: true
+  file_pattern: "*.yml"
+  data_source: grafanacloud-logs # The UID of a data source
+  required_rule_fields:
+    - level
+    - logsource
+    - author
+conversions:
+  - name: aws_cloudtrail
+    input: "rules/cloud/aws/cloudtrail/*"
+    backend_options:
+      case_sensitive: true
+    pipelines:
+      - pipelines/cloud/aws/cloudtrail/filter_permitted_aws_accounts.yml
+      - pipelines/datasources/aws_cloudtrail.yml
+    rule_group: Every 5 Minutes
+    time_window: 5m
+  - name: gcp_k8s
+    input: "rules/cloud/kubernetes/audit/*"
+    pipeline_check: false
+    encoding: utf-8
+    pipelines:
+      - pipelines/cloud/gcp/audit/gcp_kubernetes_audit_logs.yml
+    rule_group: Every 5 Minutes
+    time_window: 5m
+  - name: okta_audit
+    input: "rules/cloud/okta/*"
+    backend_options:
+      case_sensitive: false
+      add_line_filters: true
+    pipelines:
+      - loki_okta_system_log
+    rule_group: Every 1 Hour
+    time_window: 1h
+    data_source: okta-loki
+    query_model: '{"refId":"%s","datasource":{"type":"loki","uid":"%s"},"query":"%s"}' # A custom query model
+integration:
+  folder_id: XXXX # Use a dedicated folder that will only contain the alerts created by these actions
+  org_id: 1
+  test_queries: true # Whether to test the queries against the datasource
+  from: "now-1h"
+  to: "now"
+  template_labels:
+    Level: "{{.Level}}"
+    Product: "{{.Logsource.Product}}"
+    Service: "{{.Logsource.Service}}"
+  template_annotations:
+    Author: "{{.Author}}"
+  template_all_rules: false
+deployment:
+  grafana_instance: https://myinstance.grafana.com
+  timeout: 10s # HTTP request timeout for testing queries

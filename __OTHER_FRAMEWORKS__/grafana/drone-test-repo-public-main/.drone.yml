@@ -1,0 +1,16 @@
+---
+kind: pipeline
+type: docker
+name: default
+steps:
+- name: greeting
+  image: alpine
+  commands:
+  - echo hello
+  - echo world
+  - echo "DRONE_BUILD_EVENT=${DRONE_BUILD_EVENT}"
+---
+kind: signature
+hmac: 9076ca7efa44f4d1406b2abb16e5a6f5c5f4582d7b144833f737421071035b9a
+
+...

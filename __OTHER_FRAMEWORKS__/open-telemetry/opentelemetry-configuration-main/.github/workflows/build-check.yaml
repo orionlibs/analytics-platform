@@ -1,0 +1,45 @@
+name: Build Check
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+permissions:
+  contents: read
+
+jobs:
+  check-schema:
+    runs-on: ubuntu-latest
+    steps:
+    - name: check out code
+      uses: actions/checkout@1af3b93b6815bc44a9784bd300feb67ff0d1eeb3 # v6.0.0
+
+    - name: install dependencies
+      run: npm install
+
+    - name: compile schema
+      run: make compile-schema
+
+    - name: validate example
+      run: make validate-examples
+
+    - name: meta schema
+      run: make all-meta-schema
+
+    - name: check for diff
+      run: |
+        # need to "git add" to detect any changes which are not checked in
+        # select files from locations managed by meta schema
+        git add schema/meta_schema_*
+        git add schema-docs.md
+        if git diff --cached --quiet
+        then 
+          echo "No diff detected."
+        else 
+          echo "Diff detected - did you run 'make all-meta-schema'?"
+          echo $(git diff --cached --name-only)
+          echo $(git diff --cached)
+          exit 1
+        fi

@@ -1,0 +1,205 @@
+{
+  "openapi": "3.0.2",
+  "info": {
+    "title": "Service",
+    "version": "2018-03-17"
+  },
+  "paths": {
+    "/1": {
+      "post": {
+        "operationId": "Operation1",
+        "parameters": [
+          {
+            "name": "vendor",
+            "in": "query",
+            "schema": {
+              "type": "number",
+              "format": "int32",
+              "nullable": true
+            },
+            "required": true
+          },
+          {
+            "name": "version",
+            "in": "query",
+            "schema": {
+              "type": "number",
+              "format": "int32",
+              "nullable": true
+            },
+            "required": true
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Operation1 200 response",
+            "headers": {
+              "requestId": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "302": {
+            "description": "Redirect 302 response",
+            "headers": {
+              "Location": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Default 400 response",
+            "headers": {
+              "test-method-response-header": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          }
+        },
+        "x-amazon-apigateway-integration": {
+          "type": "aws",
+          "uri": "arn:aws:apigateway:us-east-1:lambda:path/2015-03-31/functions/arn:aws:lambda:us-east-1:012345678901:function:HelloWorld/invocations",
+          "httpMethod": "POST",
+          "credentials": "arn:aws:iam::012345678901:role/apigateway-invoke-lambda-exec-role",
+          "cacheNamespace": "cache namespace",
+          "payloadFormatVersion": "1.0",
+          "requestParameters": {
+            "integration.request.querystring.provider": "method.request.querystring.vendor",
+            "integration.request.path.stage": "method.request.querystring.version"
+          },
+          "requestTemplates": {
+            "application/xml": "#set ($root=$input.path('$')) <stage>$root.name</stage> ",
+            "application/json": "#set ($root=$input.path('$')) { \"stage\": \"$root.name\", \"user-id\": \"$root.key\" }"
+          },
+          "passthroughBehavior": "never",
+          "responses": {
+            "302": {
+              "statusCode": "302",
+              "responseParameters": {
+                "method.response.header.Location": "integration.response.body.redirect.url"
+              }
+            },
+            "default": {
+              "statusCode": "400",
+              "responseParameters": {
+                "method.response.header.test-method-response-header": "'static value'"
+              }
+            },
+            "2\\d{2}": {
+              "statusCode": "200",
+              "responseTemplates": {
+                "application/xml": "#set ($root=$input.path('$')) <stage>$root.name</stage> ",
+                "application/json": "#set ($root=$input.path('$')) { \"stage\": \"$root.name\", \"user-id\": \"$root.key\" }"
+              },
+              "responseParameters": {
+                "method.response.header.requestId": "integration.response.header.cid"
+              }
+            }
+          }
+        }
+      }
+    },
+    "/2": {
+      "post": {
+        "operationId": "Operation2",
+        "parameters": [
+          {
+            "name": "vendor",
+            "in": "query",
+            "schema": {
+              "type": "number",
+              "format": "int32",
+              "nullable": true
+            },
+            "required": true
+          },
+          {
+            "name": "version",
+            "in": "query",
+            "schema": {
+              "type": "number",
+              "format": "int32",
+              "nullable": true
+            },
+            "required": true
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Operation2 200 response",
+            "headers": {
+              "requestId": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "302": {
+            "description": "Redirect 302 response",
+            "headers": {
+              "Location": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Default 400 response",
+            "headers": {
+              "test-method-response-header": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          }
+        },
+        "x-amazon-apigateway-integration": {
+          "requestParameters": {
+            "integration.request.querystring.provider": "method.request.querystring.vendor",
+            "integration.request.path.stage": "method.request.querystring.version"
+          },
+          "requestTemplates": {
+            "application/xml": "#set ($root=$input.path('$')) <stage>$root.name</stage> ",
+            "application/json": "#set ($root=$input.path('$')) { \"stage\": \"$root.name\", \"user-id\": \"$root.key\" }"
+          },
+          "passthroughBehavior": "when_no_match",
+          "responses": {
+            "302": {
+              "statusCode": "302",
+              "responseParameters": {
+                "method.response.header.Location": "integration.response.body.redirect.url"
+              }
+            },
+            "default": {
+              "statusCode": "400",
+              "responseParameters": {
+                "method.response.header.test-method-response-header": "'static value'"
+              }
+            },
+            "2\\d{2}": {
+              "statusCode": "200",
+              "responseTemplates": {
+                "application/xml": "#set ($root=$input.path('$')) <stage>$root.name</stage> ",
+                "application/json": "#set ($root=$input.path('$')) { \"stage\": \"$root.name\", \"user-id\": \"$root.key\" }"
+              },
+              "responseParameters": {
+                "method.response.header.requestId": "integration.response.header.cid"
+              }
+            }
+          },
+          "type": "mock"
+        }
+      }
+    }
+  },
+  "components": { }
+}

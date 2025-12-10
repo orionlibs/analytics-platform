@@ -1,0 +1,7 @@
+httpServer:
+  authentication:
+    basic:
+      username: ${USERNAME}
+      password: ${SECRET}
+rules:
+  - pattern: ".*"

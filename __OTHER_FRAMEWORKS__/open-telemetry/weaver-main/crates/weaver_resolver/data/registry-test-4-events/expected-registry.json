@@ -1,0 +1,601 @@
+{
+  "registry_url": "https://127.0.0.1",
+  "groups": [
+    {
+      "id": "log_event_attributes_only",
+      "type": "event",
+      "brief": "brief",
+      "stability": "development",
+      "attributes": [
+        9
+      ],
+      "name": "some.event",
+      "lineage": {
+        "provenance": {
+          "registry_id": "default",
+          "path": "data/registry-test-4-events/registry/log-events.yaml"
+        },
+        "attributes": {
+          "test_attr.event.attr": {
+            "source_group": "referenced.attributes",
+            "inherited_fields": [
+              "brief",
+              "examples",
+              "note",
+              "requirement_level",
+              "stability"
+            ]
+          }
+        }
+      }
+    },
+    {
+      "id": "log_event_empty",
+      "type": "event",
+      "brief": "brief",
+      "stability": "development",
+      "name": "empty.event",
+      "lineage": {
+        "provenance": {
+          "registry_id": "default",
+          "path": "data/registry-test-4-events/registry/log-events.yaml"
+        }
+      }
+    },
+    {
+      "id": "log-feature_flag",
+      "type": "event",
+      "brief": "This document defines attributes for feature flag evaluations represented using Log Records.\n",
+      "stability": "development",
+      "attributes": [
+        19,
+        20,
+        21
+      ],
+      "name": "feature_flag",
+      "lineage": {
+        "provenance": {
+          "registry_id": "default",
+          "path": "data/registry-test-4-events/registry/log-events.yaml"
+        },
+        "attributes": {
+          "feature_flag.key": {
+            "source_group": "feature_flag",
+            "inherited_fields": [
+              "brief",
+              "examples",
+              "note",
+              "requirement_level",
+              "stability"
+            ]
+          },
+          "feature_flag.provider_name": {
+            "source_group": "feature_flag",
+            "inherited_fields": [
+              "brief",
+              "examples",
+              "note",
+              "requirement_level",
+              "stability"
+            ]
+          },
+          "feature_flag.variant": {
+            "source_group": "feature_flag",
+            "inherited_fields": [
+              "brief",
+              "examples",
+              "note",
+              "requirement_level",
+              "stability"
+            ]
+          }
+        }
+      }
+    },
+    {
+      "id": "some.string.body.event",
+      "type": "event",
+      "brief": "This event represents an occurrence of a something.\n",
+      "note": "This event transmits the body as a JSON encoded string.\n",
+      "stability": "development",
+      "name": "string.body.event",
+      "lineage": {
+        "provenance": {
+          "registry_id": "default",
+          "path": "data/registry-test-4-events/registry/log-events.yaml"
+        }
+      },
+      "body": {
+        "type": "string",
+        "id": "some.string.body.event.fields",
+        "brief": "This is the body of the event which is a JSON encoded string.\n",
+        "stability": "stable",
+        "examples": [
+          "{\"key1\":\"value1\",\"key2\":\"value2\"}"
+        ],
+        "requirement_level": "required"
+      }
+    },
+    {
+      "id": "some.string.body.detailed.event",
+      "type": "event",
+      "brief": "This event represents an occurrence of a something.\n",
+      "note": "This event transmits the body as a JSON encoded string.\n",
+      "stability": "development",
+      "name": "string.body.detailed.event",
+      "lineage": {
+        "provenance": {
+          "registry_id": "default",
+          "path": "data/registry-test-4-events/registry/log-events.yaml"
+        }
+      },
+      "body": {
+        "type": "string",
+        "id": "some.string.body.detailed.event.fields",
+        "brief": "This is the body of the event which is a JSON encoded string.\n",
+        "note": "This is a detailed note about the body.\n",
+        "stability": "development",
+        "examples": [
+          "{\"key1\":\"value1\",\"key2\":\"value2\"}"
+        ],
+        "requirement_level": "required"
+      }
+    },
+    {
+      "id": "device.app.lifecycle",
+      "type": "event",
+      "brief": "This event represents an occurrence of a lifecycle transition on Android or iOS platform.\n",
+      "note": "This event identifies the fields that are common to all lifecycle events for android and iOS using the `android.state` and `ios.state` fields. The `android.state` and `ios.state` attributes are mutually exclusive.\n",
+      "stability": "development",
+      "name": "device.app.lifecycle",
+      "lineage": {
+        "provenance": {
+          "registry_id": "default",
+          "path": "data/registry-test-4-events/registry/log-events.yaml"
+        }
+      },
+      "body": {
+        "type": "map",
+        "id": "device.app.lifecycle.fields",
+        "stability": "stable",
+        "requirement_level": "required",
+        "fields": [
+          {
+            "type": "enum",
+            "id": "ios.state",
+            "brief": "This attribute represents the state the application has transitioned into at the occurrence of the event.\n",
+            "note": "The iOS lifecycle states are defined in the [UIApplicationDelegate documentation](https://developer.apple.com/documentation/uikit/uiapplicationdelegate#1656902), and from which the `OS terminology` column values are derived.\n",
+            "stability": "development",
+            "requirement_level": {
+              "conditionally_required": "if and only if `os.name` is `ios`"
+            },
+            "members": [
+              {
+                "id": "active",
+                "value": "active",
+                "brief": "The app has become `active`. Associated with UIKit notification `applicationDidBecomeActive`.\n",
+                "stability": "stable"
+              },
+              {
+                "id": "inactive",
+                "value": "inactive",
+                "brief": "The app is now `inactive`. Associated with UIKit notification `applicationWillResignActive`.\n",
+                "stability": "stable"
+              },
+              {
+                "id": "background",
+                "value": "background",
+                "brief": "The app is now in the background. This value is associated with UIKit notification `applicationDidEnterBackground`.\n",
+                "stability": "stable"
+              },
+              {
+                "id": "foreground",
+                "value": "foreground",
+                "brief": "The app is now in the foreground. This value is associated with UIKit notification `applicationWillEnterForeground`.\n",
+                "stability": "stable"
+              },
+              {
+                "id": "terminate",
+                "value": "terminate",
+                "brief": "The app is about to terminate. Associated with UIKit notification `applicationWillTerminate`.\n",
+                "stability": "stable"
+              }
+            ]
+          },
+          {
+            "type": "enum",
+            "id": "android.state",
+            "brief": "This attribute represents the state the application has transitioned into at the occurrence of the event.\n",
+            "note": "The Android lifecycle states are defined in [Activity lifecycle callbacks](https://developer.android.com/guide/components/activities/activity-lifecycle#lc), and from which the `OS identifiers` are derived.\n",
+            "stability": "development",
+            "requirement_level": {
+              "conditionally_required": "if and only if `os.name` is `android`"
+            },
+            "members": [
+              {
+                "id": "created",
+                "value": "created",
+                "brief": "Any time before Activity.onResume() or, if the app has no Activity, Context.startService() has been called in the app for the first time.\n",
+                "stability": "stable"
+              },
+              {
+                "id": "background",
+                "value": "background",
+                "brief": "Any time after Activity.onPause() or, if the app has no Activity, Context.stopService() has been called when the app was in the foreground state.\n",
+                "stability": "stable"
+              },
+              {
+                "id": "foreground",
+                "value": "foreground",
+                "brief": "Any time after Activity.onResume() or, if the app has no Activity, Context.startService() has been called when the app was in either the created or background states.\n",
+                "stability": "stable"
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "id": "client.exception.event",
+      "type": "event",
+      "brief": "This document defines the log event used to report a client exception.\n",
+      "stability": "development",
+      "attributes": [
+        0
+      ],
+      "name": "client.exception.event",
+      "lineage": {
+        "provenance": {
+          "registry_id": "default",
+          "path": "data/registry-test-4-events/registry/log-events.yaml"
+        }
+      },
+      "body": {
+        "type": "map",
+        "id": "client.exception.event.fields",
+        "stability": "stable",
+        "requirement_level": "recommended",
+        "fields": [
+          {
+            "type": "string",
+            "id": "type",
+            "brief": "The type of the exception.\n",
+            "stability": "stable",
+            "examples": [
+              "java.net.ConnectException",
+              "OSError"
+            ],
+            "requirement_level": "recommended"
+          },
+          {
+            "type": "string",
+            "id": "message",
+            "brief": "The exception message.",
+            "stability": "stable",
+            "examples": [
+              "Division by zero",
+              "Can't convert 'int' object to str implicitly"
+            ],
+            "requirement_level": "recommended"
+          },
+          {
+            "type": "string",
+            "id": "stacktrace",
+            "brief": "A stacktrace.\n",
+            "stability": "stable",
+            "examples": "Exception in thread \"main\" java.lang.RuntimeException: Test exception\\n at com.example.GenerateTrace.methodB(GenerateTrace.java:13)\\n at com.example.GenerateTrace.methodA(GenerateTrace.java:9)\\n at com.example.GenerateTrace.main(GenerateTrace.java:5)",
+            "requirement_level": "recommended"
+          },
+          {
+            "type": "boolean",
+            "id": "escaped",
+            "brief": "SHOULD be set to true if the exception event is recorded at a point where it is known that the exception is escaping the scope of the span.\n",
+            "note": "An exception is considered to have escaped.",
+            "stability": "stable",
+            "requirement_level": "recommended"
+          }
+        ]
+      }
+    },
+    {
+      "id": "browser.test.event_with_fields",
+      "type": "event",
+      "brief": "An event that adds global attributes for reuse.\n",
+      "stability": "development",
+      "attributes": [
+        1,
+        2,
+        3,
+        4
+      ],
+      "name": "browser.test.event_with_fields",
+      "lineage": {
+        "provenance": {
+          "registry_id": "default",
+          "path": "data/registry-test-4-events/registry/log-events.yaml"
+        }
+      },
+      "body": {
+        "type": "map",
+        "id": "browser.test.event_with_body.fields",
+        "stability": "stable",
+        "requirement_level": "required",
+        "fields": [
+          {
+            "type": "string",
+            "id": "some.field",
+            "brief": "A field that is not referenced in the attributes",
+            "note": "This field is not referenced in the attributes",
+            "stability": "stable",
+            "examples": [
+              "some value",
+              "another value"
+            ],
+            "requirement_level": "required"
+          }
+        ]
+      }
+    },
+    {
+      "id": "browser.test.event_with_body_details",
+      "type": "event",
+      "brief": "An event that adds global attributes for reuse.\n",
+      "stability": "development",
+      "name": "browser.test.event_with_body_details",
+      "lineage": {
+        "provenance": {
+          "registry_id": "default",
+          "path": "data/registry-test-4-events/registry/log-events.yaml"
+        }
+      },
+      "body": {
+        "type": "map",
+        "id": "browser.test.event_with_body_details.fields",
+        "brief": "A map of fields that are not referenced in the attributes",
+        "note": "This map is not referenced in the attributes",
+        "stability": "development",
+        "examples": [
+          "{ \"some.field\": \"some value\" }"
+        ],
+        "requirement_level": "required",
+        "fields": [
+          {
+            "type": "string",
+            "id": "some.field",
+            "brief": "A field that is not referenced in the attributes",
+            "note": "This field is not referenced in the attributes",
+            "stability": "stable",
+            "examples": [
+              "some value",
+              "another value"
+            ],
+            "requirement_level": "recommended"
+          }
+        ]
+      }
+    },
+    {
+      "id": "ios.lifecycle.events",
+      "type": "event",
+      "brief": "This event represents an occurrence of a lifecycle transition on the iOS platform.\n",
+      "stability": "development",
+      "attributes": [
+        5
+      ],
+      "name": "ios.device.app.lifecycle",
+      "lineage": {
+        "provenance": {
+          "registry_id": "default",
+          "path": "data/registry-test-4-events/registry/mobile-events.yaml"
+        }
+      }
+    },
+    {
+      "id": "android.lifecycle.events",
+      "type": "event",
+      "brief": "This event represents an occurrence of a lifecycle transition on the Android platform.\n",
+      "stability": "development",
+      "attributes": [
+        6
+      ],
+      "name": "android.device.app.lifecycle",
+      "lineage": {
+        "provenance": {
+          "registry_id": "default",
+          "path": "data/registry-test-4-events/registry/mobile-events.yaml"
+        }
+      }
+    },
+    {
+      "id": "referenced.attributes",
+      "type": "attribute_group",
+      "brief": "These attributes are used as references for the test below\n",
+      "attributes": [
+        7,
+        8,
+        9,
+        10
+      ],
+      "lineage": {
+        "provenance": {
+          "registry_id": "default",
+          "path": "data/registry-test-4-events/registry/referenced-attributes.yaml"
+        }
+      }
+    },
+    {
+      "id": "registry.client",
+      "type": "attribute_group",
+      "brief": "Client test attributes",
+      "attributes": [
+        11,
+        12
+      ],
+      "lineage": {
+        "provenance": {
+          "registry_id": "default",
+          "path": "data/registry-test-4-events/registry/referenced-attributes.yaml"
+        }
+      }
+    },
+    {
+      "id": "registry.exception",
+      "type": "attribute_group",
+      "brief": "This document defines the shared attributes used to report a single exception associated with a span or log.\n",
+      "attributes": [
+        13,
+        14,
+        15,
+        16
+      ],
+      "lineage": {
+        "provenance": {
+          "registry_id": "default",
+          "path": "data/registry-test-4-events/registry/referenced-attributes.yaml"
+        }
+      }
+    },
+    {
+      "id": "trace-exception",
+      "type": "event",
+      "brief": "This document defines the attributes used to report a single exception associated with a span.\n",
+      "stability": "development",
+      "attributes": [
+        15,
+        16,
+        17,
+        18
+      ],
+      "name": "exception",
+      "lineage": {
+        "provenance": {
+          "registry_id": "default",
+          "path": "data/registry-test-4-events/registry/trace-events.yaml"
+        },
+        "attributes": {
+          "exception.escaped": {
+            "source_group": "registry.exception",
+            "inherited_fields": [
+              "brief",
+              "note",
+              "requirement_level",
+              "stability"
+            ]
+          },
+          "exception.message": {
+            "source_group": "registry.exception",
+            "inherited_fields": [
+              "brief",
+              "examples",
+              "note",
+              "stability"
+            ],
+            "locally_overridden_fields": [
+              "requirement_level"
+            ]
+          },
+          "exception.stacktrace": {
+            "source_group": "registry.exception",
+            "inherited_fields": [
+              "brief",
+              "examples",
+              "note",
+              "requirement_level",
+              "stability"
+            ]
+          },
+          "exception.type": {
+            "source_group": "registry.exception",
+            "inherited_fields": [
+              "brief",
+              "examples",
+              "note",
+              "stability"
+            ],
+            "locally_overridden_fields": [
+              "requirement_level"
+            ]
+          }
+        }
+      }
+    },
+    {
+      "id": "feature_flag",
+      "type": "event",
+      "brief": "This semantic convention defines the attributes used to represent a feature flag evaluation as an event.\n",
+      "stability": "development",
+      "attributes": [
+        19,
+        20,
+        21
+      ],
+      "name": "trace_feature_flag",
+      "lineage": {
+        "provenance": {
+          "registry_id": "default",
+          "path": "data/registry-test-4-events/registry/trace-events.yaml"
+        }
+      }
+    },
+    {
+      "id": "test_evt.with_attr",
+      "type": "event",
+      "brief": "Simple example span event with an attribute\n",
+      "stability": "development",
+      "attributes": [
+        22
+      ],
+      "name": "test_evt.with_attr",
+      "lineage": {
+        "provenance": {
+          "registry_id": "default",
+          "path": "data/registry-test-4-events/registry/trace-events.yaml"
+        },
+        "attributes": {
+          "test_attr.event.attr": {
+            "source_group": "referenced.attributes",
+            "inherited_fields": [
+              "brief",
+              "examples",
+              "stability"
+            ],
+            "locally_overridden_fields": [
+              "note",
+              "requirement_level"
+            ]
+          }
+        }
+      }
+    },
+    {
+      "id": "test_evt.session",
+      "type": "event",
+      "brief": "Another simple span event with another attribute\n",
+      "stability": "development",
+      "attributes": [
+        23
+      ],
+      "name": "test_evt.session",
+      "lineage": {
+        "provenance": {
+          "registry_id": "default",
+          "path": "data/registry-test-4-events/registry/trace-events.yaml"
+        },
+        "attributes": {
+          "test_attr.session.id": {
+            "source_group": "referenced.attributes",
+            "inherited_fields": [
+              "brief",
+              "examples",
+              "stability"
+            ],
+            "locally_overridden_fields": [
+              "note",
+              "requirement_level"
+            ]
+          }
+        }
+      }
+    }
+  ]
+}

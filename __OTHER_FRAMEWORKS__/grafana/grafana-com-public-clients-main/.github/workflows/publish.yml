@@ -1,0 +1,32 @@
+name: Generate Clients
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+
+permissions:
+  contents: write
+
+jobs:
+  build-and-publish:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@1af3b93b6815bc44a9784bd300feb67ff0d1eeb3 # v6.0.0
+        with:
+          persist-credentials: true
+      - uses: actions/setup-go@4dc6199c7b1a012772edbd06daecab0f50c9053c # v6.1.0
+        with:
+          go-version: 1.25
+      - name: Generate Client
+        uses: grafana/shared-workflows/actions/generate-openapi-clients@f7987ba378e8968ad5796f1dd473e2e5b14de2b0
+        with:
+          package-name: gcom
+          spec-path: openapi.json
+          modify-spec-script: .github/workflows/modify-spec.sh
+        env:
+          REPO_NAME: grafana-com-public-clients
+

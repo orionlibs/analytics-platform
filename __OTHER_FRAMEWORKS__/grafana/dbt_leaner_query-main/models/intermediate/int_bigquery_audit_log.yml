@@ -1,0 +1,12 @@
+version: 2
+
+models:
+
+  - name: int_threat_calculation
+    description: ""
+
+  - name: int_importance_calculations
+    description: ""
+
+  - name: int_table_active_users
+    description: ""

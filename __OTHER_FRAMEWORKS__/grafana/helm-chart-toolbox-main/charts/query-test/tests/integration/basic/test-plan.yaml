@@ -1,0 +1,24 @@
+---
+apiVersion: helm-chart-toolbox.grafana.com/v1
+kind: TestPlan
+name: basic
+subject:
+  path: ../../..
+  values:
+    tests:
+      - env: {}
+        queries: []
+
+cluster:
+  type: kind
+
+tests:
+  - type: kubernetes-objects-test
+    values:
+      checks:
+        - kind: ConfigMap
+          name: basic-query-test-0
+          namespace: default
+        - kind: Secret
+          name: basic-query-test-0
+          namespace: default

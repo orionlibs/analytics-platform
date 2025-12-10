@@ -1,0 +1,22 @@
+version: v2
+plugins:
+  # This will invoke protoc-gen-es and write output to src/gen
+  - local: protoc-gen-es
+    out: src/
+    opt: target=ts
+    # This will invoke protoc-gen-connect-query
+  - local: protoc-gen-connect-query
+    out: src/
+    opt: target=ts
+inputs:
+  # Build a subset of the Pyroscope protobuf API
+  - git_repo: https://github.com/grafana/pyroscope.git
+    ref: 575f82a3471695335262a9d8e7807de96302ffd4
+    subdir: api
+    paths:
+      - adhocprofiles/
+      - querier/
+      - settings/
+      - types/
+      - vcs/
+      - google/

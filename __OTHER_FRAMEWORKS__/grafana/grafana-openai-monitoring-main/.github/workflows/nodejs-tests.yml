@@ -1,0 +1,59 @@
+name: Node.js Tests
+
+on:
+  push:
+    branches: [ "main" ]
+  pull_request:
+    branches: [ "main" ]
+  workflow_dispatch:
+  schedule:
+    - cron: '*/180 * * * *'
+
+defaults:
+  run:
+    working-directory: node
+
+env:
+  METRICS_URL: ${{ secrets.PROMETHEUS_URL }}
+  LOGS_URL: ${{ secrets.LOKI_URL }}
+  METRICS_USERNAME: ${{ secrets.PROMETHEUS_USERNAME }}
+  LOGS_USERNAME: ${{ secrets.LOKI_USERNAME }}
+  ACCESS_TOKEN: ${{ secrets.GRAFANA_CLOUD_ACCESS_TOKEN }}
+  OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        node-version: [16.x, 18.x, 20.x]
+    
+    steps:
+    - uses: actions/checkout@v3
+
+    - name: Get changed files in the docs folder
+      id: changed-files-specific
+      uses: tj-actions/changed-files@v41
+      with:
+        files: node/**
+
+    - name: Setup Node.js ${{ matrix.node-version }}
+      if: steps.changed-files-specific.outputs.any_changed == 'true' || github.event.schedule == '*/180 * * * *'
+      uses: actions/setup-node@v3
+      with:
+        node-version: ${{ matrix.node-version }}
+        cache: 'npm'
+        cache-dependency-path: node/package-lock.json
+    
+    - name: NPM CI
+      if: steps.changed-files-specific.outputs.any_changed == 'true' || github.event.schedule == '*/180 * * * *'
+      run: npm ci
+
+    - name: NPM build
+      if: steps.changed-files-specific.outputs.any_changed == 'true' || github.event.schedule == '*/180 * * * *'
+      run: npm run build --if-present
+    
+    - name: NPM Test
+      if: steps.changed-files-specific.outputs.any_changed == 'true' || github.event.schedule == '*/180 * * * *'
+      run: npm test

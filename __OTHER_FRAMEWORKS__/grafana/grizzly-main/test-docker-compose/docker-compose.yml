@@ -1,0 +1,74 @@
+services:
+  grafana:
+    image: &image grafana/grafana:10.2.0
+    restart: on-failure
+    ports:
+      - "3001:3001"
+    environment:
+      - GF_SERVER_HTTP_PORT=3001
+      - GF_AUTH_ANONYMOUS_ENABLED=true
+      - GF_AUTH_ANONYMOUS_ORG_ROLE=Admin
+      - GF_PATHS=/etc/grafana/provisioning
+    volumes:
+      - ./provisioning:/etc/grafana/provisioning
+    healthcheck:
+      test: wget --no-verbose --tries=1 --spider http://0.0.0.0:3001/api/health || exit 1 # Use wget because older versions of Grafana don't have curl
+      interval: 1s
+      retries: 30
+      start_period: 10s
+
+  # Grafana instance served from a subpath (Grafana on port 3002, nginx on port 3003, and the subpath is /grafana)
+  # It's important to use nginx to serve the subpath, otherwise, it doesn't really test the real-world scenario
+  # Grafana will redirect all subpaths to the root URL if that's the correct path, while nginx will fail if the subpath is not correct
+  grafana_subpath:
+    image: *image
+    restart: on-failure
+    ports:
+      - "3002:3002"
+    environment:
+      - GF_SERVER_HTTP_PORT=3002
+      - GF_AUTH_ANONYMOUS_ENABLED=true
+      - GF_AUTH_ANONYMOUS_ORG_ROLE=Admin
+      - GF_PATHS=/etc/grafana/provisioning
+      - GF_SERVER_SERVE_FROM_SUB_PATH=true
+      - GF_SERVER_ROOT_URL=http://localhost:3003/grafana # This is the URL that nginx will use to proxy to the subpath
+    volumes:
+      - ./provisioning:/etc/grafana/provisioning
+    healthcheck:
+      test: wget --no-verbose --tries=1 --spider http://0.0.0.0:3002/api/health || exit 1 # Use wget because older versions of Grafana don't have curl
+      interval: 1s
+      retries: 30
+      start_period: 10s
+  nginx:
+    image: nginx:latest
+    depends_on:
+      - mimir
+      - grafana_subpath
+    ports:
+      - "3003:3003"
+      - "9009:9009"
+    volumes:
+      - ./nginx.conf:/etc/nginx/nginx.conf
+      - ./provisioning/mimir/htpasswd:/etc/nginx/.htpasswd:ro
+
+  grafana_basic_auth:
+    image: *image
+    ports:
+      - "3004:3004"
+    environment:
+      - GF_SERVER_HTTP_PORT=3004
+      - GF_PATHS=/etc/grafana/provisioning
+    volumes:
+      - ./provisioning:/etc/grafana/provisioning
+    healthcheck:
+      test: wget --no-verbose --tries=1 --spider http://0.0.0.0:3004/api/health || exit 1 # Use wget because older versions of Grafana don't have curl
+      interval: 1s
+      retries: 30
+      start_period: 10s
+
+  mimir:
+    image: grafana/mimir:2.12.0
+    command: [ "-config.file=/etc/mimir.yaml" ]
+    hostname: mimir
+    volumes:
+      - ./provisioning/mimir/mimir.yaml:/etc/mimir.yaml

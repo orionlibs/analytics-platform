@@ -1,0 +1,159 @@
+---
+kind: pipeline
+type: docker
+name: Test
+platform:
+  os: linux
+  arch: amd64
+trigger:
+  event:
+    - push
+    - pull_request
+    - tag
+  ref:
+    - refs/heads/main
+    - refs/pull/*/head
+    - refs/tags/**
+steps:
+  - name: test
+    image: golang:1.19-bullseye
+    commands:
+      - echo no tests for this repo
+---
+kind: pipeline
+type: docker
+name: Build
+platform:
+  os: linux
+  arch: amd64
+trigger:
+  event:
+    - push
+    - pull_request
+    - tag
+  ref:
+    - refs/heads/main
+    - refs/pull/*/head
+    - refs/tags/**
+
+steps:
+  - name: build
+    image: golang:1.19-bullseye
+    commands:
+      - make build
+---
+kind: pipeline
+type: docker
+name: Containerize
+platform:
+  os: linux
+  arch: amd64
+trigger:
+  event:
+    - push
+    - tag
+  ref:
+    - refs/heads/main
+    - refs/tags/v*
+
+steps:
+  - name: build and push
+    image: docker
+    volumes:
+      - name: docker
+        path: /var/run/docker.sock
+    environment:
+      GCR_CREDS:
+        from_secret: gcr_admin
+    commands:
+      - apk add --update --no-cache make git coreutils
+      - mkdir -p $HOME/.docker
+      - printenv GCR_CREDS > $HOME/.docker/config.json
+      - make push
+
+volumes:
+  - name: docker
+    host:
+      path: /var/run/docker.sock
+---
+kind: secret
+name: gh_token
+
+get:
+  path: infra/data/ci/github/grafanabot
+  name: pat
+---
+kind: secret
+name: dockerconfigjson
+
+get:
+  path: secret/data/common/gcr
+  name: .dockerconfigjson
+
+---
+kind: secret
+name: gcr_admin
+
+get:
+  name: .dockerconfigjson
+  path: infra/data/ci/gcr-admin
+
+---
+
+kind: pipeline
+type: docker
+name: Deploy-To-Deployment-Tools
+platform:
+  os: linux
+  arch: amd64
+trigger:
+  ref:
+    - refs/heads/main
+
+image_pull_secrets:
+  - dockerconfigjson
+
+steps:
+  - name: put image tag in a file
+    image: alpine
+    commands:
+      - apk update && apk add git
+      - test -f ./tools/image-tag || exit 1
+      - echo "$(sh ./tools/image-tag)" > .tag-only || exit 1
+      - echo "us.gcr.io/kubernetes-dev/test.k6.io:$(sh ./tools/image-tag)" > .image-tag || exit 1
+  - name: Update Deployment Tools
+    image: us.gcr.io/kubernetes-dev/drone/plugins/updater
+    settings:
+      config_json: |-
+        {
+          "destination_branch": "master",
+          "pull_request_branch_prefix": "test-k6-io-",
+          "pull_request_enabled": false,
+          "pull_request_team_reviewers": [
+            "@k6-devops"
+          ],
+          "repo_name": "deployment_tools",
+          "update_jsonnet_attribute_configs": [
+            {
+              "file_path": "ksonnet/environments/k6-test-services/waves.libsonnet",
+              "jsonnet_key": "dev_canary",
+              "jsonnet_value_file": ".image-tag"
+            }
+          ]
+        }
+      github_token:
+        from_secret: gh_token
+
+depends_on:
+  - Containerize
+
+volumes:
+  - name: docker
+    host:
+      path: /var/run/docker.sock
+
+---
+kind: signature
+hmac: 1591c14399e38dddf3da3a8422d0b8759240bfb01269156d792a65e125520693
+
+...

@@ -1,0 +1,47 @@
+{
+  "name": "@opentelemetry-samples/lambda-awssdk",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Sample application for AWS Lambda using AWS SDK v2.",
+  "main": "build/src/index.js",
+  "types": "build/src/index.d.ts",
+  "repository": "open-telemetry/opentelemetry-lambda",
+  "scripts": {
+    "clean": "rimraf build/*",
+    "lint": "ESLINT_USE_FLAT_CONFIG=false eslint . --ext .ts",
+    "lint:fix": "ESLINT_USE_FLAT_CONFIG=false eslint . --ext .ts --fix",
+    "build": "npm run clean && npm run compile && npm run postcompile",
+    "compile": "tsc -p .",
+    "postcompile": "copyfiles 'package*.json' build/lambda/ && npm install --production --ignore-scripts --prefix build/lambda/ && cd build/lambda && bestzip ../function.zip *"
+  },
+  "keywords": [
+    "opentelemetry",
+    "awslambda",
+    "nodejs",
+    "tracing",
+    "profiling",
+    "instrumentation"
+  ],
+  "author": "OpenTelemetry Authors",
+  "license": "Apache-2.0",
+  "engines": {
+    "node": ">=16.0.0"
+  },
+  "files": [
+    "build/src/**/*.js",
+    "build/src/**/*.d.ts",
+    "doc",
+    "LICENSE",
+    "README.md"
+  ],
+  "devDependencies": {
+    "@aws-sdk/client-sts": "^3.826.0",
+    "@types/node": "24.10.1",
+    "aws-cdk-lib": "^2.201.0",
+    "bestzip": "2.2.1",
+    "copyfiles": "2.4.1",
+    "rimraf": "6.1.2",
+    "ts-node": "10.9.2",
+    "typescript": "5.9.3"
+  }
+}

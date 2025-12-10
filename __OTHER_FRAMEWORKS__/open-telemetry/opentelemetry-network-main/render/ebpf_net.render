@@ -1,0 +1,2150 @@
+/*
+ * Copyright The OpenTelemetry Authors
+ * SPDX-License-Identifier: Apache-2.0
+ */
+
+package ebpf_net
+
+/* RPC ID ranges.
+ *
+ * NOTE: when modifying, make sure that existing IDs stay the same
+ *       (add IDs higher than previously used, add at the end of the list).
+ * RPC IDs are allocated here, but mapped over the list of contiguous app message ids
+ * for each message. 300 is the first allocated RPC id per historical convention.
+ */
+namespace {
+  ingest: 301-310,321-330,341,350-360,390-420,491-520,531-550
+  agent_internal: 331-340,361-380
+  matching: 421-440,471-490
+  kernel_collector: 521-530
+  cloud_collector: 441-450
+  aggregation: 451-470
+  logging: 600-699
+}
+
+/******************************************************************************
+ * APP SPANS
+ ******************************************************************************/
+app agent_internal {
+  span agent_internal
+    impl "ebpf_net::agent_internal::AgentInternalSpanBase"
+    include "<generated/ebpf_net/agent_internal/span_base.h>"
+  {
+    pool_size 1
+    singleton
+    0: log dns_packet {
+      description "a DNS packet sent or received by an application"
+      severity 0
+      1: u64 sk
+      2: string pkt
+      3: u16 total_len
+      4: u8 is_rx                 // 0 = sent, 1 = received
+    }
+    1: log reset_tcp_counters {
+      description "new_socket and the sk has the following counters"
+      severity 0
+      1: u64 sk
+      2: u64 bytes_acked
+      3: u32 packets_delivered
+      4: u32 packets_retrans
+      5: u64 bytes_received
+      6: u32 pid
+    }
+    2: log new_sock_created {
+      description "new socket has been created"
+      severity 0
+      1: u32 pid
+      2: u64 sk
+    }
+    3: log udp_new_socket {
+      description "found new or scanned existing udp socket"
+      severity 0
+      1: u32 pid
+      2: u64 sk
+      3: u8 laddr[16]
+      4: u16 lport
+    }
+    4: log udp_destroy_socket {
+      description "udp socket was destroyed"
+      severity 0
+      1: u64 sk
+    }
+    5: log udp_stats {
+      description "udp socket sent datagrams"
+      severity 0
+      1: u64 sk
+      2: u8 raddr[16]
+      3: u32 packets
+      4: u32 bytes
+      5: u8 changed_af
+      6: u16 rport
+      7: u8 is_rx
+      8: u8 laddr[16]
+      9: u16 lport
+      10: u32 drops
+    }
+    6: log pid_info {
+      description "new process info"
+      severity 0
+      1: u32 pid
+      2: u8 comm[16]
+      3: u64 cgroup
+      4: s32 parent_pid
+    }
+    7: log pid_close {
+      description "close process info"
+      severity 0
+      1: u32 pid
+      2: u8 comm[16]
+    }
+    20: log pid_set_comm {
+      description "process comm change"
+      severity 0
+      1: u32 pid
+      2: u8 comm[16]
+    }
+    8: log set_state_ipv4 {
+      description "socket state changed or enumerating sockets"
+      severity 0
+      1: u32 dest
+      2: u32 src
+      3: u16 dport
+      4: u16 sport
+      5: u64 sk
+      7: u32 tx_rx // 0-unknown, 1-connector, 2-listener
+    }
+    9: log set_state_ipv6 {
+      description "socket state changed or enumerating sockets"
+      severity 0
+      1: u8 dest[16]
+      2: u8 src[16]
+      3: u16 dport
+      4: u16 sport
+      5: u64 sk
+      7: u32 tx_rx // 0-unknown, 1-connector, 2-listener
+    }
+    10: log rtt_estimator {
+      description "periodic telemetry about a socket"
+      severity 0
+      1: u32 srtt
+      2: u32 snd_cwnd
+      3: u64 bytes_acked
+      4: u8 ca_state
+      5: u64 sk
+      6: u32 packets_in_flight
+      7: u32 packets_delivered
+      8: u32 packets_retrans
+      9: u32 rcv_holes
+      10: u64 bytes_received
+      11: u32 rcv_delivered
+      12: u32 rcv_rtt
+    }
+    11: log close_sock_info {
+      description "close socket info"
+      severity 0
+      1: u64 sk
+    }
+    12: log kill_css {
+      description "destroy a css"
+      severity 0
+      1: u64 cgroup
+      2: u64 cgroup_parent
+      3: u8 name[256]
+      // Be careful: mind the 512 byte limit for the bpf stack.
+      // We need the whole name because systemd style cgroup names are long and
+      // have the container id at the end.
+    }
+    13: log css_populate_dir {
+      description "create subsys files in a cgroup directory"
+      severity 0
+      1: u64 cgroup
+      2: u64 cgroup_parent
+      3: u8 name[256] // See kill_css note.
+    }
+    14: log existing_cgroup_probe {
+      description "existing_cgroup_probe used by kprobe:cgroup_clone_children_read for cgroup v1 and kprobe:cgroup_control for cgroup v2."
+      severity 0
+      1: u64 cgroup
+      2: u64 cgroup_parent
+      3: u8 name[256] // See kill_css note.
+    }
+    15: log cgroup_attach_task {
+      description "cgroup_attach_task"
+      severity 0
+      1: u64 cgroup
+      2: u32 pid
+      3: u8 comm[16]
+    }
+    // unpacks connection information from the params of this function
+    // struct nf_conn ct.tuplehash holds two nf_conntrack_tuple structs
+    // see nf_conntrack_tuple.h for more info
+    16: log nf_conntrack_alter_reply {
+      description "nf_conntrack_alter_reply"
+      severity 0
+      1: u64 ct
+      2: u32 src_ip // in network byte order
+      3: u16 src_port // in network byte order
+      4: u32 dst_ip // in network byte order
+      5: u16 dst_port // in network byte order
+      6: u8 proto
+      7: u32 nat_src_ip // in network byte order
+      8: u16 nat_src_port // in network byte order
+      9: u32 nat_dst_ip // in network byte order
+      10: u16 nat_dst_port // in network byte order
+      11: u8 nat_proto
+    }
+    17: log nf_nat_cleanup_conntrack {
+      description "nf_nat_cleanup_conntrack"
+      severity 0
+      1: u64 ct
+      2: u32 src_ip // in network byte order
+      3: u16 src_port // in network byte order
+      4: u32 dst_ip // in network byte order
+      5: u16 dst_port // in network byte order
+      6: u8 proto
+    }
+    18: log existing_conntrack_tuple {
+      description "existing_conntrack_tuple"
+      severity 0
+      1: u64 ct
+      2: u32 src_ip // in network byte order
+      3: u16 src_port // in network byte order
+      4: u32 dst_ip // in network byte order
+      5: u16 dst_port // in network byte order
+      6: u8 proto
+      7: u8 dir
+    }
+    19: log tcp_syn_timeout {
+      description "tcp socket experienced a timeout in SYN_RECV or SYN_SENT state"
+      severity 0
+      1: u64 sk
+    }
+    21: log http_response {
+      description "http response code and latency"
+      severity 0
+      1: u64 sk
+      2: u32 pid
+      3: u16 code           // http response code
+      4: u64 latency_ns     // in nanoseconds (client=round-trip time, server=processing time)
+      5: u8 client_server   // 0 = client, 1 = server
+    }
+    22: log bpf_log {
+      description "log/warning/error event"
+      severity 0
+      1: u64 filelineid // file/line debug information id
+      2: u64 code       // error/warning/message code
+      3: u64 arg0       // code-specific arguments (generic)
+      4: u64 arg1
+      5: u64 arg2
+    }
+    23: log stack_trace {
+      description "debugging stack trace event"
+      severity 0
+      1: s32 kernel_stack_id  // id of the kernel stack trace
+      2: s32 user_stack_id    // id of the userland stack trace
+      3: u32 tgid             // tgid
+      4: u8 comm[16]          // process command
+    }
+    24: log tcp_data {
+      description "tcp packet data from bpf"
+      severity 0
+      1: u64 sk               // sock
+      2: u32 pid              // tgid
+      3: u32 length           // data length
+      4: u64 offset           // offset into the stream for the data
+      5: u8 stream_type       // enum STREAM_TYPE { ST_SEND = 0, ST_RECV = 1 }
+      6: u8 client_server     // enum CLIENT_SERVER_TYPE { SC_CLIENT = 0, SC_SERVER = 1 }
+    }
+    26: log pid_exit {
+      description "called when a thread exits"
+      severity 0
+
+      1: u64 tgid
+      2: u32 pid
+
+      3: s32 exit_code
+    }
+    27: log report_debug_event {
+      description "called when a bpf debug event is triggered - for debugging purposes"
+      severity 0
+
+      1: u16 event // unique dentifying code for the debug event
+      2: u64 arg1 // event dependent data
+      3: u64 arg2 // event dependent data
+      4: u64 arg3 // event dependent data
+      5: u64 arg4 // event dependent data
+    }
+    28: log tcp_reset {
+      description "tcp RST was sent/received"
+      severity 0
+      1: u64 sk
+      2: u8 is_rx
+    }
+  }
+} /* app agent_internal */
+
+app ingest {
+
+  span process impl "reducer::ingest::ProcessSpan" include "<reducer/ingest/process_span.h>" {
+    pool_size 10000000
+
+    string<16> comm
+
+    reference<cgroup> cgroup
+    reference<service> service
+
+    // userspace proxy hack: cgroup of the target process
+    reference<cgroup> cgroup_override
+
+    0: start pid_info ref pid {
+      description "new process info"
+      severity 0
+      1: u32 pid
+      2: u8 comm[16]
+    }
+    5: end pid_close_info ref pid {
+      description "close process info"
+      severity 0
+      1: u32 pid
+      2: u8 comm[16]
+    }
+    35: start pid_info_create_deprecated ref pid {
+      description "new process info"
+      severity 0
+      1: u32 pid
+      2: u8 comm[16]
+      3: u64 cgroup
+    }
+    108: start pid_info_create ref pid {
+      description "new process info"
+      severity 0
+      1: u32 pid
+      2: u8 comm[16]
+      3: u64 cgroup
+      4: s32 parent_pid
+      5: string cmdline
+    }
+    39: log pid_cgroup_move ref pid {
+      description "process attached to a cgroup"
+      severity 0
+      1: u32 pid
+      3: u64 cgroup
+    }
+    41: log pid_set_comm ref pid {
+      description "process comm changed"
+      severity 0
+      1: u32 pid
+      2: u8 comm[16]
+    }
+    109: log pid_set_cmdline ref pid {
+      description "process command-line changed"
+      severity 0
+      1: u32 pid
+      2: string cmdline
+    }
+  } /* span process */
+
+  // processes proxied by the kernel collector
+  // transitional span so we can migrate from the non-proxied version
+  // gradually without breaking existing functionality
+  span tracked_process
+    impl "ebpf_net::ingest::TrackedProcessSpanBase"
+    include "<generated/ebpf_net/ingest/span_base.h>"
+  {
+    pool_size 10000000
+
+    72: msg _start {}
+    73: msg _end {}
+
+    74: msg set_tgid {
+      description "set tgid"
+      severity 0
+      1: u32 tgid
+    }
+
+    75: msg set_cgroup {
+      description "set cgroup"
+      severity 0
+      1: u64 cgroup
+    }
+
+    76: msg set_command {
+      description "set cmd line"
+      severity 0
+      1: string command
+    }
+
+    89: msg pid_exit {
+      description "pid_exit"
+      severity 0
+
+      // the TGID this PID belongs to
+      1: u64 tgid
+
+      // the PID that's exiting
+      2: u32 pid
+
+      // the exit code of the PID when it finished execution
+      3: s32 exit_code
+    }
+  } /* span tracked_process_span */
+
+  span cgroup impl "reducer::ingest::CgroupSpan" include "<reducer/ingest/cgroup_span.h>" {
+    pool_size 800000
+
+    // cgroup name prefix
+    string<256> name
+
+    // if this cgroup is a pod
+    u8 pod_uid_suffix[64]
+    u64 pod_uid_hash
+
+    u16 cpu_soft_limit // cpu shares in kernel lingo: https://elixir.bootlin.com/linux/v5.8-rc3/source/kernel/sched/fair.c#L3122
+    u32 cpu_hard_quota
+    u32 cpu_hard_period
+
+    reference<cgroup> parent
+
+    reference<service> service
+
+    reference<container> container
+
+    36: start cgroup_create_deprecated ref cgroup {
+      description "cgroup created"
+      severity 0
+      1: u64 cgroup
+      2: u64 cgroup_parent
+      3: u8 name[64]
+    }
+    106: start cgroup_create ref cgroup {
+      description "cgroup created"
+      severity 0
+      1: u64 cgroup
+      2: u64 cgroup_parent
+      3: u8 name[256]
+    }
+    37: end cgroup_close ref cgroup {
+      description "cgroup destroyed"
+      severity 0
+      1: u64 cgroup
+    }
+    38: log container_metadata ref cgroup {
+      description "Container metadata"
+      severity 0
+      1: u64 cgroup
+      2: string id
+      3: string name
+      4: string image
+      5: string ip_addr
+      6: string cluster
+      7: string container_name
+      8: string task_family
+      9: string task_version
+      10: string ns
+    }
+    52: log pod_name ref cgroup {
+      description "The name of the pod derived from docker metadata"
+      severity 0
+      1: u64 cgroup
+      2: string _deprecated_pod_uid
+      3: string name
+    }
+    80: log nomad_metadata ref cgroup {
+      description "Nomad metadata extracted from the container's environment"
+      severity 0
+      1: u64 cgroup
+      2: string ns
+      3: string group_name
+      4: string task_name
+      5: string job_name
+    }
+    84: log k8s_metadata ref cgroup {
+      description "K8s metadata extracted from the container's labels"
+      severity 0
+      1: u64 cgroup
+      2: string container_name
+      3: string pod_name
+      4: string pod_ns
+      5: string pod_uid
+      6: string sandbox_uid
+    }
+    85: log k8s_metadata_port ref cgroup {
+      description "K8s ports metadata extracted from the container's labels"
+      severity 0
+      1: u64 cgroup
+      2: u16 port
+      3: u8 protocol // as in `PortProtocol` from `common/port_protocol.h`
+      4: string name
+    }
+    86: log container_resource_limits_deprecated ref cgroup {
+      description "container resource limits"
+      severity 0
+      1: u64 cgroup
+      2: u16 cpu_shares
+      3: u16 cpu_period
+      4: u16 cpu_quota
+      5: u8 memory_swappiness
+      6: u64 memory_limit
+      7: u64 memory_soft_limit
+      8: s64 total_memory_limit
+    }
+    90: log container_resource_limits ref cgroup {
+      description "container resource limits"
+      severity 0
+      1: u64 cgroup
+      2: u16 cpu_shares
+      3: u32 cpu_period
+      4: u32 cpu_quota
+      5: u8 memory_swappiness
+      6: u64 memory_limit
+      7: u64 memory_soft_limit
+      8: s64 total_memory_limit
+    }
+    100: log container_annotation ref cgroup {
+      description "Container annotation from `Config.Labels`"
+      severity 0
+      1: u64 cgroup
+      2: string key
+      3: string value
+    }
+  } /* span cgroup */
+
+  span socket impl "reducer::ingest::SocketSpan" include "<reducer/ingest/socket_span.h>" {
+    pool_size 5000000
+
+    reference<process> process
+
+    1: start new_sock_info ref sk {
+      description "new socket info"
+      severity 0
+      1: u32 pid
+      2: u64 sk
+    }
+    2: log set_state_ipv4 ref sk {
+      description "socket state changed or enumerating sockets"
+      severity 0
+      1: u32 dest
+      2: u32 src
+      3: u16 dport
+      4: u16 sport
+      5: u64 sk
+      7: u32 tx_rx
+    }
+    3: log set_state_ipv6 ref sk {
+      description "socket state changed or enumerating sockets"
+      severity 0
+      1: u8 dest[16]
+      2: u8 src[16]
+      3: u16 dport
+      4: u16 sport
+      5: u64 sk
+      7: u32 tx_rx
+    }
+    15: log socket_stats ref sk {
+      description "aggregated statistics for the socket"
+      severity 0
+      1: u64 sk
+      2: u64 diff_bytes
+      3: u32 diff_delivered
+      4: u32 diff_retrans
+      5: u32 max_srtt
+      6: u8 is_rx
+    }
+    31: log nat_remapping ref sk {
+      description "NAT remapping for a connection"
+      severity 0
+      1: u64 sk
+      2: u32 src
+      3: u32 dst
+      4: u16 sport
+      5: u16 dport
+    }
+    7: end close_sock_info ref sk {
+      description "close socket info"
+      severity 0
+      1: u64 sk
+    }
+    40: log syn_timeout ref sk {
+      description "tcp socket experienced a timeout in SYN_RECV or SYN_SENT state"
+      severity 0
+      1: u64 sk
+    }
+    43: log http_response ref sk {
+      description "http response code and latency"
+      severity 0
+      1: u64 sk
+      2: u32 pid
+      3: u16 code           // http response code
+      4: u64 latency_ns     // in nanoseconds (client=round-trip time, server=processing time)
+      5: u8 client_server   // 0 = client, 1 = server
+    }
+    91: log tcp_reset ref sk {
+      description "tcp RST was sent/received"
+      severity 0
+      1: u64 sk
+      2: u8 is_rx
+    }
+  } /* span socket */
+
+  span agent impl "reducer::ingest::AgentSpan" include "<reducer/ingest/agent_span.h>" {
+    pool_size 512 /* See core.h CONN_POOL_SIZE */
+    singleton
+    6: log process_steady_state {
+      description "sent when we reach steady state for processes"
+      severity 0
+      1: u64 time
+    }
+    8: log socket_steady_state {
+      description "sent when we reach steady state for sockets"
+      severity 0
+      1: u64 time
+    }
+    9: log version_info {
+      description "reported to the server when the agent starts"
+      severity 0
+      no_authorization_needed
+      pipeline_only
+
+      1: u32 major
+      2: u32 minor
+      3: u32 patch
+    }
+    57: log set_node_info {
+      description "reports node information from agent"
+      severity 0
+      1: string az
+      2: string role
+      3: string instance_id
+      4: string instance_type
+    }
+    58: log set_config_label {
+      description "report a custom label"
+      severity 0
+      1: string key
+      2: string value
+    }
+    10: log set_availability_zone_deprecated {
+      description "reports availability zone"
+      severity 0
+      1: u8 retcode
+      2: u8 az[16]
+    }
+    11: log set_iam_role_deprecated {
+      description "reports cloud platform IAM role"
+      severity 0
+      1: u8 retcode
+      2: u8 role[64]
+    }
+    12: log set_instance_id_deprecated {
+      description "reports cloud platform instance name, the 17 char hex notation"
+      severity 0
+      1: u8 retcode
+      2: u8 id[17]
+    }
+    13: log set_instance_type_deprecated {
+      description "reports cloud platform instance type"
+      severity 0
+      1: u8 retcode
+      2: u8 val[17]
+    }
+    14: log dns_response_fake {
+      description "Used to manually set a DNS entry at the server"
+      severity 0
+      1: u16 total_dn_len
+      2: string ips
+      3: string domain_name
+    }
+    33: log dns_response_dep_a_deprecated {
+      description "The domain and information from a DNS response"
+      severity 0
+      1: u16 total_dn_len
+      2: string domain_name
+      3: string ipv4_addrs
+      4: string ipv6_addrs
+    }
+    16: log set_config_label_deprecated {
+      description "report a label specified in the config file"
+      severity 0
+      1: u8 key[20]
+      2: u8 val[40]
+    }
+    23: log api_key {
+      description "the api key"
+      severity 0
+      no_authorization_needed
+      pipeline_only
+
+      1: u8 tenant[20]
+      2: u8 api_key[64]
+    }
+    24: log private_ipv4_addr {
+      description "a private ipv4 address"
+      severity 0
+      1: u32 addr // in network byte order
+      2: u8 vpc_id[22]
+    }
+    25: log ipv6_addr {
+      description "an ipv6 address"
+      severity 0
+      1: u8 addr[16]
+      2: u8 vpc_id[22]
+    }
+    26: log public_to_private_ipv4 {
+      description "the mapping of a public to private ipv4 address"
+      severity 0
+      1: u32 public_addr // in network byte order
+      2: u32 private_addr // in network byte order
+      3: u8 vpc_id[22]
+    }
+    27: log metadata_complete {
+      description "sent when we've finished sending all the agent's metadata"
+      severity 0
+      1: u64 time
+    }
+    28: log bpf_lost_samples {
+      description "perf reported that samples were lost"
+      severity 1
+      pipeline_only
+
+      1: u64 count
+    }
+    29: log pod_new_legacy {
+      description "New POD"
+      severity 0
+      1: string uid
+      2: u32 ip
+      3: string owner_name
+      4: u8 owner_kind
+      5: string owner_uid
+      6: u8 is_host_network
+      // namespace of the pod
+      7: string ns
+    }
+    56: log pod_new_legacy2 {
+      description "New POD"
+      severity 0
+      1: string uid
+      2: u32 ip
+      3: string owner_name
+      4: u8 owner_kind
+      5: string owner_uid
+      6: u8 is_host_network
+      // namespace of the pod
+      7: string ns
+      8: string version
+    }
+    87: log pod_new_with_name {
+      description "New POD"
+      severity 0
+      1: string uid
+      2: u32 ip
+      3: string owner_name
+      4: string pod_name
+      5: u8 owner_kind
+      6: string owner_uid
+      7: u8 is_host_network
+      8: string ns
+      9: string version
+    }
+    42: log pod_container_legacy {
+      description "POD has a container"
+      severity 0
+      1: string uid
+      2: string container_id
+    }
+    66: log pod_container {
+      description "POD has a container"
+      severity 0
+      1: string uid
+      2: string container_id
+      3: string container_name
+      4: string container_image
+    }
+    30: log pod_delete {
+      description "POD is deleted"
+      severity 0
+      1: string uid
+    }
+    32: log pod_resync {
+      description "Current live pod info is staled. Clean then up"
+      severity 0
+      1: u64 resync_count
+    }
+    22: log span_duration_info {
+      description "the duration and span type"
+      severity 0
+      1: u64 duration
+    }
+    34: log heartbeat {
+      description "heartbeat signal from agent/collector to server."
+      severity 0
+      pipeline_only
+    }
+    110: log connect {
+      description "called by the agent to connect to intake"
+      severity 0
+      no_authorization_needed
+      pipeline_only
+
+      1: u8 collector_type // ClientType enum
+      2: string hostname
+    }
+    51: log health_check {
+      description "called to perform a health check on the server"
+      severity 0
+      no_authorization_needed
+      pipeline_only
+
+      1: u8 client_type // ClientType enum
+      2: string origin
+    }
+
+    53: log log_message {
+      description "log agent warnings"
+      severity 0
+      pipeline_only
+
+      1: u8 log_level // spdlog::level::level_enum
+      2: string message
+    }
+
+    54: log agent_resource_usage {
+      description "logs resource usage by the agent"
+      severity 0
+      pipeline_only
+
+      1: u64 user_mode_time_us
+      2: u64 kernel_mode_time_us
+      3: u64 max_resident_set_size
+      4: u32 minor_page_faults
+      5: u32 major_page_faults
+      6: u32 block_input_count
+      7: u32 block_output_count
+      8: u32 voluntary_context_switch_count
+      9: u32 involuntary_context_switch_count
+      10: u16 cpu_usage_by_agent // per-thousand fixed point, lowest 3 digits are fractional
+      11: u16 cpu_idle // per-thousand fixed point, lowest 3 digits are fractional
+    }
+
+    55: log cloud_platform {
+      description "logs which cloud platform the agent is running on"
+      severity 0
+
+      1: u16 cloud_platform // as per `common/cloud_platform.h`
+    }
+
+    61: log os_info_deprecated {
+      description "reports the os and distro under which the agent is running"
+      severity 0
+
+      1: u8 os // as per `common/operating_system.h`
+      2: u8 flavor // as per `common/linux_distro.h`
+      3: string kernel_version
+
+      // this message is forwards compatible with support for new operating systems
+      // the field `distro` could be repurposed with, say, the OSX release or Windows version
+    }
+
+    107: log os_info {
+      description "reports the os and distro under which the agent is running"
+      severity 0
+
+      1: u8 os // as per `common/operating_system.h`
+      2: u8 flavor // as per `common/linux_distro.h`
+      3: string os_version
+      4: string kernel_version
+
+      // this message is forwards compatible with support for new operating systems
+      // the field `distro` could be repurposed with, say, the OSX release or Windows version
+    }
+
+    62: log kernel_headers_source {
+      description "logs the source used to obtain kernel headers"
+      severity 0
+      pipeline_only
+
+      1: u8 source // as per `collector/kernel/kernel_headers_source.h`
+    }
+
+    63: log entrypoint_error {
+      description "logs errors that happen before launching the agent, at the container entrypoint"
+      severity 0
+      pipeline_only
+
+      1: u8 error // as per `collector/kernel/entrypoint_error.h`
+    }
+
+    64: log bpf_compiled {
+      description "tells the server that BPF was successfully compiled by the kernel collector"
+      severity 0
+      pipeline_only
+    }
+
+    65: log begin_telemetry {
+      description "tells the server that agent setup is complete and telemetry is about to flow"
+      severity 0
+      pipeline_only
+    }
+
+    67: log cloud_platform_account_info {
+      description "log under which cloud platform account id this collector is running"
+      severity 0
+      1: string account_id
+    }
+
+    68: log collector_health {
+      description "reports health status about collectors"
+      severity 0
+      pipeline_only
+
+      1: u16 status // CollectorStatus enum in `common/collector_status.h`
+      2: u16 detail // extended info about the collector's status
+                    // cloud-collector: the http status code for api calls
+    }
+
+    70: log system_wide_process_settings {
+      description "reports system-wide settings that matters for process stats"
+      severity 0
+
+      1: u64 clock_ticks_per_second
+      2: u64 memory_page_bytes
+    }
+
+    // use cases for this message:
+    // - unexpected error condition has been met, so agent collects information and
+    //   submits to the server for further inspection
+    //
+    // NOTE: calls to this message should be rate limited to avoid network overhead
+    83: log collect_blob {
+      description "a generic message used to collect random pieces of information from agents"
+      severity 0
+      pipeline_only
+
+      1: u16 blob_type // as in the `CollectedBlobType` enum from `common/collected_blob_type.h`
+      2: u64 subtype // extra metadata field whose meaning varies by `type`
+      3: string metadata // some descriptive metadata about the blob
+      4: string blob // the contents of the blob
+    }
+
+    98: log report_cpu_cores {
+      1: u32 cpu_core_count
+    }
+
+    99: log bpf_log {
+      description "reports health status about collectors"
+      severity 0
+      pipeline_only
+
+      1: string filename
+      2: u32 line
+      2: u64 code       // error/warning/message code
+      3: u64 arg0       // code-specific arguments (generic)
+      4: u64 arg1
+      5: u64 arg2
+    }
+
+  } /* span agent */
+
+  span aws_network_interface
+    impl "reducer::collector::cloud::AwsNetworkInterfaceSpan"
+    include "<reducer/ingest/aws_network_interface_span.h>"
+  {
+    pool_size 60000 // arbitrary number, we need a better estimate
+    index (ip)
+
+    proxy matching.aws_enrichment
+
+    u128 ip
+
+    48: msg _start {}
+    49: msg _end {}
+
+    50: msg network_interface_info_deprecated {
+      description "information about the network interface"
+      severity 0
+      1: u8 ip_owner_id[18]
+      2: u8 vpc_id[22]
+      3: u8 az[16]
+      4: string interface_id
+      5: u16 interface_type
+      6: string instance_id
+      7: string instance_owner_id
+      8: string public_dns_name
+      9: string private_dns_name
+      10: string interface_description
+    }
+
+    59: msg network_interface_info {
+      description "information about the network interface"
+      severity 0
+      1: string ip_owner_id
+      2: string vpc_id
+      3: string az
+      4: string interface_id
+      5: u16 interface_type
+      6: string instance_id
+      7: string instance_owner_id
+      8: string public_dns_name
+      9: string private_dns_name
+      10: string interface_description
+    }
+  } /* span aws_network_interface */
+
+  span udp_socket impl "reducer::ingest::UdpSocketSpan" include "<reducer/ingest/udp_socket_span.h>" {
+    pool_size 120000
+
+    reference<process> process
+
+    17: start udp_new_socket ref sk_id {
+      description "new udp socket was initialized"
+      severity 0
+      1: u32 pid
+      2: u32 sk_id
+      3: u8 laddr[16]
+      4: u16 lport
+    }
+    19: log udp_stats_addr_unchanged ref sk_id {
+      description "udp socket sent datagrams"
+      severity 0
+      1: u32 sk_id
+      2: u8 is_rx
+      3: u32 packets
+      4: u32 bytes
+    }
+    20: log udp_stats_addr_changed_v4 ref sk_id {
+      description "udp socket sent datagrams"
+      severity 0
+      1: u32 sk_id
+      2: u8 is_rx
+      3: u32 packets
+      4: u32 bytes
+      5: u32 raddr
+      6: u16 rport
+      // TODO: Can uncomment this once we decide to support laddr info
+      //7: u32 laddr
+      //8: u16 lport
+    }
+    21: log udp_stats_addr_changed_v6 ref sk_id {
+      description "udp socket sent datagrams"
+      severity 0
+      1: u32 sk_id
+      2: u8 is_rx
+      3: u32 packets
+      4: u32 bytes
+      5: u8 raddr[16]
+      6: u16 rport
+      // TODO: Can uncomment this once we decide to support laddr info
+      //7: u8 laddr[16]
+      //8: u16 lport
+    }
+    44: log dns_response_dep_b ref sk_id { // deprecated
+      description "DNS A/AAAA record query response, with name, response address(es), and latency information"
+      severity 0
+      1: u32 sk_id
+      2: u16 total_dn_len                 // Total length of domain name without truncation (DNS_NAME_MAX_LENGTH)
+      3: string domain_name               // Domain name being queried (possibly truncated)
+      4: string ipv4_addrs                // IPv4 addresses corresponding to domain name 'dn'
+      5: string ipv6_addrs                // IPv6 addresses corresponding to domain name 'dn'
+      6: u64 latency_ns                   // Request to response latency (in ns)
+    }
+    45: log dns_timeout ref sk_id {
+      description "A DNS A/AAAA record request timeout"
+      severity 0
+      1: u32 sk_id
+      2: u16 total_dn_len                 // Total length of domain name without truncation (DNS_NAME_MAX_LENGTH)
+      3: string domain_name               // Domain name being queried (possibly truncated)
+      4: u64 timeout_ns                   // Timeout duration for request (in ns)
+    }
+    47: log udp_stats_drops_changed ref sk_id {
+      description "udp socket drops"
+      severity 0
+      1: u32 sk_id
+      2: u32 drops
+    }
+    60: log dns_response ref sk_id {
+      description "DNS A/AAAA record query response, with name, response address(es), and latency information, with direction"
+      severity 0
+      1: u32 sk_id
+      2: u16 total_dn_len                 // Total length of domain name without truncation (DNS_NAME_MAX_LENGTH)
+      3: string domain_name               // Domain name being queried (possibly truncated)
+      4: string ipv4_addrs                // IPv4 addresses corresponding to domain name 'dn'
+      5: string ipv6_addrs                // IPv6 addresses corresponding to domain name 'dn'
+      6: u64 latency_ns                   // Request to response total time (in ns) for clients, or processing time for servers
+      7: u8 client_server                 // 0 = client received response, 1 = server sent response
+    }
+
+    18: end udp_destroy_socket ref sk_id {
+      description "udp socket was destroyed"
+      severity 0
+      1: u32 sk_id
+    }
+  } /* span udp_socket */
+
+  /**
+   * An k8s_pod
+   */
+  span k8s_pod impl "reducer::ingest::K8sPodSpan" include "<reducer/ingest/k8s_pod_span.h>" {
+    pool_size 220000
+    index (uid_suffix, uid_hash)
+    proxy matching.k8s_pod
+
+    // can be obtained from docker label `io.kubernetes.pod.uid`
+    u8 uid_suffix[64]
+    // since uid's can theoretically be unbounded in length, we will use the
+    // the last 64 bytes of the uid, with the addition of a u64 which provides
+    // extra reduction in collisions
+    u64 uid_hash
+
+    // can be obtained from docker label `io.kubernetes.pod.name`??
+    string<64> owner_name   // name of the Deployment, DaemonSet, ReplicaSet or StatefulSet owning the pod
+
+    // owner uid
+    string<64> owner_uid
+
+    // can be obtained from docker label `io.kubernetes.pod.namespace`
+    string<64> ns
+
+    // can be obtained from docker label ``??
+    string<64> version
+  }
+
+  span k8s_container {
+    pool_size 600000
+    index (uid_suffix, uid_hash)
+    proxy matching.k8s_container
+
+    u8 uid_suffix[64]
+    u64 uid_hash
+
+    // can be obtained from docker label `io.kubernetes.container.name`
+    string<64> name
+
+    // can be obtained from docker label ``??
+    string<64> image
+  }
+
+  span container {
+    pool_size 500000
+    index (id)
+    string<64> id
+    string<64> name // i.e. ECS or k&s container name
+    string<80> role
+    string<64> version
+    string<64> ns
+    string<64> pod_name
+    u8 node_type // as in `NodeResolutionType`, either `K8S_CONTAINER`, `CONTAINER` or `NOMAD`
+    u32 update_count // incremented each time one or more fields are modified
+  }
+
+  span service {
+    pool_size 500000
+    index (name)
+    string<64> name
+  }
+
+  span flow {
+    pool_size 4200000
+    index (addr1, port1, addr2, port2)
+    proxy matching.flow shard_by (addr1, port1, addr2, port2)
+
+    u128 addr1
+    u16 port1
+    u128 addr2
+    u16 port2
+
+    reference<process> process1
+    reference<process> process2
+    u32 is_connector
+
+    reference<container> container1 cached {
+      id = process1.cgroup.container.id
+    }
+    reference<container> container2 cached {
+      id = process2.cgroup.container.id
+    }
+
+    // userspace proxy hack: container from process' overridden cgroup
+    //
+    reference<container> container1_override cached {
+      id = process1.cgroup_override.container.id
+    }
+    reference<container> container2_override cached {
+      id = process2.cgroup_override.container.id
+    }
+  }
+
+  span logger {
+    proxy logging.logger
+  }
+
+  span core_stats {
+    proxy logging.core_stats
+  }
+
+  span ingest_core_stats {
+    proxy logging.ingest_core_stats
+  }
+} /* app ingest */
+
+app matching {
+
+  span flow impl "reducer::matching::FlowSpan" include "<reducer/matching/flow_span.h>" {
+    pool_size 4200000
+    index (addr1, port1, addr2, port2)
+
+    aggregate tcp_a_to_b (root type tcp_metrics interval 30 slots 4)
+    aggregate tcp_b_to_a (root type tcp_metrics interval 30 slots 4)
+    aggregate http_a_to_b (root type http_metrics interval 30 slots 4)
+    aggregate http_b_to_a (root type http_metrics interval 30 slots 4)
+    aggregate udp_a_to_b (root type udp_metrics interval 30 slots 4)
+    aggregate udp_b_to_a (root type udp_metrics interval 30 slots 4)
+    aggregate dns_a_to_b (root type dns_metrics interval 30 slots 4)
+    aggregate dns_b_to_a (root type dns_metrics interval 30 slots 4)
+
+    u128 addr1
+    u16 port1
+    u128 addr2
+    u16 port2
+
+    reference<agg_root> agg_root
+
+    // the pods for either side, if enriched with pod info.
+    reference<k8s_pod> k8s_pod1
+    reference<k8s_pod> k8s_pod2
+
+    0: msg _start {}
+    1: msg _end {}
+    2: msg agent_info {
+      1: u8 side
+      2: string id
+      3: string az
+      4: string env
+      5: string role
+      6: string ns
+    }
+    3: msg task_info {
+      1: u8 side
+      2: string comm
+      3: string cgroup_name
+    }
+    4: msg socket_info {
+      1: u8 side
+      2: u8 local_addr[16]
+      3: u16 local_port
+      4: u8 remote_addr[16]
+      5: u16 remote_port
+      6: u8 is_connector
+      8: string remote_dns_name
+    }
+    5: msg k8s_info {
+      1: u8 side
+      2: u8 pod_uid_suffix[64]
+      3: u64 pod_uid_hash
+    }
+    6: msg tcp_update {
+      1: u8 side
+      2: u8 is_rx
+      3: u32 active_sockets
+      4: u32 sum_retrans
+      5: u64 sum_bytes
+      6: u64 sum_srtt
+      7: u64 sum_delivered
+      8: u32 active_rtts
+      9: u32 syn_timeouts
+     10: u32 new_sockets
+     11: u32 tcp_resets
+    }
+    7: msg udp_update {
+      1: u8 side
+      2: u8 is_rx
+      3: u32 active_sockets
+      4: u32 addr_changes
+      5: u32 packets
+      6: u64 bytes
+      7: u32 drops
+    }
+    8: msg http_update {
+      1: u8 side
+      2: u8 client_server
+
+      // Fields below are aliases of those in http_metrics
+      3: u32 active_sockets
+      4: u32 sum_code_200
+      5: u32 sum_code_400
+      6: u32 sum_code_500
+      7: u32 sum_code_other
+      8: u64 sum_total_time_ns
+      9: u64 sum_processing_time_ns
+    }
+    9: msg dns_update {
+      1: u8 side
+      2: u8 client_server
+
+      // Fields below are aliases of those in dns_metrics
+      3: u32 active_sockets
+      4: u32 requests_a
+      5: u32 requests_aaaa
+      6: u32 responses
+      7: u32 timeouts
+      8: u64 sum_total_time_ns
+      9: u64 sum_processing_time_ns
+    }
+    13: msg container_info {
+      1: u8 side
+      2: string name
+      3: string pod
+      4: string role
+      5: string version
+      6: string ns
+      7: u8 node_type // as in `NodeResolutionType`, either `CONTAINER` or `NOMAD`
+    }
+    14: msg service_info {
+      1: u8 side
+      2: string name
+    }
+  }
+
+  span aws_enrichment
+    impl "reducer::matching::AwsEnrichmentSpan"
+    include "<reducer/matching/aws_enrichment_span.h>"
+  {
+    pool_size 60000 // arbitrary number, we need a better estimate
+    index (ip)
+
+    u128 ip
+
+    10: msg _start {}
+    11: msg _end {}
+
+    12: msg aws_enrichment {
+      description "enrichment from cloud-collector / aws node resolution"
+      severity 0
+      1: string role
+      2: string az
+      3: string id
+    }
+  } /* span aws_enrichment */
+
+  span agg_root {
+    pool_size 4800000
+    proxy aggregation.agg_root shard_by (role1, az1, role2, az2)
+    string<80> role1
+    string<256> role2
+    string<32> az1
+    string<32> az2
+  }
+
+  span k8s_pod impl "reducer::matching::K8sPodSpan" include "<reducer/matching/k8s_pod_span.h>" {
+    pool_size 220000
+    index (uid_suffix, uid_hash)
+
+    u8 uid_suffix[64]
+
+    // since uid's can theoretically be unbounded in length, we will use the
+    // the last 64 bytes of the uid, with the addition of a u64 which provides
+    // extra reduction in collisions
+    u64 uid_hash
+
+    string<64> owner_name   // name of the Deployment, DaemonSet, ReplicaSet or StatefulSet owning the pod
+    string<64> owner_uid
+    string<64> pod_name
+    string<64> ns
+    string<64> version
+
+    15: msg _start {}
+    16: msg _end {}
+
+    17: msg set_pod_detail {
+      description "sets the pod owner name and namespace"
+      severity 0
+      1: string owner_name
+      2: string pod_name
+      3: string ns
+      4: string version
+      5: string owner_uid
+    }
+  } /* span k8s_pod */
+
+  span k8s_container impl "reducer::matching::K8sContainerSpan" include "<reducer/matching/k8s_container_span.h>" {
+    pool_size 600000
+    index (uid_suffix, uid_hash)
+
+    u8 uid_suffix[64]
+    u64 uid_hash
+
+    string<64> name
+    string<64> version
+
+    reference<k8s_pod> pod
+
+    18: msg _start {}
+    19: msg _end {}
+
+    20: msg set_container_pod {
+      description "sets the pod for the given container"
+      severity 0
+      1: u8 pod_uid_suffix[64]
+      2: u64 pod_uid_hash
+      3: string name
+      4: string image
+    }
+  } /* span k8s_container */
+
+  span core_stats {
+    proxy logging.core_stats
+  }
+
+  span logger {
+    proxy logging.logger
+  }
+} /* app matching */
+
+app aggregation {
+
+  /**
+   * a node which is part of a conversation
+   */
+  span node {
+    pool_size 5000000
+    index (id, ip, az)
+    string<80> id
+    string<45> ip
+    reference<az> az
+    string<64> pod_name
+  }
+
+  /**
+   * A (role,az) pair
+   */
+  span az {
+    pool_size 70000
+    index (s, role)
+    string<32> s
+    reference<role> role
+  }
+
+  /**
+   * A role with all its az's and nodes
+   */
+  span role {
+    pool_size 70000
+    index (s, version, env, ns, node_type, process, container)
+    string<256> s
+    string<80> uid
+    string<64> version
+    string<32> env
+    string<64> ns
+    u8 node_type
+    string<16> process
+    string<64> container
+  }
+
+  /*****************************************************************************
+   * node-pair aggregation tree
+   ****************************************************************************/
+  span agg_root
+       impl "reducer::aggregation::AggRootSpan"
+       include "<reducer/aggregation/agg_root_span.h>"
+  {
+    pool_size 4000000
+
+    aggregate tcp_a_to_b (root type tcp_metrics interval 30 slots 2)
+    {
+      update node_node.tcp_a_to_b
+    }
+    aggregate tcp_b_to_a (root type tcp_metrics interval 30 slots 2)
+    {
+      update node_node.tcp_b_to_a
+    }
+    aggregate http_a_to_b (root type http_metrics interval 30 slots 2)
+    {
+      update node_node.http_a_to_b
+    }
+    aggregate http_b_to_a (root type http_metrics interval 30 slots 2)
+    {
+      update node_node.http_b_to_a
+    }
+    aggregate udp_a_to_b (root type udp_metrics interval 30 slots 2)
+    {
+      update node_node.udp_a_to_b
+    }
+    aggregate udp_b_to_a (root type udp_metrics interval 30 slots 2)
+    {
+      update node_node.udp_b_to_a
+    }
+    aggregate dns_a_to_b (root type dns_metrics interval 30 slots 2)
+    {
+      update node_node.dns_a_to_b
+    }
+    aggregate dns_b_to_a (root type dns_metrics interval 30 slots 2)
+    {
+      update node_node.dns_b_to_a
+    }
+
+    reference<node> node1
+    reference<node> node2
+
+    reference<node_node> node_node cached {
+      node1 = node1
+      node2 = node2
+    }
+
+    10: msg _start {}
+    11: msg _end {}
+    12: msg update_node {
+      1: u8 side
+      2: string id
+      3: string az
+      4: string role
+      5: string version
+      6: string env
+      7: string ns
+      8: u8 node_type
+      9: string address
+      11: string process
+      12: string container
+      13: string pod_name
+      14: string role_uid
+    }
+    14: msg update_tcp_metrics {
+      1: u8 direction
+      2: u32 active_sockets
+      3: u32 sum_retrans
+      4: u64 sum_bytes
+      5: u64 sum_srtt
+      6: u64 sum_delivered
+      7: u32 active_rtts
+      8: u32 syn_timeouts
+      9: u32 new_sockets
+     10: u32 tcp_resets
+    }
+    15: msg update_udp_metrics {
+      1: u8 direction
+      2: u32 active_sockets
+      3: u32 addr_changes
+      4: u32 packets
+      5: u64 bytes
+      6: u32 drops
+    }
+    16: msg update_http_metrics {
+      1: u8 direction
+      2: u32 active_sockets
+      3: u32 sum_code_200
+      4: u32 sum_code_400
+      5: u32 sum_code_500
+      6: u32 sum_code_other
+      7: u64 sum_total_time_ns
+      8: u64 sum_processing_time_ns
+    }
+    17: msg update_dns_metrics {
+      1: u8 direction
+      2: u32 active_sockets
+      3: u32 requests_a
+      4: u32 requests_aaaa
+      5: u32 responses
+      6: u32 timeouts
+      7: u64 sum_total_time_ns
+      8: u64 sum_processing_time_ns
+    }
+  }
+
+  span node_node
+  {
+    pool_size 4000000
+    index (node1, node2)
+
+    aggregate tcp_a_to_b (type tcp_metrics interval 30 slots 1)
+    {
+      update az_node.tcp_a_to_b
+      update node_az.tcp_b_to_a
+    }
+    aggregate tcp_b_to_a (type tcp_metrics interval 30 slots 1)
+    {
+      update az_node.tcp_b_to_a
+      update node_az.tcp_a_to_b
+    }
+    aggregate http_a_to_b (type http_metrics interval 30 slots 1)
+    {
+      update az_node.http_a_to_b
+      update node_az.http_b_to_a
+    }
+    aggregate http_b_to_a (type http_metrics interval 30 slots 1)
+    {
+      update az_node.http_b_to_a
+      update node_az.http_a_to_b
+    }
+    aggregate udp_a_to_b (type udp_metrics interval 30 slots 1)
+    {
+      update az_node.udp_a_to_b
+      update node_az.udp_b_to_a
+    }
+    aggregate udp_b_to_a (type udp_metrics interval 30 slots 1)
+    {
+      update az_node.udp_b_to_a
+      update node_az.udp_a_to_b
+    }
+    aggregate dns_a_to_b (type dns_metrics interval 30 slots 1)
+    {
+      update az_node.dns_a_to_b
+      update node_az.dns_b_to_a
+    }
+    aggregate dns_b_to_a (type dns_metrics interval 30 slots 1)
+    {
+      update az_node.dns_b_to_a
+      update node_az.dns_a_to_b
+    }
+
+    reference<node> node1
+    reference<node> node2
+
+    reference<az_node> az_node cached {
+      az = node1.az
+      node = node2
+    }
+    reference<az_node> node_az cached {
+      node = node1
+      az = node2.az
+    }
+  }
+
+
+
+  span az_az {
+    pool_size 600000
+    index (az1, az2)
+    aggregate tcp_a_to_b (type tcp_metrics interval 30 slots 1)
+    {
+    }
+    aggregate http_a_to_b (type http_metrics interval 30 slots 1)
+    {
+    }
+    aggregate udp_a_to_b (type udp_metrics interval 30 slots 1)
+    {
+
+    }
+    aggregate dns_a_to_b (type dns_metrics interval 30 slots 1)
+    {
+    
+    }
+
+    reference<az> az1
+    reference<az> az2
+  }
+
+  span az_node {
+    pool_size 3000000
+    index (az, node)
+
+    aggregate tcp_a_to_b (type tcp_metrics interval 30 slots 1)
+    {
+      update az_az.tcp_a_to_b
+    }
+    aggregate tcp_b_to_a (type tcp_metrics interval 30 slots 1)
+    {
+    }
+    aggregate http_a_to_b (type http_metrics interval 30 slots 1)
+    {
+      update az_az.http_a_to_b
+    }
+    aggregate http_b_to_a (type http_metrics interval 30 slots 1)
+    {
+    }
+    aggregate udp_a_to_b (type udp_metrics interval 30 slots 1)
+    {
+      update az_az.udp_a_to_b
+    }
+    aggregate udp_b_to_a (type udp_metrics interval 30 slots 1)
+    {
+    }
+    aggregate dns_a_to_b (type dns_metrics interval 30 slots 1)
+    {
+      update az_az.dns_a_to_b
+    }
+    aggregate dns_b_to_a (type dns_metrics interval 30 slots 1)
+    {
+    }
+
+    reference<az> az
+    reference<node> node
+
+    reference<az_az> az_az auto {
+      az1 = az
+      az2 = node.az
+    }
+  }
+
+  span core_stats {
+    proxy logging.core_stats
+  }
+  
+  span agg_core_stats {
+    proxy logging.agg_core_stats
+  }
+} /* app aggregation */
+
+app kernel_collector {
+  span tracked_process
+    impl "ebpf_net::kernel_collector::TrackedProcessSpanBase"
+    include "<generated/ebpf_net/kernel_collector/span_base.h>"
+  {
+    pool_size 600000
+    index (cgroup, tgid)
+
+    proxy ingest.tracked_process
+
+    u64 cgroup
+    u32 tgid
+  }
+} /* app kernel_collector */
+
+app cloud_collector {
+  span aws_network_interface
+    impl "ebpf_net::cloud_collector::AwsNetworkInterfaceSpanBase"
+    include "<generated/ebpf_net/cloud_collector/span_base.h>"
+  {
+    pool_size 60000
+    index (ip)
+
+    proxy ingest.aws_network_interface
+
+    u128 ip
+  }
+} /* app cloud_collector */
+
+app logging {
+
+  span logger
+      impl "reducer::logging::LoggerSpan"
+      include "<reducer/logging/logger_span.h>"
+  {
+    pool_size 128
+
+    0: msg _start {}
+    1: msg _end {}
+    2: msg agent_lost_events {
+      description "agent lost perf events"
+      severity 3
+      1: u32 count
+      2: string client_hostname
+    }
+    3: msg pod_not_found {
+      description "pod with the specified UID is unknown"
+      severity 4
+      1: string uid
+      2: u8 on_delete
+    }
+    4: msg cgroup_not_found {
+      description "cgroup with the specified ID is unknown"
+      severity 4
+      1: u64 cgroup
+    }
+    5: msg rewriting_private_to_public_ip_mapping {
+      description "rewriting existing private-to-public IP address mapping"
+      severity 3
+      1: string private_addr
+      2: string existing_public_addr
+      3: string new_public_addr
+    }
+    6: msg private_ip_in_private_to_public_ip_mapping {
+      description "private-only address found in private-to-public mappings"
+      severity 3
+      1: string private_addr
+      2: string existing_public_addr
+    }
+    7: msg failed_to_insert_dns_record {
+      description "failed to insert DNS record into IP->domain map"
+      severity 4
+    }
+    8: msg tcp_socket_failed_getting_process_reference {
+      description "TCP socket failed to get process reference"
+      severity 4
+      1: u32 pid
+    }
+    9: msg udp_socket_failed_getting_process_reference {
+      description "UDP socket failed to get process reference"
+      severity 4
+      1: u32 pid
+    }
+    10: msg socket_address_already_assigned {
+      description "attempt to assign socket address multiple times"
+      severity 4
+    }
+    11: msg ingest_decompression_error {
+      description "failed to decompress data coming from client"
+      severity 4
+      1: u8 client_type
+      2: string client_hostname
+      3: string error
+    }
+    12: msg ingest_processing_error {
+      description "failed to process data coming from client"
+      severity 4
+      1: u8 client_type
+      2: string client_hostname
+      3: string error
+    }
+    13: msg ingest_connection_error {
+      description "client connection error"
+      severity 4
+      1: u8 client_type
+      2: string client_hostname
+      3: string error
+    }
+    14: msg agent_auth_success {
+      severity 2
+      1: u8 client_type
+      2: string client_hostname
+    }
+    15: msg agent_auth_failure {
+      severity 3
+      1: u8 client_type
+      2: string client_hostname
+      3: string error
+    }
+    16: msg agent_attempting_auth_using_api_key {
+      severity 3
+      1: u8 client_type
+      2: string client_hostname
+    }
+    17: msg k8s_container_pod_not_found {
+      severity 4
+      1: u8 pod_uid_suffix[64]
+      2: u64 pod_uid_hash
+    }
+    18: msg agent_connect_success {
+      severity 2
+      1: u8 client_type
+      2: string client_hostname
+    }
+  }
+
+  span core_stats
+     impl "reducer::logging::CoreStatsSpan"
+     include "<reducer/logging/core_stats_span.h>"
+  {
+    pool_size 128
+
+    19: msg _start {}
+    20: msg _end {}
+    21: msg span_utilization_stats {
+      1: string span_name
+      2: string module
+      3: u16 shard
+      4: u16 allocated
+      5: u16 max_allocated
+      6: u16 pool_size_
+      7: u64 time_ns
+    }
+    22: msg connection_message_stats {
+      1: string module
+      2: string msg_
+      3: u16 shard
+      4: u32 severity_
+      5: u16 conn
+      6: u64 time_ns
+      7: u64 count
+    }
+    23: msg connection_message_error_stats {
+      1: string module
+      2: u16 shard
+      3: u16 conn
+      4: string msg_
+      5: string error
+      6: u64 count
+      7: u64 time_ns
+    }
+    24: msg status_stats{
+      1: string module
+      2: u16 shard
+      3: string program
+      4: string version
+      5: u8 status
+      6: u64 time_ns
+    }
+    25: msg rpc_receive_stats{
+      1: string receiver_app
+      2: u16 shard
+      3: string sender_app
+      4: u64 max_latency_ns
+      5: u64 time_ns
+    }
+    26: msg rpc_write_stalls_stats{
+      1: string sender_app
+      2: u16 shard
+      3: string receiver_app
+      4: u64 count
+      5: u64 time_ns
+    }
+    27: msg rpc_write_utilization_stats{
+      1: string sender_app
+      2: u16 shard
+      3: string receiver_app
+      4: u32 max_buf_used
+      5: u64 max_buf_util
+      6: u64 max_elem_util
+      7: u64 time_ns
+    }
+    28: msg code_timing_stats{
+       1: string name
+       2: string filename
+       3: u16 line
+       4: u64 index_string
+       5: u64 count
+       6: u64 avg_ns
+       7: u64 min_ns
+       8: u64 max_ns
+       7: u64 sum_ns
+       8: u64 time_ns
+    }
+  }
+
+  span agg_core_stats
+     impl "reducer::logging::AggCoreStatsSpan"
+     include "<reducer/logging/agg_core_stats_span.h>"
+  {
+    pool_size 128
+
+    29: msg _start {}
+    30: msg _end {}
+    31: msg agg_root_truncation_stats{
+      1: string module
+      2: u16 shard
+      3: string field
+      4: u64 count
+      5: u64 time_ns
+    }
+    32: msg agg_prometheus_bytes_stats{
+      1: string module
+      2: u16 shard
+      3: u64 prometheus_bytes_written
+      4: u64 prometheus_bytes_discarded
+      5: u64 time_ns
+    }
+    44: msg agg_otlp_grpc_stats{
+      1: string module
+      2: u16 shard
+      3: string client_type
+      4: u64 bytes_failed
+      5: u64 bytes_sent
+      6: u64 data_points_failed
+      7: u64 data_points_sent
+      8: u64 requests_failed
+      9: u64 requests_sent
+      10: u64 unknown_response_tags
+      11: u64 time_ns
+    }
+  }
+
+  span ingest_core_stats
+     impl "reducer::logging::IngestCoreStatsSpan"
+     include "<reducer/logging/ingest_core_stats_span.h>"
+  {
+    pool_size 128
+
+    33: msg _start {}
+    34: msg _end {}
+    35: msg client_handle_pool_stats{
+      1: string module
+      2: u16 shard
+      3: string span_name
+      4: string version
+      5: string cloud
+      6: string env
+      7: string role
+      8: string az
+      9: string node_id
+      10: string kernel_version
+      11: u16 client_type
+      12: string agent_hostname
+      13: string os
+      14: string os_version
+      15: u64 time_ns
+      16: u64 client_handle_pool
+      17: u64 client_handle_pool_fraction
+    }
+    36: msg agent_connection_message_stats{
+      1: string module
+      2: u16 shard
+      3: string version
+      4: string cloud
+      5: string env
+      6: string role
+      7: string az
+      8: string node_id
+      9: string kernel_version
+      10: u16 client_type
+      11: string agent_hostname
+      12: string os
+      13: string os_version
+      14: u64 time_ns
+      15: string message
+      16: u16 severity_
+      17: u64 count
+    }
+    37: msg agent_connection_message_error_stats{
+      1: string module
+      2: u16 shard
+      3: string version
+      4: string cloud
+      5: string env
+      6: string role
+      7: string az
+      8: string node_id
+      9: string kernel_version
+      10: u16 client_type
+      11: string agent_hostname
+      12: string os
+      13: string os_version
+      14: u64 time_ns
+      15: string message
+      16: string error
+      17: u64 count
+    }
+    38: msg connection_stats{
+      1: string module
+      2: u16 shard
+      3: string version
+      4: string cloud
+      5: string env
+      6: string role
+      7: string az
+      8: string node_id
+      9: string kernel_version
+      10: u16 client_type
+      11: string agent_hostname
+      12: string os
+      13: string os_version
+      14: u64 time_ns
+      15: u64 time_since_last_message_ns
+      16: u64 clock_offset_ns
+    }
+    39: msg collector_log_stats{
+      1: string module
+      2: u16 shard
+      3: string version
+      4: string cloud
+      5: string env
+      6: string role
+      7: string az
+      8: string node_id
+      9: string kernel_version
+      10: u16 client_type
+      11: string agent_hostname
+      12: string os
+      13: string os_version
+      14: u64 time_ns
+      15: string severity_
+      16: u32 count
+    }
+    40: msg entry_point_stats{
+      1: string module
+      2: u16 shard
+      3: string version
+      4: string cloud
+      5: string env
+      6: string role
+      7: string az
+      8: string node_id
+      9: string kernel_version
+      10: u16 client_type
+      11: string agent_hostname
+      12: string os
+      13: string os_version
+      14: u64 time_ns
+      15: string kernel_headers_source
+      16: string entrypoint_error
+      17: u8 entrypoint_info
+    }
+    41: msg collector_health_stats{
+      1: string module
+      2: u16 shard
+      3: string version
+      4: string cloud
+      5: string env
+      6: string role
+      7: string az
+      8: string node_id
+      9: string kernel_version
+      10: u16 client_type
+      11: string hostname
+      12: string os
+      13: string os_version
+      14: u64 time_ns
+      15: string status
+      16: string status_detail
+    }
+    42: msg bpf_log_stats{
+      1: string module
+      2: u16 shard
+      3: string version
+      4: string cloud
+      5: string env
+      6: string role
+      7: string az
+      8: string node_id
+      9: string kernel_version
+      10: u16 client_type
+      11: string hostname
+      12: string os
+      13: string os_version
+      14: u64 time_ns
+      15: string filename
+      16: string line
+      17: string code
+      18: string arg0
+      19: string arg1
+      20: string arg2
+    }
+    43: msg server_stats{
+      1: string module
+      2: u64 connection_counter
+      3: u64 disconnect_counter
+      4: u64 time_ns
+    }
+  }
+} /* app logging */
+
+/******************************************************************************
+ * METRICS
+ * CAUTION: If you change these, make sure you update server/copy_metrics.h
+ ******************************************************************************/
+metric tcp_metrics {
+  u32 active_sockets
+  u32 sum_retrans
+  u64 sum_bytes
+  u64 sum_srtt
+  u64 sum_delivered
+  u32 active_rtts
+  u32 syn_timeouts
+  u32 new_sockets
+  u32 tcp_resets
+}
+
+metric udp_metrics {
+  u32 active_sockets
+  u32 addr_changes
+  u32 packets
+  u64 bytes
+  u32 drops
+}
+
+metric http_metrics {
+  u32 active_sockets
+  u32 sum_code_200
+  u32 sum_code_400
+  u32 sum_code_500
+  u32 sum_code_other
+  u64 sum_total_time_ns
+  u64 sum_processing_time_ns
+}
+
+metric dns_metrics {
+  u32 active_sockets
+  u32 requests_a
+  u32 requests_aaaa
+  u32 responses
+  u32 timeouts
+  u64 sum_total_time_ns
+  u64 sum_processing_time_ns
+}
+

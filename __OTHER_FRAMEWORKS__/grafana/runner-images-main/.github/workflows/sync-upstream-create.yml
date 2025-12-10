@@ -1,0 +1,104 @@
+name: Sync with Upstream (create)
+
+on:
+  schedule:
+    - cron: "0 0 1 * *" # Runs at 00:00 on the first day of every month
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  pull-requests: write
+  id-token: write
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Retrieve secrets
+        uses: grafana/shared-workflows/actions/get-vault-secrets@28361cdb22223e5f1e34358c86c20908e7248760 # get-vault-secrets-v1.1.0
+        with:
+          repo_secrets: |
+            APP_ID=app:id
+            APP_PRIVATE_KEY=app:private-key
+
+      - name: Generate a token
+        id: generate-token
+        uses: actions/create-github-app-token@5d869da34e18e7287c1daad50e0b8ea0f506ce69 # v1.11.0
+        with:
+          app-id: ${{ env.APP_ID }}
+          private-key: ${{ env.APP_PRIVATE_KEY }}
+
+      - name: Checkout the repository
+        uses: actions/checkout@692973e3d937129bcbf40652eb9f2f61becf3332 # v4.1.7
+        with:
+          fetch-depth: 0
+          ref: main
+          token: ${{ steps.generate-token.outputs.token }}
+          persist-credentials: true # This is required to push to the repository
+
+      - name: Configure Git
+        run: |
+          git config --local user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git config --local user.name "github-actions[bot]"
+
+      - name: Pull changes from upstream and merge
+        id: merge
+        run: |
+          git remote add upstream https://github.com/actions/runner-images.git
+          git fetch upstream
+          SHA="$(git rev-parse upstream/main)"
+          SHORT_SHA="$(git rev-parse --short upstream/main)"
+          BRANCH="sync-upstream-$SHORT_SHA"
+          echo "upstream-sha=$SHA" >> $GITHUB_OUTPUT
+          echo "branch=$BRANCH" >> $GITHUB_OUTPUT
+          git checkout -b $BRANCH
+          if ! git merge -m "Merge commit '$SHA' from actions/runner-images" "${SHA}"; then
+            echo "conflicts=true" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Handle conflicts with empty commit
+        if: steps.merge.outputs.conflicts == 'true'
+        run: |
+          git merge --abort
+          git commit --allow-empty -m "Empty commit due to merge conflicts"
+
+      - name: Push changes to new branch
+        run: |
+          git push --force-with-lease origin ${{ steps.merge.outputs.branch }}
+
+      - name: Set PR body
+        id: pr-body
+        env:
+          WORKFLOW_NAME: "${{ github.workflow }}"
+          GITHUB_SERVER_URL: "${{ github.server_url }}"
+          GITHUB_REPOSITORY: "${{ github.repository }}"
+          GITHUB_RUN_ID: "${{ github.run_id }}"
+          HEAD_REF: "${{ steps.merge.outputs.branch }}"
+          UPSTREAM_SHA: "${{ steps.merge.outputs.upstream-sha }}"
+          PR_BODY_NO_CONFLICTS_TEMPLATE: ".github/workflows/sync-upstream/templates/pr-body-no-conflicts.txt"
+          PR_BODY_WITH_CONFLICTS_TEMPLATE: ".github/workflows/sync-upstream/templates/pr-body-with-conflicts.txt"
+          HAS_CONFLICTS: "${{ steps.merge.outputs.conflicts }}"
+        run: |
+          echo 'body<<EOF' >> $GITHUB_OUTPUT
+          if [ "$HAS_CONFLICTS" == "true" ]; then
+            envsubst < $PR_BODY_WITH_CONFLICTS_TEMPLATE  >> $GITHUB_OUTPUT
+          else
+            envsubst < $PR_BODY_NO_CONFLICTS_TEMPLATE  >> $GITHUB_OUTPUT
+          fi
+          echo EOF >> $GITHUB_OUTPUT
+
+      - name: Create pull request
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PR_BODY: ${{ steps.pr-body.outputs.body }}
+          HEAD_REF: ${{ steps.merge.outputs.branch }}
+          REPOSITORY: ${{ github.repository }}
+        run: |
+          gh pr create --title 'Update from upstream' \
+          --body "$PR_BODY" \
+          --base main --head $HEAD_REF \
+          --repo $REPOSITORY \
+          || \
+          gh pr edit $HEAD_REF \
+          --repo $REPOSITORY \
+          --body "$PR_BODY"

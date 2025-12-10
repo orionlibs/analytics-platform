@@ -1,0 +1,34 @@
+name: Lint Charts
+
+on:
+  pull_request:
+    branches:
+      - main
+
+permissions:
+  contents: read
+
+jobs:
+  lint-test:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
+        with:
+          fetch-depth: 0
+      - name: Setup
+        uses: ./.github/actions/setup
+        with:
+          create-kind-cluster: "false"
+          helm-version: "v3.14.4"
+
+      - name: Run chart-testing (lint)
+        run: "ct lint --target-branch main
+          --chart-repos opentelemetry-collector=https://open-telemetry.github.io/opentelemetry-helm-charts
+          --chart-repos prometheus=https://prometheus-community.github.io/helm-charts
+          --chart-repos grafana=https://grafana.github.io/helm-charts
+          --chart-repos jaeger=https://jaegertracing.github.io/helm-charts
+          --chart-repos opensearch=https://opensearch-project.github.io/helm-charts"
+
+      - name: Run make check-examples
+        run: make check-examples

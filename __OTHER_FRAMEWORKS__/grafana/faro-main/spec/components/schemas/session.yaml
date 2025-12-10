@@ -1,0 +1,17 @@
+components:
+  schemas:
+    Session:
+      type: object
+      description: holds metadata about the browser session the event originates from.
+      properties:
+        id:
+          type: string
+          x-go-type-skip-optional-pointer: true
+        attributes:
+          type: object
+          additionalProperties:
+            type: string
+          x-go-type-skip-optional-pointer: true
+        overrides:
+          $ref: '#/components/schemas/Overrides'
+      x-go-type-skip-optional-pointer: true

@@ -1,0 +1,55 @@
+name: CI - Collector Binaries
+
+on:
+  merge_group:
+  push:
+    branches:
+      - main
+      - release/*
+  pull_request:
+    branches:
+      - main
+      - release/*
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    name: Build
+    runs-on: ubuntu-24.04
+    strategy:
+      fail-fast: false
+      matrix:
+        distro:
+          - otelcol
+          - otelcol-contrib
+          - otelcol-k8s
+          - otelcol-otlp
+          - otelcol-ebpf-profiler
+    steps:
+      - name: Checkout
+        uses: actions/checkout@93cb6efe18208431cddfb8368fd83d5badbf9bfd # v5.0.1
+        with:
+          fetch-depth: 0
+
+      - name: Setup Go
+        uses: actions/setup-go@4dc6199c7b1a012772edbd06daecab0f50c9053c # v6.1.0
+        with:
+          go-version: "~1.25.0"
+          check-latest: true
+
+      - name: Tidy go.mod files
+        run: go mod tidy
+
+      - name: Verify
+        run: make ci
+        env:
+          DISTRIBUTIONS: ${{ matrix.distro }}
+
+  build-result:
+    name: "Build Result"
+    runs-on: ubuntu-latest
+    needs: build
+    steps:
+      - run: echo "Build for all distros succeeded"

@@ -1,0 +1,33 @@
+{
+  "$schema": "https://raw.githubusercontent.com/grafana/grafana/main/docs/sources/developers/plugins/plugin.schema.json",
+  "type": "datasource",
+  "name": "Orbit",
+  "id": "grafana-orbit-datasource",
+  "metrics": true,
+  "backend": true,
+  "alerting": true,
+  "executable": "gpx_orbit_datasource",
+
+  "info": {
+    "description": "A data source for Orbit.",
+    "author": {
+      "name": "Grafana Labs"
+    },
+    "keywords": ["orbit", "community"],
+    "logos": {
+      "small": "img/logo.svg",
+      "large": "img/logo.svg"
+    },
+    "links": [
+      { "name": "Website", "url": "https://github.com/grafana/orbit-datasource" },
+      { "name": "License", "url": "https://github.com/grafana/orbit-datasource/blob/main/LICENSE" }
+    ],
+    "screenshots": [{ "name": "Pulse dashboard", "path": "img/pulse.png" }],
+    "version": "%VERSION%",
+    "updated": "%TODAY%"
+  },
+  "dependencies": {
+    "grafanaDependency": ">=8.0.0",
+    "plugins": []
+  }
+}

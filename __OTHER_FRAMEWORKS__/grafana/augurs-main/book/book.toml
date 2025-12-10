@@ -1,0 +1,8 @@
+[book]
+authors = ["Ben Sully"]
+language = "en"
+src = "src"
+title = "augurs - a time series toolkit"
+
+[rust]
+edition = "2021"

@@ -1,0 +1,23 @@
+version: 2
+updates:
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+  - package-ecosystem: "gomod"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+  - package-ecosystem: "npm"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+    groups:
+      # These all follow the same Grafana versioning
+      grafana:
+        patterns:
+          - "@grafana/data"
+          - "@grafana/runtime"
+          - "@grafana/schema"
+          - "@grafana/ui"
+        applies-to: version-updates

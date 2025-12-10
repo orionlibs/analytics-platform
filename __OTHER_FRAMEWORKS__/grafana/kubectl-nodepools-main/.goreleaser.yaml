@@ -1,0 +1,44 @@
+project_name: kubectl-nodepools
+
+before:
+  hooks:
+    - go mod tidy
+
+builds:
+  - id: kubectl-nodepools
+    main: ./
+    binary: kubectl-nodepools
+    env:
+      - CGO_ENABLED=0
+    goos:
+      - linux
+      - windows
+      - darwin
+    goarch:
+      - amd64
+      - arm64
+
+archives:
+  - id: kubectl-nodepools
+    builds:
+    - kubectl-nodepools
+    name_template: "{{ .ProjectName }}_{{ .Tag }}_{{ .Os }}_{{ .Arch }}"
+    files:
+      - LICENSE
+    format_overrides:
+    - goos: windows
+      format: zip
+
+checksum:
+  name_template: "{{ .ProjectName }}_checksums.txt"
+  algorithm: sha256
+
+snapshot:
+  name_template: "{{ incpatch .Version }}-next"
+
+changelog:
+  sort: asc
+  filters:
+    exclude:
+      - '^docs:'
+      - '^test:'

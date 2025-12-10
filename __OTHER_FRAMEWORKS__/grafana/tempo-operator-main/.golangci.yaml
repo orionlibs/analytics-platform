@@ -1,0 +1,45 @@
+version: "2"
+linters:
+  enable:
+    - exhaustive
+    - godot
+    - gosec
+    - govet
+    - misspell
+    - revive
+    - unparam
+  settings:
+    misspell:
+      locale: US
+    revive:
+      rules:
+        - name: exported
+          arguments:
+            - disableStutteringCheck
+  exclusions:
+    generated: lax
+    rules:
+      - path: _test\.go
+        linters:
+          - gosec
+      - linters:
+          - staticcheck
+        text: "(QF1001|QF1003|QF1008)"
+    paths:
+      - third_party$
+      - builtin$
+      - examples$
+formatters:
+  enable:
+    - gofmt
+    - goimports
+  settings:
+    goimports:
+      local-prefixes:
+        - github.com/grafana/tempo-operator
+  exclusions:
+    generated: lax
+    paths:
+      - third_party$
+      - builtin$
+      - examples$

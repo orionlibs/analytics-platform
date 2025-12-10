@@ -1,0 +1,23 @@
+httpServer:
+  threads:
+    minimum: 1
+    maximum: 10
+    keepAliveTime: 120 # seconds
+  ssl:
+    mutualTLS: false
+    keyStore:
+      filename: localhost.jks
+      type: JKS
+      password: changeit
+    trustStore:
+      filename: localhost.jks
+      type: JKS
+      password: changeit
+    certificate:
+      alias: localhost
+  authentication:
+    basic:
+      username: Prometheus
+      password: secret
+rules:
+  - pattern: ".*"

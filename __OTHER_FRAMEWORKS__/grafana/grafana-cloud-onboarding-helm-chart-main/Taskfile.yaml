@@ -1,0 +1,82 @@
+version: "3"
+
+tasks:
+  install-plugins:
+    desc: Install required plugins
+    cmds:
+      - helm plugin install https://github.com/quintush/helm-unittest || echo "Plugin already installed, skipping."
+
+  update-deps:
+    desc: Update the chart dependencies
+    dir: charts/grafana-cloud-onboarding
+    cmds:
+      - helm dependency update
+
+  test:
+    desc: Run all tests
+    cmds:
+      - task: unittest
+      - task: test-golden-records
+
+  unittest:
+    desc: Run unit tests for the Helm chart
+    cmds:
+      - helm unittest charts/grafana-cloud-onboarding
+
+  lint:
+    desc: Lint the Helm chart
+    cmds:
+      - helm lint charts/grafana-cloud-onboarding
+
+  generate:
+    desc: Generate all the generated content
+    cmds:
+      - task: generate-golden-records
+
+  generate-golden-records:
+    desc: Generate golden record result files from values files
+    cmds:
+      - |
+        set -e
+        for values_file in charts/grafana-cloud-onboarding/tests/goldenrecords/*_values.yaml; do
+          result_file="${values_file%_values.yaml}_result.yaml"
+          echo "Generating $result_file from $values_file"
+          helm template test ./charts/grafana-cloud-onboarding -f "$values_file" -n test-namespace > "$result_file"
+        done
+
+  test-golden-records:
+    desc: Verify that generated golden records match existing ones
+    cmds:
+      - |
+        set -e
+        for values_file in charts/grafana-cloud-onboarding/tests/goldenrecords/*_values.yaml; do
+          result_file="${values_file%_values.yaml}_result.yaml"
+          temp_file=$(mktemp)
+          
+          echo "Verifying $result_file..."
+          helm template test ./charts/grafana-cloud-onboarding -f "$values_file" -n test-namespace > "$temp_file"
+          
+          if ! diff -u "$result_file" "$temp_file"; then
+            echo "Error: Generated content does not match golden record for $result_file"
+            rm "$temp_file"
+            exit 1
+          fi
+          
+          rm "$temp_file"
+        done
+      - 'echo Test completed'
+
+  integration-test-secret:
+    desc: Create the Grafana Cloud Secret from 1Password
+    dir: charts/grafana-cloud-onboarding/tests/integration
+    cmds:
+      - |
+        set -e
+        echo "---" > grafana-cloud-credentials.yaml
+        echo "# yamllint disable rule:line-length" >> grafana-cloud-credentials.yaml
+        kubectl create secret generic grafana-cloud \
+          --from-literal=fleetManagementUsername=$(op --account grafana.1password.com read  "op://Kubernetes Monitoring/helmchart Fleet Management/username") \
+          --from-literal=fleetManagementPassword=$(op --account grafana.1password.com read  "op://Kubernetes Monitoring/helmchart Fleet Management/password") \
+          --from-literal=PROMETHEUS_USER=$(op --account grafana.1password.com read  "op://Kubernetes Monitoring/helmchart Prometheus/username") \
+          --from-literal=PROMETHEUS_PASS=$(op --account grafana.1password.com read  "op://Kubernetes Monitoring/helmchart Prometheus/password") \
+          -o yaml --dry-run=client >> grafana-cloud-credentials.yaml

@@ -1,0 +1,61 @@
+{
+    "_readme": [
+        "This file locks the dependencies of your project to a known state",
+        "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies",
+        "This file is @generated automatically"
+    ],
+    "content-hash": "a84ceaf9e23cefd8467844675e984bf4",
+    "packages": [
+        {
+            "name": "grafana/foundation-sdk",
+            "version": "dev-v11.6.x+cog-v0.0.x",
+            "source": {
+                "type": "git",
+                "url": "https://github.com/grafana/grafana-foundation-sdk.git",
+                "reference": "e22983a17becc636d750bde32757950cabca96a9"
+            },
+            "dist": {
+                "type": "zip",
+                "url": "https://api.github.com/repos/grafana/grafana-foundation-sdk/zipball/e22983a17becc636d750bde32757950cabca96a9",
+                "reference": "e22983a17becc636d750bde32757950cabca96a9",
+                "shasum": ""
+            },
+            "type": "library",
+            "autoload": {
+                "psr-4": {
+                    "Grafana\\Foundation\\": "php/src/"
+                }
+            },
+            "notification-url": "https://packagist.org/downloads/",
+            "license": [
+                "Apache-2.0"
+            ],
+            "description": "A set of tools, types and libraries for building and manipulating Grafana objects.",
+            "homepage": "https://github.com/grafana/grafana-foundation-sdk",
+            "keywords": [
+                "Metrics",
+                "grafana",
+                "logs",
+                "observability",
+                "sdk",
+                "traces"
+            ],
+            "support": {
+                "issues": "https://github.com/grafana/grafana-foundation-sdk/issues",
+                "source": "https://github.com/grafana/grafana-foundation-sdk/tree/v11.6.x+cog-v0.0.x"
+            },
+            "time": "2025-05-01T22:09:44+00:00"
+        }
+    ],
+    "packages-dev": [],
+    "aliases": [],
+    "minimum-stability": "stable",
+    "stability-flags": {
+        "grafana/foundation-sdk": 20
+    },
+    "prefer-stable": false,
+    "prefer-lowest": false,
+    "platform": [],
+    "platform-dev": [],
+    "plugin-api-version": "2.6.0"
+}

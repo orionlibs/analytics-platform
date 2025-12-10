@@ -1,0 +1,33 @@
+name: Update release
+
+on:
+  repository_dispatch:
+    types: [update-github-release]
+
+permissions:
+  contents: write
+
+jobs:
+  Update_GitHub_release:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Update release for ${{ github.event.client_payload.ReleaseBranchName }}
+      uses: actions/github-script@v8
+      env:
+        RELEASE_BRANCH_NAME: ${{ github.event.client_payload.ReleaseBranchName }}
+        PRERELEASE: ${{ github.event.client_payload.Prerelease }}
+      with:
+        github-token: ${{secrets.GITHUB_TOKEN}}
+        script: |
+            const response = await github.rest.repos.getReleaseByTag({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              tag: process.env.RELEASE_BRANCH_NAME
+            });
+            github.rest.repos.updateRelease({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              release_id: response.data.id,
+              prerelease: process.env.PRERELEASE === 'true'
+            });

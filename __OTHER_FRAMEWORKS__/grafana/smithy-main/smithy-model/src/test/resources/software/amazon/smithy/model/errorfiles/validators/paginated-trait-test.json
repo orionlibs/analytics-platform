@@ -1,0 +1,630 @@
+{
+    "smithy": "1.0",
+    "shapes": {
+        "ns.foo#Service": {
+            "type": "service",
+            "version": "2019-06-27",
+            "operations": [
+                {
+                    "target": "ns.foo#Valid1"
+                },
+                {
+                    "target": "ns.foo#Valid2"
+                },
+                {
+                    "target": "ns.foo#Valid3"
+                },
+                {
+                    "target": "ns.foo#Invalid1"
+                },
+                {
+                    "target": "ns.foo#Invalid2"
+                },
+                {
+                    "target": "ns.foo#Invalid3"
+                },
+                {
+                    "target": "ns.foo#Invalid4"
+                },
+                {
+                    "target": "ns.foo#Invalid5"
+                },
+                {
+                    "target": "ns.foo#Invalid6"
+                },
+                {
+                    "target": "ns.foo#Invalid7"
+                },
+                {
+                    "target": "ns.foo#Invalid8"
+                },
+                {
+                    "target": "ns.foo#Invalid9"
+                },
+                {
+                    "target": "ns.foo#ValidNestedOutputOperation"
+                },
+                {
+                    "target": "ns.foo#DeeplyNestedOutputOperation"
+                },
+                {
+                    "target": "ns.foo#InvalidNoOutput"
+                },
+                {
+                    "target": "ns.foo#InvalidNestedInput"
+                },
+                {
+                    "target": "ns.foo#MapTokens"
+                }
+            ]
+        },
+        "ns.foo#Valid1": {
+            "type": "operation",
+            "input": {
+                "target": "ns.foo#ValidInput"
+            },
+            "output": {
+                "target": "ns.foo#ValidOutput"
+            },
+            "traits": {
+                "smithy.api#readonly": {},
+                "smithy.api#paginated": {
+                    "inputToken": "nextToken",
+                    "outputToken": "nextToken",
+                    "items": "items"
+                }
+            }
+        },
+        "ns.foo#Valid2": {
+            "type": "operation",
+            "input": {
+                "target": "ns.foo#ValidInput"
+            },
+            "output": {
+                "target": "ns.foo#ValidOutput"
+            },
+            "traits": {
+                "smithy.api#readonly": {},
+                "smithy.api#paginated": {
+                    "inputToken": "nextToken",
+                    "outputToken": "nextToken",
+                    "items": "items",
+                    "pageSize": "pageSize"
+                }
+            }
+        },
+        "ns.foo#Valid3": {
+            "type": "operation",
+            "input": {
+                "target": "ns.foo#ValidInput3"
+            },
+            "output": {
+                "target": "ns.foo#ValidOutput3"
+            },
+            "traits": {
+                "smithy.api#readonly": {},
+                "smithy.api#paginated": {
+                    "inputToken": "nextToken",
+                    "outputToken": "nextToken"
+                }
+            }
+        },
+        "ns.foo#ValidNestedOutputOperation": {
+            "type": "operation",
+            "input": {
+                "target": "ns.foo#ValidInput"
+            },
+            "output": {
+                "target": "ns.foo#ValidWrappedOutput"
+            },
+            "traits": {
+                "smithy.api#readonly": {},
+                "smithy.api#paginated": {
+                    "inputToken": "nextToken",
+                    "outputToken": "result.nextToken",
+                    "items": "result.items"
+                }
+            }
+        },
+        "ns.foo#DeeplyNestedOutputOperation": {
+            "type": "operation",
+            "input": {
+                "target": "ns.foo#ValidInput"
+            },
+            "output": {
+                "target": "ns.foo#DeeplyNestedOutput"
+            },
+            "traits": {
+                "smithy.api#readonly": {},
+                "smithy.api#paginated": {
+                    "inputToken": "nextToken",
+                    "outputToken": "output.result.nextToken",
+                    "items": "output.result.items"
+                }
+            }
+        },
+        "ns.foo#DeeplyNestedOutput": {
+            "type": "structure",
+            "members": {
+                "output": {
+                    "target": "ns.foo#ValidWrappedOutput"
+                }
+            }
+        },
+        "ns.foo#ValidWrappedOutput": {
+            "type": "structure",
+            "members": {
+                "result": {
+                    "target": "ns.foo#ValidOutput"
+                }
+            }
+        },
+        "ns.foo#ValidInput3": {
+            "type": "structure",
+            "members": {
+                "nextToken": {
+                    "target": "smithy.api#String"
+                }
+            }
+        },
+        "ns.foo#ValidOutput3": {
+            "type": "structure",
+            "members": {
+                "nextToken": {
+                    "target": "smithy.api#String"
+                }
+            }
+        },
+        "ns.foo#Invalid1": {
+            "type": "operation",
+            "output": {
+                "target": "ns.foo#ValidOutput"
+            },
+            "traits": {
+                "smithy.api#readonly": {},
+                "smithy.api#paginated": {
+                    "inputToken": "nextToken",
+                    "outputToken": "nextToken",
+                    "items": "items",
+                    "pageSize": "pageSize"
+                }
+            }
+        },
+        "ns.foo#InvalidNoOutput": {
+            "type": "operation",
+            "input": {
+                "target": "ns.foo#ValidInput"
+            },
+            "traits": {
+                "smithy.api#readonly": {},
+                "smithy.api#paginated": {
+                    "inputToken": "nextToken",
+                    "outputToken": "nextToken",
+                    "items": "items",
+                    "pageSize": "pageSize"
+                }
+            }
+        },
+        "ns.foo#Invalid2": {
+            "type": "operation",
+            "input": {
+                "target": "ns.foo#MissingInputToken"
+            },
+            "output": {
+                "target": "ns.foo#MissingOutputToken"
+            },
+            "traits": {
+                "smithy.api#readonly": {},
+                "smithy.api#paginated": {
+                    "inputToken": "nextToken",
+                    "outputToken": "nextToken",
+                    "items": "items",
+                    "pageSize": "pageSize"
+                }
+            }
+        },
+        "ns.foo#MissingInputToken": {
+            "type": "structure",
+            "members": {
+                "pageSize": {
+                    "target": "smithy.api#Integer"
+                }
+            }
+        },
+        "ns.foo#MissingOutputToken": {
+            "type": "structure",
+            "members": {
+                "items": {
+                    "target": "ns.foo#StringList"
+                }
+            }
+        },
+        "ns.foo#Invalid3": {
+            "type": "operation",
+            "input": {
+                "target": "ns.foo#InputNotString"
+            },
+            "output": {
+                "target": "ns.foo#OutputNotString"
+            },
+            "traits": {
+                "smithy.api#readonly": {},
+                "smithy.api#paginated": {
+                    "inputToken": "nextToken",
+                    "outputToken": "nextToken",
+                    "items": "items",
+                    "pageSize": "pageSize"
+                }
+            }
+        },
+        "ns.foo#InputNotString": {
+            "type": "structure",
+            "members": {
+                "nextToken": {
+                    "target": "smithy.api#Integer"
+                },
+                "pageSize": {
+                    "target": "smithy.api#Integer"
+                }
+            }
+        },
+        "ns.foo#OutputNotString": {
+            "type": "structure",
+            "members": {
+                "nextToken": {
+                    "target": "smithy.api#Integer"
+                }
+            }
+        },
+        "ns.foo#Invalid4": {
+            "type": "operation",
+            "input": {
+                "target": "ns.foo#NonOptionalInput"
+            },
+            "output": {
+                "target": "ns.foo#NonOptionalOutput"
+            },
+            "traits": {
+                "smithy.api#readonly": {},
+                "smithy.api#paginated": {
+                    "inputToken": "nextToken",
+                    "outputToken": "nextToken",
+                    "items": "items",
+                    "pageSize": "pageSize"
+                }
+            }
+        },
+        "ns.foo#NonOptionalInput": {
+            "type": "structure",
+            "members": {
+                "nextToken": {
+                    "target": "smithy.api#String",
+                    "traits": {
+                        "smithy.api#required": {}
+                    }
+                },
+                "pageSize": {
+                    "target": "ns.foo#Number",
+                    "traits": {
+                        "smithy.api#required": {}
+                    }
+                }
+            }
+        },
+        "ns.foo#NonOptionalOutput": {
+            "type": "structure",
+            "members": {
+                "nextToken": {
+                    "target": "smithy.api#String",
+                    "traits": {
+                        "smithy.api#required": {}
+                    }
+                },
+                "items": {
+                    "target": "ns.foo#StringList"
+                }
+            }
+        },
+        "ns.foo#Invalid5": {
+            "type": "operation",
+            "input": {
+                "target": "ns.foo#UnresolvedInput"
+            },
+            "output": {
+                "target": "ns.foo#UnresolvedOutput"
+            },
+            "traits": {
+                "smithy.api#readonly": {},
+                "smithy.api#paginated": {
+                    "inputToken": "nextToken",
+                    "outputToken": "nextToken",
+                    "items": "items",
+                    "pageSize": "pageSize"
+                }
+            }
+        },
+        "ns.foo#UnresolvedInput": {
+            "type": "structure",
+            "members": {
+                "nextToken": {
+                    "target": "ns.foo#Missing"
+                },
+                "pageSize": {
+                    "target": "ns.foo#Missing"
+                }
+            }
+        },
+        "ns.foo#UnresolvedOutput": {
+            "type": "structure",
+            "members": {
+                "nextToken": {
+                    "target": "ns.foo#Missing"
+                },
+                "items": {
+                    "target": "ns.foo#Missing",
+                    "traits": {
+                        "smithy.api#required": {}
+                    }
+                }
+            }
+        },
+        "ns.foo#Invalid6": {
+            "type": "operation",
+            "input": {
+                "target": "ns.foo#Invalid6Input"
+            },
+            "output": {
+                "target": "ns.foo#ValidOutput"
+            },
+            "traits": {
+                "smithy.api#readonly": {},
+                "smithy.api#paginated": {
+                    "inputToken": "nextToken",
+                    "outputToken": "nextToken",
+                    "items": "items",
+                    "pageSize": "pageSize"
+                }
+            }
+        },
+        "ns.foo#Invalid6Input": {
+            "type": "structure",
+            "members": {
+                "nextToken": {
+                    "target": "smithy.api#String"
+                },
+                "pageSize": {
+                    "target": "smithy.api#String"
+                }
+            }
+        },
+        "ns.foo#Invalid7": {
+            "type": "operation",
+            "input": {
+                "target": "ns.foo#ValidInput"
+            },
+            "output": {
+                "target": "ns.foo#Invalid7Input"
+            },
+            "traits": {
+                "smithy.api#readonly": {},
+                "smithy.api#paginated": {
+                    "inputToken": "nextToken",
+                    "outputToken": "nextToken",
+                    "items": "items",
+                    "pageSize": "pageSize"
+                }
+            }
+        },
+        "ns.foo#Invalid7Input": {
+            "type": "structure",
+            "members": {
+                "nextToken": {
+                    "target": "smithy.api#String"
+                },
+                "items": {
+                    "target": "smithy.api#String",
+                    "traits": {
+                        "smithy.api#required": {}
+                    }
+                }
+            }
+        },
+        "ns.foo#Invalid8": {
+            "type": "operation",
+            "input": {
+                "target": "ns.foo#ValidInput"
+            },
+            "output": {
+                "target": "ns.foo#Invalid8Output"
+            },
+            "traits": {
+                "smithy.api#readonly": {},
+                "smithy.api#paginated": {
+                    "inputToken": "nextToken",
+                    "outputToken": "missing",
+                    "items": "items",
+                    "pageSize": "pageSize"
+                }
+            }
+        },
+        "ns.foo#Invalid8Output": {
+            "type": "structure",
+            "members": {
+                "nextToken": {
+                    "target": "smithy.api#String"
+                }
+            }
+        },
+        "ns.foo#Invalid9": {
+            "type": "operation",
+            "input": {
+                "target": "ns.foo#ValidInput"
+            },
+            "output": {
+                "target": "ns.foo#ValidOutput"
+            },
+            "traits": {
+                "smithy.api#paginated": {}
+            }
+        },
+        "ns.foo#InvalidNestedInput": {
+            "type": "operation",
+            "input": {
+                "target": "ns.foo#NestedInput"
+            },
+            "output": {
+                "target": "ns.foo#ValidOutput"
+            },
+            "traits": {
+                "smithy.api#paginated": {
+                    "inputToken": "input.nextToken",
+                    "outputToken": "nextToken",
+                    "items": "items",
+                    "pageSize": "input.pageSize"
+                }
+            }
+        },
+        "ns.foo#NestedInput": {
+            "type": "structure",
+            "members": {
+                "input": {
+                    "target": "ns.foo#ValidInput"
+                }
+            }
+        },
+        "ns.foo#ValidInput": {
+            "type": "structure",
+            "members": {
+                "nextToken": {
+                    "target": "smithy.api#String"
+                },
+                "pageSize": {
+                    "target": "smithy.api#Integer"
+                }
+            }
+        },
+        "ns.foo#ValidOutput": {
+            "type": "structure",
+            "members": {
+                "nextToken": {
+                    "target": "smithy.api#String"
+                },
+                "items": {
+                    "target": "ns.foo#StringList",
+                    "traits": {
+                        "smithy.api#required": {}
+                    }
+                }
+            }
+        },
+        "ns.foo#StringList": {
+            "type": "list",
+            "member": {
+                "target": "smithy.api#String"
+            }
+        },
+        "smithy.api#String": {
+            "type": "string"
+        },
+        "ns.foo#Number": {
+            "type": "integer"
+        },
+        "ns.foo#Service2": {
+            "type": "service",
+            "version": "2019-06-27",
+            "resources": [
+                {
+                    "target": "ns.foo#Resource"
+                }
+            ],
+            "traits": {
+                "smithy.api#paginated": {
+                    "inputToken": "nextToken",
+                    "outputToken": "nextToken",
+                    "pageSize": "pageSize"
+                }
+            }
+        },
+        "ns.foo#Resource": {
+            "type": "resource",
+            "identifiers": {
+                "foo": {
+                    "target": "smithy.api#String"
+                }
+            },
+            "list": {
+                "target": "ns.foo#ListResources"
+            }
+        },
+        "ns.foo#ListResources": {
+            "type": "operation",
+            "input": {
+                "target": "ns.foo#ListResourcesInput"
+            },
+            "output": {
+                "target": "ns.foo#ListResourcesOutput"
+            },
+            "traits": {
+                "smithy.api#readonly": {},
+                "smithy.api#paginated": {
+                    "items": "items"
+                }
+            }
+        },
+        "ns.foo#ListResourcesInput": {
+            "type": "structure",
+            "members": {
+                "nextToken": {
+                    "target": "smithy.api#String"
+                },
+                "pageSize": {
+                    "target": "smithy.api#Integer"
+                }
+            }
+        },
+        "ns.foo#ListResourcesOutput": {
+            "type": "structure",
+            "members": {
+                "nextToken": {
+                    "target": "smithy.api#String"
+                },
+                "items": {
+                    "target": "ns.foo#StringList"
+                }
+            }
+        },
+        "ns.foo#MapTokens": {
+            "type": "operation",
+            "input": {
+                "target": "ns.foo#MapTokenInputOutput"
+            },
+            "output": {
+                "target": "ns.foo#MapTokenInputOutput"
+            },
+            "traits": {
+                "smithy.api#readonly": {},
+                "smithy.api#paginated": {
+                    "inputToken": "nextToken",
+                    "outputToken": "nextToken"
+                }
+            }
+        },
+        "ns.foo#MapTokenInputOutput": {
+            "type": "structure",
+            "members": {
+                "nextToken": {
+                    "target": "ns.foo#StringMap"
+                }
+            }
+        },
+        "ns.foo#StringMap": {
+            "type": "map",
+            "key": {
+                "target": "smithy.api#String"
+            },
+            "value": {
+                "target": "smithy.api#String"
+            }
+        }
+    }
+}

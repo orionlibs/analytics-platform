@@ -1,0 +1,5 @@
+/target
+/data
+.cargo-ok
+.DS_Store
+.envrc

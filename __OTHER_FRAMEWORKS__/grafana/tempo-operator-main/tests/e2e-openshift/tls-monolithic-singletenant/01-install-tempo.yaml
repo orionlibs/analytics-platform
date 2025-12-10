@@ -1,0 +1,18 @@
+apiVersion: tempo.grafana.com/v1alpha1
+kind: TempoMonolithic
+metadata:
+  name: mono
+  namespace: chainsaw-tls-mono-st
+spec:
+  jaegerui:
+    enabled: true
+    route:
+      enabled: true
+  ingestion:
+    otlp:
+      grpc:
+        tls:
+          enabled: true
+      http:
+        tls:
+          enabled: true

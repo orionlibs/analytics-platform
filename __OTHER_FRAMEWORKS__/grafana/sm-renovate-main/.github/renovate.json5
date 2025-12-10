@@ -1,0 +1,48 @@
+// This config is NOT intended to be reused by other repos. It's the config this repo uses to self-update.
+{
+  "$schema": "https://docs.renovatebot.com/renovate-schema.json",
+  "extends": [
+    "config:best-practices",
+    ":disableDependencyDashboard",
+    "github>grafana/sm-renovate//presets/grafana.json5",
+  ],
+  "commitMessagePrefix": "chore: ",
+  "labels": [
+    "dependencies"
+  ],
+  "customManagers": [
+    {
+      // Update renovate version in GHA action YAMLs.
+      "customType": "regex",
+      "depNameTemplate": "ghcr.io/renovatebot/renovate",
+      "datasourceTemplate": "docker",
+      "managerFilePatterns": [
+        "/^actions/.*\\.ya?ml$/", // Any yaml file inside /actions, including subfolders.
+      ],
+      "matchStrings": [
+        // https://regex101.com/r/CJFnB8/1
+        "(?<currentValue>[^@\\s]+)(?:@(?<currentDigest>\\S+))? # renovate-version",
+      ]
+    }
+  ],
+  "packageRules": [
+    {
+      // Renovate updates itself very frequently, sometimes even several times per day. Assume that users wanting to
+      // update renovate do not want to get that much spam, and restrict it to once per week.
+      "matchPackageNames": [
+        "ghcr.io/renovatebot/renovate"
+      ],
+      "schedule": "* 0-8 * * 1", // Early on mondays only.
+    },
+    {
+      // Shared workflows gets updates very often, throttle them a bit.
+      "matchPackageNames": [
+        "grafana/shared-workflows",
+      ],
+      "matchUpdateTypes": [
+        "digest",
+      ],
+      "schedule": "* 0-8 * * 1", // Early on mondays only.
+    },
+  ],
+}

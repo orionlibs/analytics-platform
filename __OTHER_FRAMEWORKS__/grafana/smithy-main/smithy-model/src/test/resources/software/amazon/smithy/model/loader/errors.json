@@ -1,0 +1,17 @@
+{
+    "smithy": "1.0",
+    "shapes": {
+        "example.namespace#Invalid1": {
+            "type": "structure",
+            "traits": {
+                "smithy.api#error": "foo"
+            }
+        },
+        "example.namespace#Invalid2": {
+            "type": "structure",
+            "traits": {
+                "smithy.api#error": "foo"
+            }
+        }
+    }
+}

@@ -1,0 +1,16 @@
+*.log
+opentelemetry-go-compile-instrumentation
+otel
+otel.exe
+demo/basic/basic
+.idea
+tmp
+
+.otel-build
+**/.DS_Store
+demo/demo
+
+otel.runtime.go
+otel-pkg.gz
+pkg_temp
+coverage.txt

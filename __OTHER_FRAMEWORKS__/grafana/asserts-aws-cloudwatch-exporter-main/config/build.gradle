@@ -1,0 +1,59 @@
+plugins {
+    id 'java'
+    id 'maven-publish'
+}
+
+group 'ai.asserts.aws-cloudwatch-exporter'
+version = new Date().format("YY.M.0") + '.' + 'git rev-parse --short HEAD'.execute().text.trim()
+
+repositories {
+    mavenCentral()
+}
+
+compileJava   {
+    sourceCompatibility = '1.8'
+    targetCompatibility = '1.8'
+}
+
+dependencies {
+    implementation(
+            "org.springframework:spring-core:$springCoreVersion",
+            "com.google.guava:guava:$guavaVersion",
+            "com.fasterxml.jackson.core:jackson-databind:$jacksonVersion",
+            "com.fasterxml.jackson.dataformat:jackson-dataformat-yaml:$jacksonVersion",
+            "software.amazon.awssdk:cloudwatch:$awsSdkVersion",
+    )
+    compileOnly(
+            "org.projectlombok:lombok:$lombokVersion"
+    )
+    annotationProcessor "org.projectlombok:lombok:$lombokVersion"
+
+    testImplementation(
+            "org.junit.jupiter:junit-jupiter-api:$junitJupiterVersion",
+            "org.easymock:easymock:$easyMockVersion"
+    )
+    testRuntimeOnly(
+            "org.junit.jupiter:junit-jupiter-engine:$junitJupiterVersion",
+    )
+}
+
+test {
+    useJUnitPlatform()
+}
+
+publishing {
+    repositories {
+        maven {
+            name = "AssertsMavenRepo"
+            url = "s3://asserts-maven-repo"
+            authentication {
+                awsIm(AwsImAuthentication)
+            }
+        }
+    }
+    publications {
+        gpr(MavenPublication) {
+            from(components.java)
+        }
+    }
+}

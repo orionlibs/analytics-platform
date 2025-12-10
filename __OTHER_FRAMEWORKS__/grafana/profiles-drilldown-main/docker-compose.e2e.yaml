@@ -1,0 +1,52 @@
+services:
+  grafana:
+    container_name: 'grafana-pyroscope-app'
+    build:
+      context: ./.config
+      args:
+        grafana_image: ${GRAFANA_IMAGE:-grafana-enterprise}
+        grafana_version: ${GRAFANA_VERSION:-12.1.3}
+    ports:
+      - ${GRAFANA_PORT:-3000}:3000/tcp
+    volumes:
+      - ./dist:/var/lib/grafana/plugins/grafana-pyroscope-app
+      - ./samples/provisioning:/etc/grafana/provisioning
+      - ./samples/dashboards:/var/lib/grafana/dashboards
+    environment:
+      GF_INSTALL_PLUGINS: grafana-llm-app
+      OPENAI_API_KEY: $OPENAI_API_KEY
+      OPENAI_ORGANIZATION_ID: $OPENAI_ORGANIZATION_ID
+      GF_FEATURE_TOGGLES_ENABLE: metricsFromProfiles
+
+  qdrant:
+    image: qdrant/qdrant@sha256:0fb8897412abc81d1c0430a899b9a81eb8328aa634e7242d1bc804c1fe8fe863
+    volumes:
+      - qdrant-storage:/qdrant/storage
+
+  pyroscope:
+    container_name: 'pyroscope-static-e2e'
+    build:
+      dockerfile: ./Dockerfile.pyroscope.e2e
+      context: .
+    ports:
+      - 4100:4100/tcp
+    environment:
+      GITHUB_CLIENT_ID: $GITHUB_CLIENT_ID
+      GITHUB_CLIENT_SECRET: $GITHUB_CLIENT_SECRET
+      GITHUB_SESSION_SECRET: $GITHUB_SESSION_SECRET
+
+  # e2e testing
+  playwright:
+    network_mode: host
+    container_name: 'playwright-e2e'
+    build:
+      dockerfile: Dockerfile.plugin.e2e
+      context: .
+    volumes:
+      - ./e2e:/app/e2e
+      - ./src:/app/src
+    command: ${PLAYWRIGHT_ARGS:-}
+    profiles: [playwright]
+
+volumes:
+  qdrant-storage:

@@ -1,0 +1,121 @@
+syntax = "proto3";
+
+package vcs.v1;
+
+service VCSService {
+  rpc GithubApp(GithubAppRequest) returns (GithubAppResponse) {}
+  rpc GithubLogin(GithubLoginRequest) returns (GithubLoginResponse) {}
+  rpc GithubRefresh(GithubRefreshRequest) returns (GithubRefreshResponse) {}
+  rpc GetFile(GetFileRequest) returns (GetFileResponse) {}
+  rpc GetCommit(GetCommitRequest) returns (GetCommitResponse) {}
+  rpc GetCommits(GetCommitsRequest) returns (GetCommitsResponse) {}
+}
+message GithubAppRequest {}
+
+message GithubAppResponse {
+  string clientID = 1;
+}
+
+message GithubLoginRequest {
+  string authorizationCode = 1;
+}
+
+message GithubLoginResponse {
+  // Deprecated
+  // In future version, this cookie won't be sent. Now, old cookie is sent alongside the new expected
+  // data (token, token_expires_at and refresh_token_expires_at). Frontend will be responsible of computing
+  // its own cookie from the new data.
+  // Remove after completing https://github.com/grafana/explore-profiles/issues/187
+  string cookie = 1;
+  // base64 encoded encrypted token
+  string token = 2;
+  // Unix ms timestamp of when the token expires.
+  int64 token_expires_at = 3;
+  // Unix ms timestamp of when the refresh token expires.
+  int64 refresh_token_expires_at = 4;
+}
+
+message GithubRefreshRequest {}
+
+message GithubRefreshResponse {
+  // Deprecated
+  // In future version, this cookie won't be sent. Now, old cookie is sent alongside the new expected
+  // data (token, token_expires_at and refresh_token_expires_at). Frontend will be responsible of computing
+  // its own cookie from the new data.
+  // Remove after completing https://github.com/grafana/explore-profiles/issues/187
+  string cookie = 1;
+  // base64 encoded encrypted token
+  string token = 2;
+  // Unix ms timestamp of when the token expires.
+  int64 token_expires_at = 3;
+  // Unix ms timestamp of when the refresh token expires.
+  int64 refresh_token_expires_at = 4;
+}
+
+message GetFileRequest {
+  // the full path to the repository
+  string repositoryURL = 1;
+  // the vcs ref to get the file from
+  string ref = 2;
+  // the path to the file as provided by the symbols
+  string localPath = 3;
+  // the root path where the project lives inside the repository
+  string rootPath = 4;
+}
+
+message GetFileResponse {
+  // base64 content of the file
+  string content = 1;
+  // the full URL to the file
+  string URL = 2;
+}
+
+message GetCommitRequest {
+  // the full path to the repository
+  string repositoryURL = 1;
+  // the vcs ref to get the file from
+  string ref = 2;
+}
+
+message GetCommitResponse {
+  // the commit message
+  string message = 1;
+  // the commit author login
+  CommitAuthor author = 2;
+  // the commit date
+  string date = 3;
+  // the commit sha
+  string sha = 4;
+  // the full URL to the commit
+  string URL = 5;
+}
+
+message CommitAuthor {
+  // the author login
+  string login = 1;
+  // the author avatar URL
+  string avatarURL = 2;
+}
+
+message CommitInfo {
+  // the commit message
+  string message = 1;
+  // the commit author login
+  CommitAuthor author = 2;
+  // the commit date
+  string date = 3;
+  // the commit sha
+  string sha = 4;
+  // the full URL to the commit
+  string URL = 5;
+}
+
+// New messages for the GetCommits method
+message GetCommitsRequest {
+  string repository_url = 1;
+  repeated string refs = 2;
+}
+
+message GetCommitsResponse {
+  repeated CommitInfo commits = 1;
+}

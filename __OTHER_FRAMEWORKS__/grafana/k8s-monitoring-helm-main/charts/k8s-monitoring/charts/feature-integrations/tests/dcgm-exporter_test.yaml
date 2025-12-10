@@ -1,0 +1,37 @@
+# yamllint disable rule:document-start rule:line-length rule:trailing-spaces rule:empty-lines
+suite: Test DCGM Exporter Integration - Metrics
+templates:
+  - configmap.yaml
+tests:
+  - it: should create the DCGM Exporter config
+    set:
+      deployAsConfigMap: true
+      dcgm-exporter:
+        instances:
+          - name: dcgm-exporter
+            labelSelectors:
+              app: dcgm-exporter
+    asserts:
+      - isKind:
+          of: ConfigMap
+      - matchSnapshot:
+          path: data["metrics.alloy"]
+
+  - it: can create DCGM Exporter config with a single allowed metric
+    set:
+      deployAsConfigMap: true
+      dcgm-exporter:
+        instances:
+          - name: dcgm-exporter
+            labelSelectors:
+              app: dcgm-exporter
+            metrics:
+              tuning:
+                useDefaultAllowList: false
+                includeMetrics: ["example_metric"]
+    asserts:
+      - isKind:
+          of: ConfigMap
+      - matchRegex:
+          path: data["metrics.alloy"]
+          pattern: \s+keep_metrics \= "up\|scrape_samples_scraped\|example_metric"

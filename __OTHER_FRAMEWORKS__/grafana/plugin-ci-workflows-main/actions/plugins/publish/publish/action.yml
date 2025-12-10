@@ -1,0 +1,86 @@
+name: Plugins - Publish to catalog
+
+inputs:
+  zips:
+    description: |
+      Array of absolute URLs to ZIP files to publish.
+      It can contain:
+      - a single ZIP for all OS/arch combinations (universal/"any" zip).
+      - multiple ZIPs for different OS/arch combinations.
+      - a combination of both.
+    required: true
+
+  environment:
+    description: |
+      Environment to publish to.
+      Can be 'dev', 'ops' (or 'staging'), or 'prod'.
+    required: true
+
+  scopes:
+    description: |
+      Comma-separated list of scopes for the plugin version.
+      Defaults to 'universal'.
+    required: false
+    default: universal
+
+  gcom-publish-token:
+    description: GCOM token used to publish the plugin to the catalog.
+    required: true
+  gcloud-auth-token:
+    description: |
+      Google Cloud auth token for IAP acccess.
+      Required only for publishing to dev or ops.
+    required: false
+    default: ""
+  ignore-conflicts:
+    description: |
+      If "true", ignore conflicts when publishing to the catalog.
+      A conflict occurs when publishing a plugin with the same name and version
+      Note: this is not a force publish.
+    required: false
+    default: "false"
+  publish-as-pending:
+    description: |
+      If "true", the plugin will be published as pending in the catalog.
+      A pending plugin is effectively hidden from the catalog but available for provisioning.
+      Default is "false".
+    required: false
+    default: "false"
+
+runs:
+  using: composite
+  steps:
+    - name: Publish to catalog
+      run: |
+        cd ${ZIPS_FOLDER}
+
+        # Convert the "zips" JSON array to a space-separated string
+        # (used to pass each ZIP in the JSON array as a separate argument)
+        args=()
+        args+=($(echo "${ZIPS}" | jq -r 'join(" ")'))
+
+        # new array for flags
+        publish_args=(
+          --environment "${ENVIRONMENT}"
+          --scopes "${SCOPES}"
+        )
+
+        if [ "${PUBLISH_AS_PENDING}" = "true" ]; then
+          publish_args+=(--publish-as-pending)
+        fi
+
+        ${{ github.action_path }}/publish.sh \
+          "${publish_args[@]}" \
+          "${args[@]}"
+      env:
+        GCLOUD_AUTH_TOKEN: ${{ inputs.gcloud-auth-token }}
+        GCOM_PUBLISH_TOKEN: ${{ inputs.gcom-publish-token }}
+
+        ZIPS_FOLDER: ${{ inputs.zips-folder }}
+        ZIPS: ${{ inputs.zips }}
+        ENVIRONMENT: ${{ inputs.environment }}
+        SCOPES: ${{ inputs.scopes }}
+
+        IGNORE_CONFLICTS: ${{ inputs.ignore-conflicts }}
+        PUBLISH_AS_PENDING: ${{ inputs.publish-as-pending }}
+      shell: bash

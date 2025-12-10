@@ -1,0 +1,75 @@
+version = '2'
+
+[linters]
+default = 'none'
+enable = [
+  'copyloopvar',
+  'dogsled',
+  'goconst',
+  'gocritic',
+  'gocyclo',
+  'goprintffuncname',
+  'gosec',
+  'govet',
+  'ineffassign',
+  'misspell',
+  'nakedret',
+  'rowserrcheck',
+  'staticcheck',
+  'unconvert',
+  'unused',
+  'whitespace'
+]
+
+[linters.settings]
+[linters.settings.goconst]
+min-len = 5
+min-occurrences = 5
+[linters.settings.staticcheck]
+checks = ['all', '-QF1001', '-QF1003', '-QF1008']
+
+[linters.exclusions]
+generated = 'lax'
+presets = [
+  'comments',
+  'common-false-positives',
+  'legacy',
+  'std-error-handling'
+]
+paths = [
+  'third_party$',
+  'builtin$',
+  'examples$'
+]
+
+[[linters.exclusions.rules]]
+linters = [
+  'staticcheck'
+]
+path = '_test.go'
+text = 'ST1003: should not use underscores in Go names;'
+
+[[linters.exclusions.rules]]
+linters = [
+  'gocritic'
+]
+text = 'deprecatedComment: the proper format is `Deprecated: <text>`'
+
+[[linters.exclusions.rules]]
+linters = [
+  'gosec'
+]
+text = 'G402: TLS MinVersion too low.'
+
+[formatters]
+enable = [
+  'goimports'
+]
+
+[formatters.exclusions]
+generated = 'lax'
+paths = [
+  'third_party$',
+  'builtin$',
+  'examples$'
+]

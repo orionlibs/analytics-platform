@@ -1,0 +1,27 @@
+name: Build and Push
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+  schedule:
+    - cron: "0 0 * * 0" # Rebuild the image once a week
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    permissions: 
+      contents: read
+      id-token: write
+      
+    steps:
+    - name: Login to Docker Hub
+      uses: grafana/shared-workflows/actions/dockerhub-login@c6d954f7cd9c0022018982e01268de6cb75b913c # dockerhub-login/v1.0.2
+      if: github.event_name != 'pull_request'
+    - uses: actions/checkout@1af3b93b6815bc44a9784bd300feb67ff0d1eeb3 # v6
+      with:
+          persist-credentials: false
+    - run: make build
+    - run: make push
+      if: github.event_name != 'pull_request'

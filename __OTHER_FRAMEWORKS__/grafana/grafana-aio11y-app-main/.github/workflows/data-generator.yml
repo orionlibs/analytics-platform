@@ -1,0 +1,159 @@
+name: AI Observability Data Generator
+
+on:
+  workflow_dispatch:
+    inputs:
+      data_type:
+        description: 'Select data type to generate'
+        required: true
+        default: 'All'
+        type: choice
+        options:
+          - LLM
+          - VectorDB
+          - All
+      otel_endpoint:
+        description: 'OTEL Endpoint (e.g., https://otlp-gateway-prod-us-east-1.grafana.net/otlp)'
+        required: true
+        type: string
+      otel_headers:
+        description: 'OTEL Headers (e.g., Authorization=Basic%20MTM1NDYzMzpnbGNfZXlK...)'
+        required: true
+        type: string
+      service_name:
+        description: 'Service Name (e.g., cart-service)'
+        required: false
+        default: 'example-service'
+        type: string
+      deployment_environment:
+        description: 'Deployment Environment (e.g., production)'
+        required: false
+        default: 'example-environment'
+        type: string
+      openai_api_key:
+        description: 'OpenAI API Key (e.g., sk-proj-...)'
+        required: true
+        type: string
+      anthropic_api_key:
+        description: 'Anthropic API Key (e.g., sk-ant-api03-...) - optional but recommended'
+        required: false
+        type: string
+
+jobs:
+  llm-data:
+    if: ${{ github.event.inputs.data_type == 'LLM' || github.event.inputs.data_type == 'All' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
+          
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r .github/scripts/requirements.txt
+          
+      - name: Validate API Keys
+        env:
+          OPENAI_API_KEY: ${{ github.event.inputs.openai_api_key }}
+          ANTHROPIC_API_KEY: ${{ github.event.inputs.anthropic_api_key }}
+        run: |
+          if [ -z "$OPENAI_API_KEY" ] && [ -z "$ANTHROPIC_API_KEY" ]; then
+            echo "❌ Error: At least one API key (OpenAI or Anthropic) must be provided"
+            exit 1
+          fi
+          if [ -n "$OPENAI_API_KEY" ]; then
+            echo "✅ OpenAI API key provided (${#OPENAI_API_KEY} characters)"
+          fi
+          if [ -n "$ANTHROPIC_API_KEY" ]; then
+            echo "✅ Anthropic API key provided (${#ANTHROPIC_API_KEY} characters)"
+          fi
+          
+      - name: Mask sensitive input parameters
+        run: |
+          echo "🔐 Masking sensitive input parameters..."
+          
+          # Extract and mask OpenAI API key if provided
+          OPENAI_KEY=$(jq -r '.inputs.openai_api_key // empty' $GITHUB_EVENT_PATH)
+          if [ -n "$OPENAI_KEY" ]; then
+            echo "::add-mask::$OPENAI_KEY"
+            echo "OPENAI_API_KEY=$OPENAI_KEY" >> $GITHUB_ENV
+            echo "✅ OpenAI API key masked"
+          fi
+          
+          # Extract and mask Anthropic API key if provided
+          ANTHROPIC_KEY=$(jq -r '.inputs.anthropic_api_key // empty' $GITHUB_EVENT_PATH)
+          if [ -n "$ANTHROPIC_KEY" ]; then
+            echo "::add-mask::$ANTHROPIC_KEY"
+            echo "ANTHROPIC_API_KEY=$ANTHROPIC_KEY" >> $GITHUB_ENV
+            echo "✅ Anthropic API key masked"
+          fi
+          
+          # Extract and mask OTEL headers
+          OTEL_HEADERS=$(jq -r '.inputs.otel_headers // empty' $GITHUB_EVENT_PATH)
+          if [ -n "$OTEL_HEADERS" ]; then
+            echo "::add-mask::$OTEL_HEADERS"
+            echo "OTEL_EXPORTER_OTLP_HEADERS=$OTEL_HEADERS" >> $GITHUB_ENV
+            echo "✅ OTEL headers masked"
+          fi
+          
+          echo "🔒 Sensitive parameters successfully masked from logs"
+          
+      - name: Generate LLM Data
+        timeout-minutes: 10
+        env:
+          OTEL_EXPORTER_OTLP_ENDPOINT: ${{ github.event.inputs.otel_endpoint }}
+          OTEL_EXPORTER_OTLP_HEADERS: ${{ env.OTEL_EXPORTER_OTLP_HEADERS }}
+          OTEL_SERVICE_NAME: ${{ github.event.inputs.service_name }}
+          OTEL_DEPLOYMENT_ENVIRONMENT: ${{ github.event.inputs.deployment_environment }}
+          OPENAI_API_KEY: ${{ env.OPENAI_API_KEY }}
+          ANTHROPIC_API_KEY: ${{ env.ANTHROPIC_API_KEY }}
+        run: python .github/scripts/llm_data_generator.py
+
+  vectordb-data:
+    if: ${{ github.event.inputs.data_type == 'VectorDB' || github.event.inputs.data_type == 'All' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
+          
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r .github/scripts/requirements.txt
+          
+      - name: Mask sensitive input parameters
+        run: |
+          echo "🔐 Masking sensitive input parameters..."
+          
+          # Extract and mask OTEL headers
+          OTEL_HEADERS=$(jq -r '.inputs.otel_headers // empty' $GITHUB_EVENT_PATH)
+          if [ -n "$OTEL_HEADERS" ]; then
+            echo "::add-mask::$OTEL_HEADERS"
+            echo "OTEL_EXPORTER_OTLP_HEADERS=$OTEL_HEADERS" >> $GITHUB_ENV
+            echo "✅ OTEL headers masked"
+          fi
+          
+          echo "🔒 Sensitive parameters successfully masked from logs"
+          
+      - name: Generate Vector Database Data
+        timeout-minutes: 10
+        env:
+          OTEL_EXPORTER_OTLP_ENDPOINT: ${{ github.event.inputs.otel_endpoint }}
+          OTEL_EXPORTER_OTLP_HEADERS: ${{ env.OTEL_EXPORTER_OTLP_HEADERS }}
+          OTEL_SERVICE_NAME: ${{ github.event.inputs.service_name }}
+          OTEL_DEPLOYMENT_ENVIRONMENT: ${{ github.event.inputs.deployment_environment }}
+        run: python .github/scripts/vectordb_data_generator.py

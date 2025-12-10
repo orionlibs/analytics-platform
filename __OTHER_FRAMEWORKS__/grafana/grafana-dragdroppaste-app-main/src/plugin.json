@@ -1,0 +1,48 @@
+{
+  "$schema": "https://raw.githubusercontent.com/grafana/grafana/main/docs/sources/developers/plugins/plugin.schema.json",
+  "type": "app",
+  "name": "Dragndrop",
+  "id": "grafana-dragdroppaste-app",
+  "backend": true,
+  "executable": "gpx_dragdroppaste",
+  "info": {
+    "keywords": ["app"],
+    "description": "",
+    "author": {
+      "name": "Grafana"
+    },
+    "logos": {
+      "small": "img/dragndrop.png",
+      "large": "img/dragndrop.png"
+    },
+    "screenshots": [],
+    "version": "%VERSION%",
+    "updated": "%TODAY%"
+  },
+  "includes": [
+    {
+      "type": "page",
+      "name": "Datasets",
+      "path": "/a/%PLUGIN_ID%/datasets",
+      "addToNav": true,
+      "defaultNav": true
+    },
+    {
+      "type": "page",
+      "icon": "cog",
+      "name": "Configuration",
+      "path": "/plugins/%PLUGIN_ID%",
+      "role": "Admin",
+      "addToNav": true
+    }
+  ],
+  "dependencies": {
+    "grafanaDependency": ">=10.4.0",
+    "plugins": []
+  },
+  "extensions": { "addedHooks": [
+    {"title": "foo", "targets": ["dashboard/grid"]},
+    {"title": "pasteHook", "targets": ["dashboard/dragndrop"]}
+  ]
+  }
+}

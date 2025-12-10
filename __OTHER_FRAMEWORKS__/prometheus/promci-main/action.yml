@@ -1,0 +1,10 @@
+name: PromCI
+description: An action used by the Prometheus project to share github actions.
+runs:
+  using: composite
+  steps:
+    - uses: actions/checkout@93cb6efe18208431cddfb8368fd83d5badbf9bfd # v5.0.1
+      with:
+        repository: 'prometheus/promci'
+        path: '.github/promci'
+        ref: v0.5.3

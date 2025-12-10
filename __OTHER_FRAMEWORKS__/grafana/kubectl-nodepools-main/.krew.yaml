@@ -1,0 +1,55 @@
+apiVersion: krew.googlecontainertools.github.com/v1alpha2
+kind: Plugin
+metadata:
+  name: nodepools
+spec:
+  version: {{ .TagName }}
+  homepage: https://github.com/grafana/kubectl-nodepools
+  platforms:
+  - selector:
+      matchLabels:
+        os: darwin
+        arch: amd64
+    {{addURIAndSha "https://github.com/grafana/kubectl-nodepools/releases/download/{{ .TagName }}/kubectl-nodepools_{{ .TagName }}_darwin_amd64.tar.gz" .TagName }}
+    bin: kubectl-nodepools
+  - selector:
+      matchLabels:
+        os: darwin
+        arch: arm64
+    {{addURIAndSha "https://github.com/grafana/kubectl-nodepools/releases/download/{{ .TagName }}/kubectl-nodepools_{{ .TagName }}_darwin_arm64.tar.gz" .TagName }}
+    bin: kubectl-nodepools
+  - selector:
+      matchLabels:
+        os: linux
+        arch: amd64
+    {{addURIAndSha "https://github.com/grafana/kubectl-nodepools/releases/download/{{ .TagName }}/kubectl-nodepools_{{ .TagName }}_linux_amd64.tar.gz" .TagName }}
+    bin: kubectl-nodepools
+  - selector:
+      matchLabels:
+        os: linux
+        arch: arm64
+    {{addURIAndSha "https://github.com/grafana/kubectl-nodepools/releases/download/{{ .TagName }}/kubectl-nodepools_{{ .TagName }}_linux_arm64.tar.gz" .TagName }}
+    bin: kubectl-nodepools
+  - selector:
+      matchLabels:
+        os: windows
+        arch: amd64
+    {{addURIAndSha "https://github.com/grafana/kubectl-nodepools/releases/download/{{ .TagName }}/kubectl-nodepools_{{ .TagName }}_windows_amd64.zip" .TagName }}
+    bin: kubectl-nodepools.exe
+  - selector:
+      matchLabels:
+        os: windows
+        arch: arm64
+    {{addURIAndSha "https://github.com/grafana/kubectl-nodepools/releases/download/{{ .TagName }}/kubectl-nodepools_{{ .TagName }}_windows_arm64.zip" .TagName }}
+    bin: kubectl-nodepools.exe
+  shortDescription: List node pools/groups
+  description: |
+    Some cloud providers allow to manage your cluster nodes in pools/groups
+    where all their nodes share base settings. This plugin allows you to
+    list node pools/groups in the current cluster, alongside a count of how
+    many nodes there are in each pool/group and their instance type. In
+    addition to this you can also list nodes for a given node pool/group by
+    name.
+
+    This plugin supports the standard kubectl flags for environment and
+    cluster selection and authentication.

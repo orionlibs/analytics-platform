@@ -1,0 +1,10 @@
+exclusions:
+  target-instance-rule:
+    reason: Instance Varibale is useless as source is a Python Library for the metrics and logs
+  template-instance-rule:
+    reason: Instance Varibale is useless as source is a Python Library for the metrics and logs
+  panel-datasource-rule:
+    reason: The dashbaord uses two datasources, The one for Prometheus is templated but for Loki its hardcoded
+  panel-units-rule:
+    reason: The dashboard has units defined as none
+

@@ -1,0 +1,19 @@
+name: Docker Env Vars Workflow
+on: [push]
+
+jobs:
+  k6_local_test:
+    name: k6 local test run - env vars example
+    runs-on: ubuntu-latest
+    container: docker://grafana/k6:latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v1
+
+      - name: Run k6 cloud test
+        uses: k6io/action@v0.1
+        with:
+          filename: env-var/script.js
+        env:
+          MY_HOSTNAME: test.loadimpact.com

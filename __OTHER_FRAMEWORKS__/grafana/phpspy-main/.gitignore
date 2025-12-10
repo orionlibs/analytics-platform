@@ -1,0 +1,11 @@
+phpspy
+*~
+\#*\#
+.\#*
+*.o
+*.a
+*.so
+pyroscope_api_tests
+.vscode/
+tags
+*.swp

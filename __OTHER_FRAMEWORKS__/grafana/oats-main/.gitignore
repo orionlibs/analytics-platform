@@ -1,0 +1,8 @@
+# Vim swap files
+*.swp
+
+**/*.test
+.idea/
+**/*.log
+build/
+*.exe

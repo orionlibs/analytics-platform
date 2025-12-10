@@ -1,0 +1,69 @@
+name: "Continuous Build (Collector)"
+
+on:
+  push:
+    paths:
+      - 'collector/**'
+      - '.github/workflows/ci-collector.yml'
+    branches:
+      - main
+  pull_request:
+    paths:
+      - 'collector/**'
+      - '.github/workflows/ci-collector.yml'
+    branches:
+      - main
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@1af3b93b6815bc44a9784bd300feb67ff0d1eeb3 # v6.0.0
+      - uses: actions/setup-go@4dc6199c7b1a012772edbd06daecab0f50c9053c # v6.1.0
+        with:
+          go-version-file: collector/go.mod
+      - uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0
+        with:
+          path: ~/go/pkg/mod
+          key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
+          restore-keys: |
+            ${{ runner.os }}-go-
+      - name: Tidy
+        run: make gotidy
+        working-directory: collector
+      - name: Run tests
+        run: make gotest
+        working-directory: collector
+  build:
+    runs-on: ubuntu-latest
+    needs: [test]
+    strategy:
+      matrix:
+        architecture: [ amd64, arm64 ]
+    steps:
+      - uses: actions/checkout@1af3b93b6815bc44a9784bd300feb67ff0d1eeb3 # v6.0.0
+      - uses: actions/setup-go@4dc6199c7b1a012772edbd06daecab0f50c9053c # v6.1.0
+        with:
+          go-version-file: collector/go.mod
+      - uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0
+        with:
+          path: ~/go/pkg/mod
+          key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
+          restore-keys: |
+            ${{ runner.os }}-go-
+      - name: Build Collector Executable for ${{ matrix.architecture }} architecture
+        run: GOARCH=${{ matrix.architecture }} make package
+        working-directory: collector
+      - name: Get Lambda Layer amd64 architecture value
+        if: ${{ matrix.architecture == 'amd64' }}
+        run: echo LAMBDA_LAYER_ARCHITECTURE=x86 | tee --append $GITHUB_ENV
+      - name: Get Lambda Layer arm64 architecture value
+        if: ${{ matrix.architecture == 'arm64' }}
+        run: echo LAMBDA_LAYER_ARCHITECTURE=ARM | tee --append $GITHUB_ENV
+      - name: Confirm architecture of built collector
+        working-directory: collector/build/extensions
+        run: |
+          grep ${{ env.LAMBDA_LAYER_ARCHITECTURE }} <<< "$(file collector)"

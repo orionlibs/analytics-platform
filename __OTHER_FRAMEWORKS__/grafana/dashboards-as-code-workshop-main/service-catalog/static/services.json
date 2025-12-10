@@ -1,0 +1,30 @@
+[
+	{
+		"name": "users",
+		"description": "Responsible for customer profiles, preferences, ...",
+		"has_http": true,
+		"has_grpc": true,
+		"github": "https://github.com/org/users"
+	},
+	{
+		"name": "payments",
+		"description": "Handles payments processing",
+		"has_http": true,
+		"has_grpc": false,
+		"github": "https://github.com/org/payments"
+	},
+	{
+		"name": "orders",
+		"description": "Handles orders processing",
+		"has_http": true,
+		"has_grpc": false,
+		"github": "https://github.com/org/orders"
+	},
+	{
+		"name": "products",
+		"description": "Manages the products catalog and stocks",
+		"has_http": true,
+		"has_grpc": true,
+		"github": "https://github.com/org/products"
+	}
+]

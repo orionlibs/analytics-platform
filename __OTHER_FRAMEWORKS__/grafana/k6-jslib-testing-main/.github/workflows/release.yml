@@ -1,0 +1,40 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - v*
+
+jobs:
+  checks:
+    runs-on: ubuntu-latest
+
+    if: startsWith(github.ref, 'refs/tags/v')
+    permissions:
+      contents: write
+
+    steps:
+      - name: Check out source code
+        uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5
+        with:
+          persist-credentials: false
+
+      - name: Setup Deno
+        uses: denoland/setup-deno@e95548e56dfa95d4e1a28d6f422fafe75c4c26fb # v2.0.3
+        with:
+          deno-version: "~2.5.0"
+
+      - name: Build & archive
+        run: |
+          set -x
+          VERSION="${GITHUB_REF##*/}"
+          deno task release
+          tar -zcf "k6-testing-${VERSION}.tar.gz" -C dist .
+
+      - name: Create release with assets
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -x
+          VERSION="${GITHUB_REF##*/}"
+          gh release create "${VERSION}" "k6-testing-${VERSION}.tar.gz" dist/* --target "${GITHUB_SHA}" --title "${VERSION}"

@@ -1,0 +1,16 @@
+name: "CI: Pull request"
+on:
+  pull_request: {}
+
+jobs:
+  pr:
+    runs-on: ubuntu-latest
+    env:
+      GITHUB_TOKEN: "${{github.token}}"
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version: "1.21"
+          cache: true
+      - run: "go run ci/main.go --do-test --do-build"

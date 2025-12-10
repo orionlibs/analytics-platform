@@ -1,0 +1,82 @@
+{
+    "smithy": "1.0",
+    "shapes": {
+        "ns.foo#Operation": {
+            "type": "operation",
+            "input": {
+                "target": "ns.foo#OperationInput"
+            },
+            "output": {
+                "target": "ns.foo#OperationOutput"
+            },
+            "traits": {
+                "smithy.api#readonly": {},
+                "smithy.api#examples": [
+                    {
+                        "title": "Testing 1",
+                        "input": {
+                            "foo": "value1"
+                        },
+                        "output": {
+                            "bam": "value2"
+                        }
+                    },
+                    {
+                        "title": "Testing 2",
+                        "input": {
+                            "baz": "baz"
+                        },
+                        "output": {
+                            "additional": "value"
+                        }
+                    }
+                ]
+            }
+        },
+        "ns.foo#OperationInput": {
+            "type": "structure",
+            "members": {
+                "foo": {
+                    "target": "ns.foo#String",
+                    "traits": {
+                        "smithy.api#required": {}
+                    }
+                },
+                "baz": {
+                    "target": "ns.foo#String"
+                }
+            }
+        },
+        "ns.foo#OperationOutput": {
+            "type": "structure",
+            "members": {
+                "bam": {
+                    "target": "ns.foo#String",
+                    "traits": {
+                        "smithy.api#required": {}
+                    }
+                }
+            }
+        },
+        "ns.foo#Operation2": {
+            "type": "operation",
+            "traits": {
+                "smithy.api#readonly": {},
+                "smithy.api#examples": [
+                    {
+                        "title": "Testing 3",
+                        "input": {
+                            "foo": "baz"
+                        },
+                        "output": {
+                            "foo": "baz"
+                        }
+                    }
+                ]
+            }
+        },
+        "ns.foo#String": {
+            "type": "string"
+        }
+    }
+}

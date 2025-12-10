@@ -1,0 +1,12 @@
+type: spansanitize
+scope_name: otelcol/spansanitize
+
+status:
+  class: processor
+  stability:
+    development: [traces]
+  distributions: [contrib, grafana]
+  codeowners:
+    active: [jcreixell]
+    emeritus: []
+    seeking_new: true

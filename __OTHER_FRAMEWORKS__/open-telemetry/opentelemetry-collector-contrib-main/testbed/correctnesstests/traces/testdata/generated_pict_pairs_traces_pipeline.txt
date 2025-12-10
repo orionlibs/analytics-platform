@@ -1,0 +1,7 @@
+Receiver	Exporter
+zipkin	otlp
+otlp	zipkin
+jaeger	zipkin
+otlp	otlp
+jaeger	otlp
+zipkin	zipkin

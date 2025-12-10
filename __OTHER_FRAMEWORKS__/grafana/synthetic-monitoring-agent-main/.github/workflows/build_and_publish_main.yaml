@@ -1,0 +1,19 @@
+name: validate and publish commit to dev
+
+on:
+  push:
+    branches:
+      - main
+
+permissions:
+  contents: none
+  packages: none
+
+jobs:
+  call_build_and_publish:
+    permissions:
+      contents: write # Necessary to publish artifacts
+      id-token: write # Necessary to publish to GAR
+    uses: ./.github/workflows/build_and_publish.yaml
+    with:
+      mode: dev

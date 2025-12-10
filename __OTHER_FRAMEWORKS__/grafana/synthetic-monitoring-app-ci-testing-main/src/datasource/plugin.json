@@ -1,0 +1,80 @@
+{
+  "type": "datasource",
+  "name": "Synthetic Monitoring API",
+  "id": "synthetic-monitoring-datasource",
+  "metrics": true,
+
+  "routes": [
+    {
+      "path": "viewer-token",
+      "method": "*",
+      "url": "{{.JsonData.apiHost}}/api/v1/register/viewer-token",
+      "reqRole": "Editor",
+      "headers": [
+        {
+          "name": "Authorization",
+          "content": "Bearer {{.SecureJsonData.accessToken}}"
+        }
+      ]
+    },
+    {
+      "path": "save",
+      "method": "*",
+      "url": "{{.JsonData.apiHost}}/api/v1/register/save",
+      "reqRole": "Editor",
+      "headers": [
+        {
+          "name": "Authorization",
+          "content": "Bearer {{.SecureJsonData.accessToken}}"
+        }
+      ]
+    },
+    {
+      "path": "sm",
+      "method": "GET",
+      "url": "{{.JsonData.apiHost}}/api/v1/",
+      "reqRole": "Viewer",
+      "headers": [
+        {
+          "name": "Authorization",
+          "content": "Bearer {{.SecureJsonData.accessToken}}"
+        }
+      ]
+    },
+    {
+      "path": "sm",
+      "method": "POST",
+      "url": "{{.JsonData.apiHost}}/api/v1/",
+      "reqRole": "Editor",
+      "headers": [
+        {
+          "name": "Authorization",
+          "content": "Bearer {{.SecureJsonData.accessToken}}"
+        }
+      ]
+    },
+    {
+      "path": "sm",
+      "method": "DELETE",
+      "url": "{{.JsonData.apiHost}}/api/v1/",
+      "reqRole": "Editor",
+      "headers": [
+        {
+          "name": "Authorization",
+          "content": "Bearer {{.SecureJsonData.accessToken}}"
+        }
+      ]
+    }
+  ],
+
+  "info": {
+    "description": "Synthetic Monitoring API",
+    "author": {
+      "name": "Grafana"
+    },
+    "logos": {
+      "small": "img/logo.svg",
+      "large": "img/logo.svg"
+    }
+  }
+}

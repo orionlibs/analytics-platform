@@ -1,0 +1,45 @@
+name: Validate Policy Bot Config
+
+on:
+  workflow_call:
+
+permissions:
+  contents: read
+
+jobs:
+  check-changes:
+    runs-on: ubuntu-latest
+    outputs:
+      policy-changed: ${{ steps.changes.outputs.policy }}
+    steps:
+      - uses: actions/checkout@93cb6efe18208431cddfb8368fd83d5badbf9bfd # v5
+      - uses: dorny/paths-filter@de90cc6fb38fc0963ad72b210f1f284cd68cea36 # v3.0.2
+        id: changes
+        with:
+          filters: |
+            policy:
+              - '.policy.yml'
+
+  validate:
+    needs: check-changes
+    if: needs.check-changes.outputs.policy-changed == 'true'
+    name: Validate policy bot config
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@93cb6efe18208431cddfb8368fd83d5badbf9bfd # v5.0.1
+        with:
+          persist-credentials: false
+
+      - name: Validate policy bot config
+        run: |
+          curl \
+            --silent \
+            --fail-with-body \
+            --request PUT \
+            --upload-file .policy.yml \
+            https://github-policy-bot.grafana-ops.net/api/validate

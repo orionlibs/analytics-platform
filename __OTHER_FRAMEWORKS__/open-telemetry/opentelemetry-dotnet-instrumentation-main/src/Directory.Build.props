@@ -1,0 +1,73 @@
+<Project>
+  <Import Project="..\Directory.Build.props" />
+
+  <PropertyGroup>
+    <TargetFrameworks>net8.0</TargetFrameworks>
+    <TargetFrameworks Condition="'$(OS)' == 'Windows_NT'">$(TargetFrameworks);net462</TargetFrameworks>
+    <GenerateDocumentationFile>true</GenerateDocumentationFile>
+    <EnablePublicApi>true</EnablePublicApi>
+    <DebugType>portable</DebugType>
+    <IncludeSymbols>true</IncludeSymbols>
+    <SymbolPackageFormat>snupkg</SymbolPackageFormat>
+    <SignAssembly>true</SignAssembly>
+    <AssemblyOriginatorKeyFile>$(MSBuildThisFileDirectory)keypair.snk</AssemblyOriginatorKeyFile>
+
+    <!-- NuGet packages -->
+    <IsPackable>true</IsPackable>
+    <PackageIcon>opentelemetry-icon-color.png</PackageIcon>
+    <PackageProjectUrl>https://opentelemetry.io</PackageProjectUrl>
+    <PackageLicenseExpression>Apache-2.0</PackageLicenseExpression>
+    <PackageRequireLicenseAcceptance>true</PackageRequireLicenseAcceptance>
+    <PackageReleaseNotes>See release notes at https://github.com/open-telemetry/opentelemetry-dotnet-instrumentation/releases</PackageReleaseNotes>
+    <PackageTags>APM;AutoInstrumentation;Automatic Instrumentation;Instrumentation;Logs;Metrics;Monitoring;O11y;Observability;OpenTelemetry;OTel;Telemetry;Tracing</PackageTags>
+    <PackageReadmeFile>docs\README.md</PackageReadmeFile>
+    <RepositoryType>git</RepositoryType>
+    <RepositoryUrl>https://github.com/open-telemetry/opentelemetry-dotnet-instrumentation.git</RepositoryUrl>
+    <Copyright>Copyright The OpenTelemetry Authors</Copyright>
+    <Company>OpenTelemetry</Company>
+    <Authors>OpenTelemetry Authors</Authors>
+    <!-- No warning on empty NuGet version suffix even if using pre-release dependencies -->
+    <NoWarn>$(NoWarn);NU5104</NoWarn>
+
+    <EmbedUntrackedSources Condition=" '$(TargetFramework)' == 'net462' ">true</EmbedUntrackedSources>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="DotNet.ReproducibleBuilds">
+      <PrivateAssets>all</PrivateAssets>
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+    </PackageReference>
+    <PackageReference Include="MinVer">
+      <PrivateAssets>all</PrivateAssets>
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+    </PackageReference>
+  </ItemGroup>
+  <PropertyGroup>
+    <MinVerTagPrefix>v</MinVerTagPrefix>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <!-- NuGet -->
+    <None Include="$(MSBuildThisFileDirectory)\..\opentelemetry-icon-color.png" Pack="true" Visible="false" PackagePath="opentelemetry-icon-color.png" />
+    <None Include="docs\README.md" Pack="true" PackagePath="docs\README.md" />
+
+    <!-- StyleCop -->
+    <Compile Include="$(MSBuildThisFileDirectory)GlobalSuppressions.cs" Link="GlobalSuppressions.src.cs" />
+
+    <!-- reference assemblies let us target .NET Framework without the SDK (for example, on non-Windows) -->
+    <PackageReference Include="Microsoft.NETFramework.ReferenceAssemblies" PrivateAssets="all" />
+  </ItemGroup>
+
+  <!--PublicApi Analyzer-->
+  <ItemGroup Condition="'$(EnablePublicApi)'=='true'">
+    <PackageReference Include="Microsoft.CodeAnalysis.PublicApiAnalyzers" >
+      <PrivateAssets>all</PrivateAssets>
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+    </PackageReference>
+
+    <AdditionalFiles Include=".publicApi\$(TargetFramework)\PublicAPI.Shipped.txt" />
+    <AdditionalFiles Include=".publicApi\$(TargetFramework)\PublicAPI.Unshipped.txt" />
+    <None Include=".publicApi\*\PublicAPI.Shipped.txt" />
+    <None Include=".publicApi\*\PublicAPI.Unshipped.txt" />
+  </ItemGroup>
+</Project>

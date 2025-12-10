@@ -1,0 +1,160 @@
+name: Run Tests
+
+on:
+  workflow_call:
+
+jobs:
+  unit-test:
+    runs-on: ubuntu-latest
+    steps:
+      # git checkout
+      - name: Checkout code
+        uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      # go env
+      - name: Set up Go
+        uses: actions/setup-go@d35c59abb061a4a6fb18e82ac0862c26744d6ab5 # v5
+        with:
+          go-version-file: 'go.mod'
+      # make test
+      - name: Test
+        # find all go.mod files and run go test against directories containing go.mod files
+        run: go test -v $(go list -f '{{.Dir}}/...' -m  | tr '\n' ' ')
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      # git checkout
+      - name: Checkout code
+        uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      # go env
+      - name: Set up Go
+        uses: actions/setup-go@d35c59abb061a4a6fb18e82ac0862c26744d6ab5 # v5
+        with:
+          go-version-file: 'go.mod'
+          # Preflight checks
+      - name: Preflight checks
+        run: make check-go-version
+      # make build
+      - name: Build
+        run: go build -v cmd/grafana-app-sdk/*.go
+  integration-test:
+    runs-on: ubuntu-24.04
+    steps:
+      # git checkout
+      - name: Checkout code
+        uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5
+        with:
+          fetch-depth: 0
+          path: 'grafana-app-sdk'
+          persist-credentials: false
+      # Go env
+      - name: Set up Go
+        uses: actions/setup-go@d35c59abb061a4a6fb18e82ac0862c26744d6ab5 # v5
+        with:
+          go-version-file: './grafana-app-sdk/go.mod'
+      # Install the CLI
+      - name: Install the CLI
+        run: cd cmd/grafana-app-sdk && go install && cd -
+        working-directory: ./grafana-app-sdk
+      # Generate code
+      - name: Copy test CUE files & data
+        run: |
+          mkdir -p codegen-tests && cd codegen-tests
+          grafana-app-sdk project init "codegen-tests"
+          rm -rf kinds/manifest.cue
+          cp ../grafana-app-sdk/codegen/cuekind/testing/*.cue kinds/
+          mkdir -p cmp && cp -R ../grafana-app-sdk/codegen/testing/golden_generated/* cmp/
+          mv cmp/manifest/*.txt cmp/crd/
+          find ./cmp -iname '*.txt' -exec bash -c 'mv -- "$1" "${1%.txt}"' bash {} \;
+      - name: Generate code
+        run: |
+          cd codegen-tests
+          grafana-app-sdk generate --grouping=kind --gogenpath=pkg/gen1 --tsgenpath=ts/gen1 --defencoding=json --manifest=customManifest --crdmanifest
+          grafana-app-sdk generate --grouping=kind --gogenpath=pkg/gen1 --tsgenpath=ts/gen1 --defencoding=json --manifest=testManifest --crdmanifest
+          grafana-app-sdk generate --grouping=group --gogenpath=pkg/gen2 --tsgenpath=ts/gen2 --defencoding=yaml --manifest=customManifest --crdmanifest
+          grafana-app-sdk generate --grouping=group --gogenpath=pkg/gen2 --tsgenpath=ts/gen2 --defencoding=yaml --manifest=testManifest --crdmanifest
+          sed -i 's/codegen\-tests\/pkg\/gen2/codegen\-tests\/pkg\/generated/g' pkg/gen2/manifestdata/*.go
+          diff pkg/gen1/customkind cmp/go/groupbykind/customkind > diff.txt
+          sed -i '/^Common subdirectories/d' diff.txt
+          difflines=$(wc -l diff.txt | awk '{ print $1 }')
+          echo "GoGroupByKindDiff=${difflines}" >> $GITHUB_ENV
+      - name: Compare generated code
+        uses: actions/github-script@ed597411d8f924073f98dfc5c65a23a2325f34cd # v8
+        with:
+          script: |
+            const fs = require('fs');
+            let diff = '';
+            const options = {
+              outStream: fs.createWriteStream('/dev/null'),
+              errStream: fs.createWriteStream('/dev/null'),
+              ignoreReturnCode: true,
+              listeners: {
+                stdout: (data) => {
+                  diff += data.toString();
+                }
+              }
+            };
+            let anyFailed = false;
+            core.startGroup('CRD Diff');
+            await exec.exec('diff', ['codegen-tests/cmp/crd', 'codegen-tests/definitions'], options);
+            console.log(diff);
+            core.endGroup();
+            if(diff.replace(/^Common subdirectories.*$/gm, '').trim().length > 0) {
+              core.error('Generated CRD comparison to codegen/testing/golden_generated failed, see diff for details');
+              anyFailed = true;
+            }
+            diff = '';
+
+            core.startGroup('Go --grouping=kind Diff');
+            await exec.exec('diff', ['codegen-tests/cmp/go/groupbykind/customkind', 'codegen-tests/pkg/gen1/customkind'], options);
+            console.log(diff);
+            core.endGroup();
+            if(diff.replace(/^Common subdirectories.*$/gm, '').trim().length > 0) {
+              core.error('Generated go with --groupbykind=kind comparison to codegen/testing/golden_generated failed, see diff for details');
+              anyFailed = true;
+            }
+            diff = '';
+
+            core.startGroup('Go --grouping=group Diff');
+            await exec.exec('diff', ['codegen-tests/cmp/go/groupbygroup', 'codegen-tests/pkg/gen2'], options);
+            console.log(diff);
+            core.endGroup();
+            if(diff.replace(/^Common subdirectories.*$/gm, '').trim().length > 0) {
+              core.error('Generated go with --groupbykind=group comparison to codegen/testing/golden_generated failed, see diff for details');
+              anyFailed = true;
+            }
+            diff = '';
+
+            core.startGroup('TypeScript Diff');
+            await exec.exec('diff', ['codegen-tests/cmp/typescript/versioned', 'codegen-tests/ts/gen1'], options);
+            console.log(diff);
+            core.endGroup();
+            if(diff.replace(/^Common subdirectories.*$/gm, '').trim().length > 0) {
+              core.error('Generated TypeScript comparison to codegen/testing/golden_generated failed, see diff for details');
+              anyFailed = true;
+            }
+            diff = '';
+
+            if(anyFailed) {
+              core.setFailed('Diff between generated code from potential release build of grafana-app-sdk and codegen/testing/golden_generated failed');
+            }
+      - name: Bootstrap project
+        run: |
+          mkdir -p test-project && cd test-project
+          grafana-app-sdk project init "test-project"
+          rm -rf kinds/manifest.cue
+          printf "\nreplace github.com/grafana/grafana-app-sdk => $(readlink -f ../grafana-app-sdk)\n" >> go.mod
+          printf "\nreplace github.com/grafana/grafana-app-sdk/logging => $(readlink -f ../grafana-app-sdk/logging)\n" >> go.mod
+          printf "\nreplace github.com/grafana/grafana-app-sdk/plugin => $(readlink -f ../grafana-app-sdk/plugin)\n" >> go.mod
+          cp ../grafana-app-sdk/codegen/cuekind/testing/customkind.cue kinds/customkind.cue
+          grafana-app-sdk generate --manifest=customManifest
+          grafana-app-sdk project component add frontend backend operator --manifest=customManifest
+          go mod tidy
+          go build cmd/operator/*.go
+          go build plugin/pkg/*.go
+  

@@ -1,0 +1,38 @@
+/*
+The following example shows using the default all logs processing module, for
+a single tenant and specifying the destination url/credentials via environment
+variables.
+*/
+logging {
+  level  = "info"
+  format = "logfmt"
+}
+
+module.git "logs_primary" {
+  repository = "https://github.com/grafana/agent-modules.git"
+  revision = "main"
+  path = "modules/kubernetes/logs/all.river"
+
+  arguments {
+    forward_to = [loki.write.default.receiver]
+    git_repo = coalesce(env("GIT_REPO"), env("AGENT_REPO"), "https://github.com/grafana/agent-modules.git")
+    git_rev = coalesce(env("GIT_REV"), env("AGENT_REV"), "main")
+  }
+}
+
+loki.write "default" {
+  endpoint {
+    url = env("LOGS_PRIMARY_URL")
+
+    basic_auth {
+        username = env("LOGS_PRIMARY_TENANT")
+        password = env("LOGS_PRIMARY_TOKEN")
+    }
+  }
+
+  external_labels = {
+    "cluster" = coalesce(env("CLUSTER_NAME"), env("CLUSTER"), ""),
+    "env" = coalesce(env("ENV"), ""),
+    "region" = coalesce(env("REGION"), ""),
+  }
+}

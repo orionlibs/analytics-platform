@@ -1,0 +1,13 @@
+cluster:
+  name: "alloy-example"
+
+collectors:
+  alloy-daemon:
+    logging:
+      level: "debug"
+    liveDebugging:
+      enabled: false
+    alloy:
+      stabilityLevel: "experimental"
+      mounts:
+        dockercontainers: true

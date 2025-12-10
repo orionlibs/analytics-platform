@@ -1,0 +1,194 @@
+# k6
+
+- module: go.k6.io/k6
+  description: A modern load testing tool, using Go and JavaScript
+  tier: official
+  imports:
+    - k6
+  versions:
+    - "v1.0.0"
+    - "v1.1.0"
+    - "v1.2.0"
+    - "v1.2.1"
+    - "v1.2.2"
+    - "v1.2.3"
+    - "v1.3.0"
+    - "v1.4.0"
+    - "v1.4.1"
+    - "v1.4.2"
+
+# Official extensions
+
+- module: github.com/grafana/xk6-dns
+  description: DNS resolution and lookups in your tests
+  tier: official
+  imports:
+    - k6/x/dns
+  versions:
+    - "v1.0.0"
+
+- module: github.com/grafana/xk6-faker
+  description: Generate fake data in your tests
+  tier: official
+  imports:
+    - k6/x/faker
+  versions:
+    - "v0.4.0"
+    - "v0.4.1"
+    - "v0.4.2"
+    - "v0.4.3"
+    - "v0.4.4"
+
+- module: github.com/grafana/xk6-icmp
+  description: ICMP protocol support for k6
+  tier: official
+  imports:
+    - k6/x/icmp
+  versions:
+    - "v0.1.0"
+
+- module: github.com/grafana/xk6-mqtt
+  description: MQTT protocol support for k6
+  tier: official
+  imports:
+    - k6/x/mqtt
+  versions:
+    - "v0.1.1"
+
+- module: github.com/grafana/xk6-sql
+  description: Load-test SQL Servers
+  tier: official
+  imports:
+    - k6/x/sql
+  versions:
+    - "v1.0.0"
+    - "v1.0.1"
+    - "v1.0.2"
+    - "v1.0.3"
+    - "v1.0.4"
+    - "v1.0.5"
+
+- module: github.com/grafana/xk6-sql-driver-mysql
+  description: xk6-sql driver extension for MySQL database support
+  tier: official
+  imports:
+    - k6/x/sql/driver/mysql
+  versions:
+    - "v0.1.0"
+    - "v0.2.0"
+    - "v0.2.1"
+
+- module: github.com/grafana/xk6-sql-driver-postgres
+  description: xk6-sql driver extension for Postgres database support
+  tier: official
+  imports:
+    - k6/x/sql/driver/postgres
+  versions:
+    - "v0.1.0"
+    - "v0.1.1"
+
+- module: github.com/grafana/xk6-ssh
+  description: Use SSH connections in your tests
+  tier: official
+  imports:
+    - k6/x/ssh
+  versions:
+    - "v0.1.0"
+    - "v0.1.1"
+    - "v0.1.2"
+    - "v0.1.3"
+
+# Community extensions
+
+- module: github.com/grafana/xk6-client-prometheus-remote
+  description: Test Prometheus Remote Write-compatible endpoints
+  tier: community
+  imports:
+    - k6/x/remotewrite
+  versions:
+    - "v0.3.2"
+
+- module: github.com/grafana/xk6-client-tracing
+  description: This extension provides k6 with the required functionality required to load test distributed tracing backends.
+  tier: community
+  imports:
+    - k6/x/tracing
+  versions:
+    - "v0.0.9"
+
+- module: github.com/grafana/xk6-disruptor
+  description: Add fault injection capabilities to k6, following the chaos engineering principles.
+  tier: community
+  imports:
+    - k6/x/disruptor
+  versions:
+    - "v0.3.17"
+
+- module: github.com/mostafa/xk6-kafka
+  description: Load test Apache Kafka. Includes support for Avro messages.
+  tier: community
+  imports:
+    - k6/x/kafka
+  versions:
+    - "v1.0.0"
+
+- module: github.com/grafana/xk6-kubernetes
+  description: A k6 extension for interacting with Kubernetes clusters while testing.
+  tier: community
+  imports:
+    - k6/x/kubernetes
+  versions:
+    - "v0.10.3"
+
+- module: github.com/grafana/xk6-loki
+  description: Test Grafana Loki log ingestion endpoints
+  tier: community
+  imports:
+    - k6/x/loki
+  versions:
+    - "v1.0.0"
+    - "v1.0.1"
+
+- module: github.com/grafana/xk6-sql-driver-azuresql
+  description: xk6-sql driver extension for Microsoft Azure SQL database support
+  tier: community
+  imports:
+    - k6/x/sql/driver/azuresql
+  versions:
+    - "v0.1.0"
+    - "v0.1.1"
+
+- module: github.com/grafana/xk6-sql-driver-clickhouse
+  description: xk6-sql driver extension for ClickHouse database support
+  tier: community
+  imports:
+    - k6/x/sql/driver/clickhouse
+  versions:
+    - "v0.1.0"
+    - "v0.1.1"
+
+- module: github.com/grafana/xk6-sql-driver-sqlserver
+  description: xk6-sql driver extension for Microsoft SQL Server database support
+  tier: community
+  imports:
+    - k6/x/sql/driver/sqlserver
+  versions:
+    - "v0.1.0"
+    - "v0.1.1"
+
+- module: github.com/phymbert/xk6-sse
+  description: Server Sent Event
+  tier: community
+  imports:
+    - k6/x/sse
+  versions:
+    - "v0.1.10"
+    - "v0.1.11"
+    
+- module: github.com/grafana/xk6-tls
+  description: TLS certificates validation and inspection
+  tier: community
+  imports:
+    - k6/x/tls
+  versions:
+    - "v0.1.0"

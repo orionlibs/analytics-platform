@@ -1,0 +1,24 @@
+# assigns reviewers to pull requests in a similar way as CODEOWNERS, but doesn't require reviewers
+# to have write access to the repository
+# see .github/component_owners.yaml for the list of components and their owners
+name: Assign reviewers
+
+on:
+  # pull_request_target is needed instead of just pull_request
+  # because repository write permission is needed to assign reviewers
+  pull_request_target:
+
+permissions:
+  contents: read
+
+jobs:
+  assign-reviewers:
+    permissions:
+      contents: read
+      pull-requests: write  # for assigning reviewers
+    runs-on: ubuntu-latest
+    steps:
+      - uses: dyladan/component-owners@58bd86e9814d23f1525d0a970682cead459fa783 # v0.1.0
+        with:
+          config-file: .github/component_owners.yml
+          assign-owners: false

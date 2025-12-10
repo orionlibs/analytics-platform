@@ -1,0 +1,229 @@
+groups:
+  - id: registry.network
+    type: attribute_group
+    brief: >
+      These attributes may be used for any network related operation.
+    attributes:
+      - id: network.carrier.icc
+        stability: stable
+        type: string
+        brief: "The ISO 3166-1 alpha-2 2-character country code associated with the mobile carrier network."
+        examples: "DE"
+      - id: network.carrier.mcc
+        stability: stable
+        type: string
+        brief: "The mobile carrier country code."
+        examples: "310"
+      - id: network.carrier.mnc
+        stability: stable
+        type: string
+        brief: "The mobile carrier network code."
+        examples: "001"
+      - id: network.carrier.name
+        stability: stable
+        type: string
+        brief: "The name of the mobile carrier."
+        examples: "sprint"
+      - id: network.connection.subtype
+        stability: stable
+        type:
+          members:
+            - id: gprs
+              stability: stable
+              brief: GPRS
+              value: "gprs"
+            - id: edge
+              stability: stable
+              brief: EDGE
+              value: "edge"
+            - id: umts
+              stability: stable
+              brief: UMTS
+              value: "umts"
+            - id: cdma
+              stability: stable
+              brief: CDMA
+              value: "cdma"
+            - id: evdo_0
+              stability: stable
+              brief: EVDO Rel. 0
+              value: "evdo_0"
+            - id: evdo_a
+              stability: stable
+              brief: "EVDO Rev. A"
+              value: "evdo_a"
+            - id: cdma2000_1xrtt
+              stability: stable
+              brief: CDMA2000 1XRTT
+              value: "cdma2000_1xrtt"
+            - id: hsdpa
+              stability: stable
+              brief: HSDPA
+              value: "hsdpa"
+            - id: hsupa
+              stability: stable
+              brief: HSUPA
+              value: "hsupa"
+            - id: hspa
+              stability: stable
+              brief: HSPA
+              value: "hspa"
+            - id: iden
+              stability: stable
+              brief: IDEN
+              value: "iden"
+            - id: evdo_b
+              stability: stable
+              brief: "EVDO Rev. B"
+              value: "evdo_b"
+            - id: lte
+              stability: stable
+              brief: LTE
+              value: "lte"
+            - id: ehrpd
+              stability: stable
+              brief: EHRPD
+              value: "ehrpd"
+            - id: hspap
+              stability: stable
+              brief: HSPAP
+              value: "hspap"
+            - id: gsm
+              stability: stable
+              brief: GSM
+              value: "gsm"
+            - id: td_scdma
+              stability: stable
+              brief: TD-SCDMA
+              value: "td_scdma"
+            - id: iwlan
+              stability: stable
+              brief: IWLAN
+              value: "iwlan"
+            - id: nr
+              stability: stable
+              brief: "5G NR (New Radio)"
+              value: "nr"
+            - id: nrnsa
+              stability: stable
+              brief: "5G NRNSA (New Radio Non-Standalone)"
+              value: "nrnsa"
+            - id: lte_ca
+              stability: stable
+              brief: LTE CA
+              value: "lte_ca"
+        brief: 'This describes more details regarding the connection.type. It may be the type of cell technology connection, but it could be used for describing details about a wifi connection.'
+        examples: 'LTE'
+      - id: network.connection.type
+        stability: stable
+        type:
+          members:
+            - id: wifi
+              stability: stable
+              value: "wifi"
+            - id: wired
+              stability: stable
+              value: "wired"
+            - id: cell
+              stability: stable
+              value: "cell"
+            - id: unavailable
+              stability: stable
+              value: "unavailable"
+            - id: unknown
+              stability: stable
+              value: "unknown"
+        brief: 'The internet connection type.'
+        examples: 'wifi'
+      - id: network.local.address
+        stability: stable
+        type: string
+        brief: Local address of the network connection - IP address or Unix domain socket name.
+        examples: ['10.1.2.80', '/tmp/my.sock']
+      - id: network.local.port
+        stability: stable
+        type: int
+        brief: Local port number of the network connection.
+        examples: [65123]
+      - id: network.peer.address
+        stability: stable
+        type: string
+        brief: Peer address of the network connection - IP address or Unix domain socket name.
+        examples: ['10.1.2.80', '/tmp/my.sock']
+      - id: network.peer.port
+        stability: stable
+        type: int
+        brief: Peer port number of the network connection.
+        examples: [65123]
+      - id: network.protocol.name
+        stability: stable
+        type: string
+        brief: '[OSI application layer](https://osi-model.com/application-layer/) or non-OSI equivalent.'
+        note: The value SHOULD be normalized to lowercase.
+        examples: ['amqp', 'http', 'mqtt']
+      - id: network.protocol.version
+        stability: stable
+        type: string
+        brief: Version of the protocol specified in `network.protocol.name`.
+        examples: '3.1.1'
+        note: >
+          `network.protocol.version` refers to the version of the protocol used and might be
+          different from the protocol client's version. If the HTTP client has a version
+          of `0.27.2`, but sends HTTP version `1.1`, this attribute should be set to `1.1`.
+      - id: network.transport
+        stability: stable
+        type:
+          members:
+            - id: tcp
+              stability: stable
+              value: 'tcp'
+              brief: "TCP"
+            - id: udp
+              stability: stable
+              value: 'udp'
+              brief: "UDP"
+            - id: pipe
+              stability: stable
+              value: "pipe"
+              brief: 'Named or anonymous pipe.'
+            - id: unix
+              stability: stable
+              value: 'unix'
+              brief: "Unix domain socket"
+        brief: >
+          [OSI transport layer](https://osi-model.com/transport-layer/) or
+          [inter-process communication method](https://wikipedia.org/wiki/Inter-process_communication).
+        note: |
+          The value SHOULD be normalized to lowercase.
+
+          Consider always setting the transport when setting a port number, since
+          a port number is ambiguous without knowing the transport. For example
+          different processes could be listening on TCP port 12345 and UDP port 12345.
+        examples: ['tcp', 'udp']
+      - id: network.type
+        stability: stable
+        type:
+          members:
+            - id: ipv4
+              stability: stable
+              value: 'ipv4'
+              brief: "IPv4"
+            - id: ipv6
+              stability: stable
+              value: 'ipv6'
+              brief: "IPv6"
+        brief: '[OSI network layer](https://osi-model.com/network-layer/) or non-OSI equivalent.'
+        note: The value SHOULD be normalized to lowercase.
+        examples: ['ipv4', 'ipv6']
+      - id: network.io.direction
+        stability: stable
+        type:
+          members:
+            - id: transmit
+              stability: stable
+              value: 'transmit'
+            - id: receive
+              stability: stable
+              value: 'receive'
+        brief: "The network IO operation direction."
+        examples: ["transmit"]

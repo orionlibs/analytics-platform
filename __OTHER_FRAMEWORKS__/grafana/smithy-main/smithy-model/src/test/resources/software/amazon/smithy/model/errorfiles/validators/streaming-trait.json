@@ -1,0 +1,64 @@
+{
+    "smithy": "1.0",
+    "shapes": {
+        "ns.foo#Blob": {
+            "type": "blob"
+        },
+        "ns.foo#StreamingOperation": {
+            "type": "operation",
+            "input": {
+                "target": "ns.foo#StreamingInput"
+            },
+            "output": {
+                "target": "ns.foo#StreamingOutput"
+            }
+        },
+        "ns.foo#StreamingInput": {
+            "type": "structure",
+            "members": {
+                "Body": {
+                    "target": "ns.foo#StreamingBlob"
+                }
+            }
+        },
+        "ns.foo#StreamingOutput": {
+            "type": "structure",
+            "members": {
+                "Body": {
+                    "target": "ns.foo#StreamingBlob"
+                }
+            }
+        },
+        "ns.foo#StreamingBlob": {
+            "type": "blob",
+            "traits": {
+                "smithy.api#streaming": {}
+            }
+        },
+        "ns.foo#InvalidStreamingOperation": {
+            "type": "operation",
+            "output": {
+                "target": "ns.foo#InvalidStreamingOutput"
+            }
+        },
+        "ns.foo#InvalidStreamingOutput": {
+            "type": "structure",
+            "members": {
+                "StreamingBlob1": {
+                    "target": "ns.foo#StreamingBlob"
+                },
+                "StreamingBlob2": {
+                    "target": "ns.foo#StreamingBlob"
+                }
+            }
+        },
+        "ns.foo#InvalidNestedStream": {
+            "type": "structure",
+            "members": {
+                "NestedStream": {
+                    "target": "ns.foo#StreamingInput"
+                }
+            }
+        }
+    }
+}

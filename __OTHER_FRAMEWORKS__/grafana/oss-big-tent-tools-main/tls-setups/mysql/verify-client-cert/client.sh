@@ -1,0 +1,1 @@
+MYSQL_PWD=password mysql -hlocalhost --protocol=tcp -ujohn -Ddb --ssl-mode=REQUIRED --ssl-cert=$PWD/../../certs/client.crt --ssl-key=$PWD/../../certs/client.key

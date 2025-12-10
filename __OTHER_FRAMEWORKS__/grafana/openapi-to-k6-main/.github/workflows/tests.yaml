@@ -1,0 +1,83 @@
+name: Run Tests
+
+on:
+  push:
+    branches:
+      - "**"
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@2028fbc5c25fe9cf00d9f06a71cc4710d4507903 # v6
+        with:
+          node-version: '21'
+          cache: 'npm'
+          cache-dependency-path: 'package-lock.json'
+      - run: npm ci
+      - run: npm run lint
+      - run: npm test
+  e2e-test:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@2028fbc5c25fe9cf00d9f06a71cc4710d4507903 # v6
+        with:
+          node-version: '21'
+          cache: 'npm'
+          cache-dependency-path: 'package-lock.json'
+      - run: npm ci
+      - name: Generate SDK for E2E tests
+        run: |
+          npm run dev -- ./tests/e2e/schema.json ./tests/e2e/single/sdk.ts --disable-analytics --mode single
+          npm run dev -- ./tests/e2e/schema.json ./tests/e2e/split/sdk.ts --disable-analytics --mode split
+          npm run dev -- ./tests/e2e/schema.json ./tests/e2e/tags/sdk.ts --disable-analytics --mode tags
+          npm run dev -- ./tests/e2e/schema.json ./tests/e2e/single-tag-filter/sdk.ts --disable-analytics --mode single --only-tags ItemsHeader
+      - name: Start Mockoon CLI
+        uses: mockoon/cli-action@971589e873f22f7c9604e4236d6dfae3164efa6c # v2 - https://github.com/mockoon/cli-action/commit/971589e873f22f7c9604e4236d6dfae3164efa6c
+        with:
+          # Mockoon local data file or URL
+          data-file: './tests/e2e/schema.json'
+          port: 3000
+      - uses: grafana/setup-k6-action@ffe7d7290dfa715e48c2ccc924d068444c94bde2 # v1
+      - uses: grafana/run-k6-action@a15e2072ede004e8d46141e33d7f7dad8ad08d9d # v1
+        with:
+          path: './tests/e2e/*/k6Script.ts'
+          flags: '--compatibility-mode=experimental_enhanced'
+          inspect-flags: '--compatibility-mode=experimental_enhanced'
+  run-examples:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@2028fbc5c25fe9cf00d9f06a71cc4710d4507903 # v6
+        with:
+          node-version: '21'
+          cache: 'npm'
+          cache-dependency-path: 'package-lock.json'
+      - run: npm ci
+      - name: Update examples
+        run: npm run update-examples
+      - name: Compare generated Clients with existing ones
+        id: diff
+        run: |
+          if [ "$(git diff --ignore-space-at-eol --text examples/ | wc -l)" -gt "0" ]; then
+            echo "Detected changes in the examples, run `npm run update-examples` to update all the examples."
+            git diff --ignore-space-at-eol --text examples/
+            exit 1
+          fi

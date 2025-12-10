@@ -1,0 +1,51 @@
+name: Test login-to-gar action
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - "actions/login-to-gar/**"
+      - ".github/workflows/test-login-to-gar.yaml"
+
+  pull_request:
+    paths:
+      - "actions/login-to-gar/**"
+      - ".github/workflows/test-login-to-gar.yaml"
+    types:
+      - edited
+      - opened
+      - ready_for_review
+      - synchronize
+
+  merge_group:
+
+permissions: {}
+
+jobs:
+  test:
+    permissions:
+      contents: read
+      id-token: write
+
+    runs-on: ubuntu-latest
+
+    # Don't run for forks - they don't have access to secrets
+    if: github.event.pull_request.head.repo.full_name == github.repository
+
+    steps:
+      - name: Harden the runner (Audit all outbound calls)
+        uses: step-security/harden-runner@95d9a5deda9de15063e7595e9719c11c38c90ae2 # v2.13.2
+        with:
+          egress-policy: audit
+
+      - name: Checkout code
+        uses: actions/checkout@1af3b93b6815bc44a9784bd300feb67ff0d1eeb3 # v6.0.0
+        with:
+          persist-credentials: false
+
+      - name: Test Login to GAR Action
+        id: test-login-to-gar
+        uses: ./actions/login-to-gar
+        with:
+          registry: "us-docker.pkg.dev"

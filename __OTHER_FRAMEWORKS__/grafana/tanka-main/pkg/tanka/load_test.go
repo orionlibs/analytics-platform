@@ -1,0 +1,283 @@
+package tanka
+
+import (
+	"os"
+	"path/filepath"
+	"testing"
+
+	"github.com/grafana/tanka/pkg/jsonnet/implementations/binary"
+	"github.com/grafana/tanka/pkg/jsonnet/implementations/goimpl"
+	"github.com/grafana/tanka/pkg/jsonnet/implementations/types"
+	"github.com/grafana/tanka/pkg/kubernetes/manifest"
+	"github.com/grafana/tanka/pkg/spec/v1alpha1"
+	"github.com/pkg/errors"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
+)
+
+func TestLoad(t *testing.T) {
+	cases := []struct {
+		name     string
+		baseDir  string
+		expected interface{}
+		env      *v1alpha1.Environment
+	}{
+		{
+			name:    "static",
+			baseDir: "./testdata/cases/withspecjson/",
+			expected: manifest.List{{
+				"apiVersion": "v1",
+				"kind":       "ConfigMap",
+				"metadata": map[string]interface{}{
+					"name":      "config",
+					"namespace": "withspec",
+				},
+			}},
+			env: &v1alpha1.Environment{
+				APIVersion: v1alpha1.New().APIVersion,
+				Kind:       v1alpha1.New().Kind,
+				Metadata: v1alpha1.Metadata{
+					Name:      "cases/withspecjson",
+					Namespace: "cases/withspecjson/main.jsonnet",
+					Labels:    v1alpha1.New().Metadata.Labels,
+				},
+				Spec: v1alpha1.Spec{
+					APIServer: "https://localhost",
+					Namespace: "withspec",
+				},
+				Data: map[string]interface{}{
+					"apiVersion": "v1",
+					"kind":       "ConfigMap",
+					"metadata":   map[string]interface{}{"name": "config", "namespace": "withspec"},
+				},
+			},
+		},
+		{
+			name:    "static-filename",
+			baseDir: "./testdata/cases/withspecjson/main.jsonnet",
+			expected: manifest.List{{
+				"apiVersion": "v1",
+				"kind":       "ConfigMap",
+				"metadata": map[string]interface{}{
+					"name":      "config",
+					"namespace": "withspec",
+				},
+			}},
+			env: &v1alpha1.Environment{
+				APIVersion: v1alpha1.New().APIVersion,
+				Kind:       v1alpha1.New().Kind,
+				Metadata: v1alpha1.Metadata{
+					Name:      "cases/withspecjson",
+					Namespace: "cases/withspecjson/main.jsonnet",
+					Labels:    v1alpha1.New().Metadata.Labels,
+				},
+				Spec: v1alpha1.Spec{
+					APIServer: "https://localhost",
+					Namespace: "withspec",
+				},
+				Data: map[string]interface{}{
+					"apiVersion": "v1",
+					"kind":       "ConfigMap",
+					"metadata":   map[string]interface{}{"name": "config", "namespace": "withspec"},
+				},
+			},
+		},
+
+		{
+			name:    "inline",
+			baseDir: "./testdata/cases/withenv/",
+			expected: manifest.List{{
+				"apiVersion": "v1",
+				"kind":       "ConfigMap",
+				"metadata": map[string]interface{}{
+					"name":      "config",
+					"namespace": "withenv",
+				},
+			}},
+			env: &v1alpha1.Environment{
+				APIVersion: v1alpha1.New().APIVersion,
+				Kind:       v1alpha1.New().Kind,
+				Metadata: v1alpha1.Metadata{
+					Name:      "withenv",
+					Namespace: "cases/withenv/main.jsonnet",
+					Labels:    v1alpha1.New().Metadata.Labels,
+				},
+				Spec: v1alpha1.Spec{
+					APIServer: "https://localhost",
+					Namespace: "withenv",
+				},
+				Data: map[string]interface{}{
+					"apiVersion": "v1",
+					"kind":       "ConfigMap",
+					"metadata":   map[string]interface{}{"name": "config", "namespace": "withenv"},
+				},
+			},
+		},
+		{
+			name:    "inline-filename",
+			baseDir: "./testdata/cases/withenv/main.jsonnet",
+			expected: manifest.List{{
+				"apiVersion": "v1",
+				"kind":       "ConfigMap",
+				"metadata": map[string]interface{}{
+					"name":      "config",
+					"namespace": "withenv",
+				},
+			}},
+			env: &v1alpha1.Environment{
+				APIVersion: v1alpha1.New().APIVersion,
+				Kind:       v1alpha1.New().Kind,
+				Metadata: v1alpha1.Metadata{
+					Name:      "withenv",
+					Namespace: "cases/withenv/main.jsonnet",
+					Labels:    v1alpha1.New().Metadata.Labels,
+				},
+				Spec: v1alpha1.Spec{
+					APIServer: "https://localhost",
+					Namespace: "withenv",
+				},
+				Data: map[string]interface{}{
+					"apiVersion": "v1",
+					"kind":       "ConfigMap",
+					"metadata":   map[string]interface{}{"name": "config", "namespace": "withenv"},
+				},
+			},
+		},
+	}
+
+	for _, test := range cases {
+		t.Run(test.name, func(t *testing.T) {
+			l, err := Load(t.Context(), test.baseDir, Opts{})
+			require.NoError(t, err)
+
+			assert.Equal(t, test.expected, l.Resources)
+			assert.Equal(t, test.env, l.Env)
+		})
+	}
+}
+
+func TestLoadSelectEnvironment(t *testing.T) {
+	// No match
+	_, err := Load(t.Context(), "./testdata/cases/multiple-inline-envs", Opts{Name: "no match"})
+	assert.EqualError(t, err, "found no matching environments; run 'tk env list ./testdata/cases/multiple-inline-envs' to view available options")
+
+	// Empty options, match all environments
+	_, err = Load(t.Context(), "./testdata/cases/multiple-inline-envs", Opts{})
+	assert.EqualError(t, err, "found multiple Environments in \"./testdata/cases/multiple-inline-envs\". Use `--name` to select a single one: \n - project1-env1\n - project1-env2\n - project2-env1")
+
+	// Partial match two environments
+	_, err = Load(t.Context(), "./testdata/cases/multiple-inline-envs", Opts{Name: "env1"})
+	assert.EqualError(t, err, "found multiple Environments in \"./testdata/cases/multiple-inline-envs\" matching \"env1\". Provide a more specific name that matches a single one: \n - project1-env1\n - project2-env1")
+
+	// Partial match
+	result, err := Load(t.Context(), "./testdata/cases/multiple-inline-envs", Opts{Name: "project2"})
+	assert.NoError(t, err)
+	assert.Equal(t, "project2-env1", result.Env.Metadata.Name)
+
+	// Full match
+	result, err = Load(t.Context(), "./testdata/cases/multiple-inline-envs", Opts{Name: "project1-env1"})
+	assert.NoError(t, err)
+	assert.Equal(t, "project1-env1", result.Env.Metadata.Name)
+}
+
+// Tests that the load function will consider the path to be an environment name if it is not found
+func TestLoadEnvironmentFallbackToName(t *testing.T) {
+	// Temporarily change the working directory to the testdata directory
+	cwd, err := os.Getwd()
+	require.NoError(t, err)
+	err = os.Chdir("./testdata/cases/multiple-inline-envs")
+	require.NoError(t, err)
+	defer func() { require.NoError(t, os.Chdir(cwd)) }()
+
+	// Partial match two environments
+	_, err = Load(t.Context(), "env1", Opts{})
+	assert.EqualError(t, err, "found multiple Environments in \".\" matching \"env1\". Provide a more specific name that matches a single one: \n - project1-env1\n - project2-env1")
+
+	// Partial match
+	result, err := Load(t.Context(), "project2", Opts{})
+	require.NoError(t, err)
+	assert.Equal(t, "project2-env1", result.Env.Metadata.Name)
+
+	// Full match
+	result, err = Load(t.Context(), "project1-env1", Opts{})
+	require.NoError(t, err)
+	assert.Equal(t, "project1-env1", result.Env.Metadata.Name)
+}
+
+func TestLoadSelectEnvironmentFullMatchHasPriority(t *testing.T) {
+	// `base` matches both `base` and `base-and-more`
+	// However, the full match should win
+	result, err := Load(t.Context(), "./testdata/cases/inline-name-conflict", Opts{Name: "base"})
+	assert.NoError(t, err)
+	assert.Equal(t, "base", result.Env.Metadata.Name)
+}
+
+func TestLoadFailsWhenBothSpecAndInline(t *testing.T) {
+	_, err := Load(t.Context(), "./testdata/cases/static-and-inline", Opts{Name: "inline"})
+	assert.EqualError(t, err, "found a tanka Environment resource. Check that you aren't using a spec.json and inline environments simultaneously")
+}
+
+func TestGetJsonnetImplementation(t *testing.T) {
+	tempDir := t.TempDir()
+
+	// Write file that is not executable
+	notExecutablePath := filepath.Join(tempDir, "not-executable")
+	require.NoError(t, os.WriteFile(notExecutablePath, []byte("not executable"), 0644))
+
+	// Write file that is executable
+	executablePath := filepath.Join(tempDir, "executable")
+	require.NoError(t, os.WriteFile(executablePath, []byte("executable"), 0755))
+
+	cases := []struct {
+		implementationName string
+		path               string
+		expected           types.JsonnetImplementation
+		expectedErr        error
+	}{
+		{
+			implementationName: "",
+			path:               "my-dir",
+			expected: &goimpl.JsonnetGoImplementation{
+				Path: "my-dir",
+			},
+		},
+		{
+			implementationName: "go",
+			path:               "my-dir",
+			expected: &goimpl.JsonnetGoImplementation{
+				Path: "my-dir",
+			},
+		},
+		{
+			implementationName: "binary:does-not-exist",
+			expectedErr:        errors.New(`binary "does-not-exist" does not exist`),
+		},
+		{
+			implementationName: "binary:" + notExecutablePath,
+			expectedErr:        errors.New(`binary "` + notExecutablePath + `" is not executable`),
+		},
+		{
+			implementationName: "binary:" + executablePath,
+			expected: &binary.JsonnetBinaryImplementation{
+				BinPath: executablePath,
+			},
+		},
+		{
+			implementationName: "invalid",
+			expectedErr:        errors.New("unknown jsonnet implementation: invalid"),
+		},
+	}
+
+	for _, tt := range cases {
+		t.Run(tt.implementationName, func(t *testing.T) {
+			implementation, err := getJsonnetImplementation(tt.path, Opts{JsonnetImplementation: tt.implementationName})
+
+			if tt.expectedErr != nil {
+				assert.EqualError(t, err, tt.expectedErr.Error())
+				return
+			}
+
+			assert.Equal(t, tt.expected, implementation)
+		})
+	}
+}

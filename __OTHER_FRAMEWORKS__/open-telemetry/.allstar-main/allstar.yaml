@@ -1,0 +1,7 @@
+# https://github.com/ossf/allstar#policies
+optConfig:
+  optOutStrategy: false
+  optOutPrivateRepos: false
+  optOutPublicRepos: false
+  optInRepos:
+    - "opentelemetry-java-instrumentation"

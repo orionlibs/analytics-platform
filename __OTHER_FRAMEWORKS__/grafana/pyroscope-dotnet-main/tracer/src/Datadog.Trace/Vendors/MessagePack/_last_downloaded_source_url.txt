@@ -1,0 +1,1 @@
+https://github.com/neuecc/MessagePack-CSharp/archive/refs/tags/v1.9.11.zip

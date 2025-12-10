@@ -1,0 +1,8 @@
+ARG VM_VERSION=v1.91.2
+FROM victoriametrics/vmagent:$VM_VERSION
+
+WORKDIR /
+COPY ./agent-scrape-config.yml /etc/agent-scrape-config.yml
+COPY ./agent-scrape-config-https.yml /etc/agent-scrape-config-https.yml
+COPY start-vmagent.sh /
+ENTRYPOINT /start-vmagent.sh

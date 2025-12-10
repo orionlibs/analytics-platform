@@ -1,0 +1,24 @@
+# These owners will be the default owners for everything in
+# the repo. Unless a later match takes precedence,
+# @grafana/platform-productivity will be requested for review when
+# someone opens a pull request.
+* @grafana/platform-productivity
+
+# Owned by the O11y department's Frontend squad
+.github/workflows/build-lint-pr.yml  @grafana/o11y-frontend
+/actions/lint-pr-title/              @grafana/o11y-frontend @grafana/platform-productivity
+
+# Platform CAT
+/actions/generate-openapi-clients @grafana/platform-cat
+
+# Platform productivity
+/.github/workflows/publish-techdocs.yaml @grafana/platform-productivity
+
+# Observability
+/actions/azure-trusted-signing/ @grafana/o11y-dept
+
+# Platform Infrasec
+/actions/create-github-app-token @grafana/platform-infrasec
+
+# Mimir
+actions/go-flaky-tests/cmd/go-flaky-tests @grafana/mimir-maintainers

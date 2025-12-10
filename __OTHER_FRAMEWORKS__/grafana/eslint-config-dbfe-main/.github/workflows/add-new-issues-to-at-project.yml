@@ -1,0 +1,43 @@
+name: Add new issues to the Adaptive Telemetry project
+
+on:
+  issues:
+    types:
+      - opened
+
+jobs:
+  add-to-project:
+    permissions:
+      contents: read
+      id-token: write
+    name: Add issue to Adaptive Telemetry project
+    runs-on: ubuntu-latest
+    steps:
+      - id: get-secrets
+        uses: grafana/shared-workflows/actions/get-vault-secrets@28361cdb22223e5f1e34358c86c20908e7248760 # get-vault-secrets-v1.1.0
+        with:
+          repo_secrets: |
+            GITHUB_APP_ID=github-app:app-id
+            GITHUB_APP_PRIVATE_KEY=github-app:private-key
+      - uses: actions/create-github-app-token@7e473efe3cb98aa54f8d4bac15400b15fad77d94 # v2.2.0
+        id: app-token
+        with:
+          app-id: ${{ env.GITHUB_APP_ID }}
+          private-key: ${{ env.GITHUB_APP_PRIVATE_KEY }}
+          owner: ${{ github.repository_owner }}
+      - uses: actions/add-to-project@244f685bbc3b7adfa8466e08b698b5577571133e # v1.0.2
+        with:
+          project-url: https://github.com/orgs/grafana/projects/769
+          github-token: ${{ steps.app-token.outputs.token }}
+  label:
+    permissions:
+      issues: write
+    runs-on: ubuntu-latest
+    name: Add labels for Adaptive Telemetry project
+    steps:
+      - run: gh issue edit "$NUMBER" --add-label "$LABELS"
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_REPO: ${{ github.repository }}
+          NUMBER: ${{ github.event.issue.number }}
+          LABELS: static-code-analysis,linter,eslint-config-dbfe

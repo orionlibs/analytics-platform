@@ -1,0 +1,29 @@
+[package]
+name = "weaver_codegen_test"
+version.workspace = true
+authors.workspace = true
+repository.workspace = true
+license.workspace = true
+publish.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+
+[features]
+semconv_experimental = []
+
+[lints]
+workspace = true
+
+[build-dependencies]
+weaver_common = { path = "../weaver_common" }
+weaver_forge = { path = "../weaver_forge" }
+weaver_resolver = { path = "../weaver_resolver" }
+weaver_semconv = { path = "../weaver_semconv" }
+walkdir.workspace = true
+dirs.workspace = true
+miette.workspace = true
+log.workspace = true
+
+
+[dependencies]
+opentelemetry.workspace = true

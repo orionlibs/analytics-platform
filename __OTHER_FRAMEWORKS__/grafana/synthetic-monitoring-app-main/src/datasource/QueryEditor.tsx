@@ -1,0 +1,239 @@
+import React, { PureComponent } from 'react';
+import { QueryEditorProps, SelectableValue } from '@grafana/data';
+import { getTemplateSrv } from '@grafana/runtime';
+import { MultiSelect, Select, Spinner } from '@grafana/ui';
+import { css } from '@emotion/css';
+import { defaults } from 'lodash';
+
+import { defaultQuery, QueryType, SMOptions, SMQuery } from './types';
+import { CheckType, Probe } from 'types';
+import { getCheckType } from 'utils';
+
+import { SMDataSource } from './DataSource';
+
+type Props = QueryEditorProps<SMDataSource, SMQuery, SMOptions, SMQuery>;
+
+interface TracerouteCheckOptionValue {
+  job: string;
+  instance: string;
+  probes: number[];
+}
+
+interface State {
+  tracerouteCheckOptions: Array<SelectableValue<TracerouteCheckOptionValue>>;
+  tracerouteCheckOptionsLoading: boolean;
+  probes: Probe[];
+  // tracerouteProbeOptions: Array<SelectableValue<string>>;
+}
+
+const types = [
+  { label: 'Probes', value: QueryType.Probes },
+  { label: 'Checks', value: QueryType.Checks },
+  { label: 'Traceroute', value: QueryType.Traceroute },
+];
+
+const getStyles = () => ({
+  tracerouteFieldWrapper: css`
+    display: flex;
+    flex-direction: row;
+    margin-bottom: 8px;
+  `,
+  marginRight: css`
+    margin-right: 8px;
+  `,
+});
+
+function getProbeOptionsForCheck(check: TracerouteCheckOptionValue | undefined, probes: Probe[]) {
+  if (check === undefined) {
+    return [];
+  }
+  const probeOptions = [] as Array<SelectableValue<string>>;
+  check.probes.forEach((probeId: number) => {
+    const probe = probes.find((probe) => probeId === probe.id);
+    if (!probe) {
+      return;
+    }
+    return probeOptions.push({
+      value: probe.name,
+      label: probe.name,
+    });
+  });
+  return probeOptions;
+}
+
+export class QueryEditor extends PureComponent<Props, State> {
+  constructor(props: Props) {
+    super(props);
+    this.state = {
+      tracerouteCheckOptions: [],
+      tracerouteCheckOptionsLoading: true,
+      probes: [],
+      // tracerouteProbeOptions: [],
+    };
+  }
+
+  componentDidMount() {
+    this.getTracerouteCheckOptions();
+  }
+
+  getTracerouteCheckOptions = async () => {
+    const { datasource } = this.props;
+    const checks = await datasource.listChecks();
+    const probes = await datasource.listProbes();
+
+    const tracerouteCheckOptions = checks
+      .filter((check) => getCheckType(check.settings) === CheckType.Traceroute)
+      .map<SelectableValue<TracerouteCheckOptionValue>>((check) => {
+        return {
+          value: {
+            instance: check.target,
+            job: check.job,
+            probes: check.probes,
+          },
+          label: check.job,
+          description: check.target,
+        };
+      });
+
+    this.setState({
+      tracerouteCheckOptions,
+      probes,
+      tracerouteCheckOptionsLoading: false,
+    });
+  };
+
+  onQueryTypeChanged = (item: SelectableValue<QueryType>) => {
+    const { onChange, onRunQuery, query } = this.props;
+
+    if (!item.value) {
+      return;
+    }
+    onChange({
+      ...query,
+      queryType: item.value!,
+      instance: '',
+      job: '',
+      probe: '',
+    });
+    onRunQuery();
+  };
+
+  onTracerouteCheckChange = async (check: SelectableValue<TracerouteCheckOptionValue>) => {
+    const { onChange, onRunQuery, query } = this.props;
+    onChange({
+      ...query,
+      queryType: QueryType.Traceroute,
+      instance: check.value?.instance,
+      job: check.value?.job,
+      probe: undefined,
+    });
+    onRunQuery();
+  };
+
+  onTracerouteProbeChange = async (probe: Array<SelectableValue<string>>) => {
+    const { onChange, onRunQuery, query } = this.props;
+    onChange({
+      ...query,
+      probe: probe
+        .map(({ value }) => value ?? '')
+        .filter((val) => Boolean(val))
+        .join('|'),
+    });
+    onRunQuery();
+  };
+
+  getSelectedTracerouteOption(): TracerouteCheckOptionValue | undefined {
+    const { query } = this.props;
+    const { tracerouteCheckOptions } = this.state;
+    const templateSrv = getTemplateSrv();
+    let instance: string | undefined = templateSrv.replace('$instance');
+    if (instance === '$instance') {
+      instance = query.instance;
+    }
+    let job: string | undefined = templateSrv.replace('$job');
+    if (job === '$job') {
+      job = query.job;
+    }
+
+    const selected = tracerouteCheckOptions.find(
+      (option) => option.value?.job === job && option.value?.instance === instance
+    );
+
+    if (instance && job && selected) {
+      return selected?.value;
+    }
+    return undefined;
+  }
+
+  getSelectedTracerouteProbeOptions(): Array<SelectableValue<string>> {
+    const { query } = this.props;
+    const templateSrv = getTemplateSrv();
+    let probe: string | undefined = templateSrv.replace('$probe');
+    if (probe === '$probe') {
+      probe = query.probe;
+    }
+    return (
+      probe
+        ?.replace('{', '')
+        .replace('}', '')
+        .split(/[\|\,]/)
+        .map((probe) => ({ label: probe, value: probe })) ?? []
+    );
+  }
+
+  isOverridenByDashboardVariable(): boolean {
+    const templateSrv = getTemplateSrv();
+    const instance = templateSrv.replace('$instance');
+    const job = templateSrv.replace('$job');
+    return instance !== '$instance' && job !== '$job';
+  }
+
+  render() {
+    const query = defaults(this.props.query, defaultQuery);
+    const { tracerouteCheckOptions, tracerouteCheckOptionsLoading, probes } = this.state;
+    const styles = getStyles();
+
+    if (tracerouteCheckOptionsLoading) {
+      return <Spinner />;
+    }
+    const selectedTracerouteOption = this.getSelectedTracerouteOption();
+    const probeOptions = getProbeOptionsForCheck(selectedTracerouteOption, probes);
+    const selectedProbeOptions = this.getSelectedTracerouteProbeOptions();
+    return (
+      <div>
+        <div className="gf-form">
+          {/* eslint-disable-next-line @typescript-eslint/no-deprecated */}
+          <Select
+            options={types}
+            value={types.find((t) => t.value === query.queryType)}
+            onChange={this.onQueryTypeChanged}
+          />
+        </div>
+        {query.queryType === QueryType.Traceroute && (
+          <>
+            <div className={styles.tracerouteFieldWrapper}>
+              {/* eslint-disable-next-line @typescript-eslint/no-deprecated */}
+              <Select
+                options={tracerouteCheckOptions}
+                prefix="Check"
+                value={tracerouteCheckOptions.find((option) => option.value === selectedTracerouteOption)}
+                onChange={this.onTracerouteCheckChange}
+                disabled={this.isOverridenByDashboardVariable()}
+              />
+            </div>
+            <div className={styles.tracerouteFieldWrapper}>
+              <MultiSelect
+                options={probeOptions}
+                prefix="Probe"
+                allowCustomValue
+                value={selectedProbeOptions}
+                onChange={this.onTracerouteProbeChange}
+                disabled={getTemplateSrv().replace('$probe') !== '$probe'}
+              />
+            </div>
+          </>
+        )}
+      </div>
+    );
+  }
+}

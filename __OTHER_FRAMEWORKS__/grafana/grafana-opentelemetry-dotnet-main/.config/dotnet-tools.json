@@ -1,0 +1,20 @@
+{
+  "version": 1,
+  "isRoot": true,
+  "tools": {
+    "dotnet-validate": {
+      "version": "0.0.1-preview.537",
+      "commands": [
+        "dotnet-validate"
+      ],
+      "rollForward": false
+    },
+    "meziantou.framework.nugetpackagevalidation.tool": {
+      "version": "1.0.38",
+      "commands": [
+        "meziantou.validate-nuget-package"
+      ],
+      "rollForward": false
+    }
+  }
+}

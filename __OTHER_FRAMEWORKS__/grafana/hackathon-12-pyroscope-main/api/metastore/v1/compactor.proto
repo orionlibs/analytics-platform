@@ -1,0 +1,72 @@
+syntax = "proto3";
+
+package metastore.v1;
+
+import "metastore/v1/types.proto";
+
+service CompactionService {
+  // Used to both retrieve jobs and update the jobs status at the same time.
+  rpc PollCompactionJobs(PollCompactionJobsRequest) returns (PollCompactionJobsResponse) {}
+}
+
+message PollCompactionJobsRequest {
+  repeated CompactionJobStatusUpdate status_updates = 1;
+  // How many new jobs a worker can be assigned to.
+  uint32 job_capacity = 2;
+}
+
+message PollCompactionJobsResponse {
+  repeated CompactionJob compaction_jobs = 1;
+  repeated CompactionJobAssignment assignments = 2;
+}
+
+message CompactionJob {
+  string name = 1;
+  uint32 shard = 2;
+  string tenant = 3;
+  uint32 compaction_level = 4;
+  repeated string source_blocks = 5;
+  repeated Tombstones tombstones = 6;
+}
+
+// Tombstones represent objects removed from the index but still stored.
+message Tombstones {
+  BlockTombstones blocks = 1;
+  // For now, we only have block tombstones created due to the
+  // compaction process. Later, we may add more types of tombstones,
+  // e.g, deleted tenant (shard), partition, dataset, series etc.
+  // Exactly one member of Tombstones should be present.
+}
+
+message BlockTombstones {
+  string name = 1;
+  uint32 shard = 2;
+  string tenant = 3;
+  uint32 compaction_level = 4;
+  repeated string blocks = 5;
+}
+
+message CompactionJobAssignment {
+  string name = 1;
+  uint64 token = 2;
+  int64 lease_expires_at = 3;
+}
+
+message CompactionJobStatusUpdate {
+  string name = 1;
+  uint64 token = 2;
+  CompactionJobStatus status = 3;
+  // Only present if the job completed successfully.
+  CompactedBlocks compacted_blocks = 4;
+}
+
+message CompactedBlocks {
+  metastore.v1.BlockList source_blocks = 1;
+  repeated metastore.v1.BlockMeta new_blocks = 2;
+}
+
+enum CompactionJobStatus {
+  COMPACTION_STATUS_UNSPECIFIED = 0;
+  COMPACTION_STATUS_IN_PROGRESS = 1;
+  COMPACTION_STATUS_SUCCESS = 2;
+}

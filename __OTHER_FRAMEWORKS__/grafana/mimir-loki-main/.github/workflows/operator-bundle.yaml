@@ -1,0 +1,31 @@
+name: operator bundle
+
+on:
+  push:
+    paths:
+      - 'operator/**'
+    branches: [ main ]
+  pull_request:
+    paths:
+      - 'operator/**'
+
+jobs:
+  build:
+    name: build
+    runs-on: ubuntu-latest
+    permissions:
+      contents: "read"
+      id-token: "write"
+      pull-requests: "write"
+    steps:
+    - uses: actions/checkout@v4
+      with:
+        persist-credentials: false
+    - name: Set up Go 1.x
+      uses: actions/setup-go@v5
+      with:
+        go-version-file: ./operator/go.mod
+    - name: make bundle
+      run: |
+        make bundle-all && git diff --exit-code -I'^    createdAt: '
+      working-directory: ./operator

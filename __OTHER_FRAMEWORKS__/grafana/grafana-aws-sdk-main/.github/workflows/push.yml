@@ -1,0 +1,40 @@
+name: Go CI
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+
+permissions: {}
+
+jobs:
+  go-check:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      - name: Setup
+        uses: grafana/plugin-ci-workflows/actions/internal/plugins/setup@main # zizmor: ignore[unpinned-uses]
+        with:
+          go-version: '1.24.6'
+          golangci-lint-version: '2.1.6'
+
+      - name: Install dependencies
+        run: go mod download
+        working-directory: ${{ inputs.plugin-directory }}
+        shell: bash
+
+      - name: Lint
+        run: golangci-lint run --timeout=5m
+        shell: bash
+
+      - name: Test
+        run: mage -v test
+        shell: bash
+
+      - name: Build
+        run: mage
+        shell: bash

@@ -1,0 +1,24 @@
+name: 'Prepare new issue'
+on:
+  issues:
+    types: [opened]
+
+permissions:
+  contents: read
+
+jobs:
+  prepare-new-issue:
+    permissions:
+      issues: write # required for labeling issues
+    runs-on: ubuntu-latest
+    if: ${{ github.repository_owner == 'open-telemetry' }}
+    steps:
+      - uses: actions/checkout@1af3b93b6815bc44a9784bd300feb67ff0d1eeb3 # v6.0.0
+
+      - name: Run prepare-new-issue.sh
+        run: ./.github/scripts/prepare-new-issue.sh
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          ISSUE: ${{ github.event.issue.number }}
+          BODY: ${{ github.event.issue.body }}
+          OPENER: ${{ github.event.issue.user.login }}

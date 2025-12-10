@@ -1,0 +1,221 @@
+package network
+
+import (
+	"context"
+	"net/http"
+	"sync"
+	"time"
+
+	"github.com/go-kit/log"
+	"github.com/go-kit/log/level"
+	"github.com/golang/snappy"
+	writev2 "github.com/prometheus/prometheus/prompb/io/prometheus/write/v2"
+
+	"github.com/grafana/walqueue/types"
+)
+
+// writeBuffer handles buffering the data, keeping track if there is a write request already running and kicking off the
+// write request as needed. All methods need to be called in a thread safe manner.
+// writeBuffer handles buffering the data, keeping track if there is a write request already running and kicking off the
+// write request as needed. All methods need to be called in a thread safe manner.
+type writeBuffer[T types.Datum] struct {
+	lastAttemptedSend time.Time
+	log               log.Logger
+	stats             func(stats types.NetworkStats)
+	items             []T
+	symbolTable       *writev2.SymbolsTable
+	wrBuf             []byte
+	snappyBuf         []byte
+	cfg               types.ConnectionConfig
+	id                int
+	mut               sync.RWMutex
+	currentlySending  bool
+	metadataCache     MetadataCache
+}
+
+func newWriteBuffer[T types.Datum](id int, cfg types.ConnectionConfig, stats func(networkStats types.NetworkStats), l log.Logger, metadataCache MetadataCache) *writeBuffer[T] {
+	return &writeBuffer[T]{
+		id:            id,
+		items:         make([]T, 0, cfg.BatchCount),
+		cfg:           cfg,
+		stats:         stats,
+		metadataCache: metadataCache,
+		log:           l,
+	}
+}
+
+func (w *writeBuffer[T]) Add(items []T) {
+	w.mut.Lock()
+	defer w.mut.Unlock()
+
+	w.items = append(w.items, items...)
+}
+
+func (w *writeBuffer[T]) RemainingCapacity() int {
+	w.mut.RLock()
+	defer w.mut.RUnlock()
+
+	return w.cfg.BatchCount - len(w.items)
+}
+
+func (w *writeBuffer[T]) Len() int {
+	w.mut.RLock()
+	defer w.mut.RUnlock()
+
+	return len(w.items)
+}
+
+func (w *writeBuffer[T]) IsSending() bool {
+	w.mut.RLock()
+	defer w.mut.RUnlock()
+
+	return w.currentlySending
+}
+
+func (w *writeBuffer[T]) LastAttemptedSend() time.Time {
+	w.mut.RLock()
+	defer w.mut.RUnlock()
+
+	return w.lastAttemptedSend
+}
+
+// Drain returns any remaining items and sets the internal item array to 0 items.
+func (w *writeBuffer[T]) Drain() []T {
+	w.mut.Lock()
+	defer w.mut.Unlock()
+
+	defer func() {
+		w.items = w.items[:0]
+	}()
+
+	return w.items
+}
+
+func (w *writeBuffer[T]) Send(ctx context.Context, client *http.Client, finish func()) {
+	w.mut.Lock()
+	defer w.mut.Unlock()
+
+	defer func() {
+		w.lastAttemptedSend = time.Now()
+	}()
+
+	s := newSignalsInfo(w.items)
+	var err error
+	if w.cfg.RemoteWriteV1() {
+		w.snappyBuf, w.wrBuf, err = buildWriteRequest(w.items, w.snappyBuf, w.wrBuf)
+	} else {
+		w.symbolTable, w.snappyBuf, w.wrBuf, err = buildWriteRequestV2(w.items, w.metadataCache, w.symbolTable, w.snappyBuf, w.wrBuf)
+	}
+	// If the build write request fails then we should still clear out the items. Since this should only trigger if
+	// we get invalid item, and there is no resolution to that.
+
+	w.items = w.items[:0]
+	if err != nil {
+		level.Error(w.log).Log("msg", "error building write request", "err", err)
+		return
+	}
+
+	w.currentlySending = true
+	go func() {
+		// Regardless of what happens we need to clear out the items.
+		// This will allow new items to be added that will then allow more sending.
+		defer func() {
+			w.mut.Lock()
+			w.currentlySending = false
+			w.mut.Unlock()
+			finish()
+		}()
+		isMeta := false
+		if _, ok := any(w.items).([]types.MetadataDatum); ok {
+			isMeta = true
+		}
+		send(isMeta, w.cfg, w.log, w.snappyBuf, s, ctx, client, w.stats)
+	}()
+}
+
+func send(isMeta bool, cfg types.ConnectionConfig, l log.Logger, bb []byte, s signalsInfo, ctx context.Context, client *http.Client, parentstats func(stats types.NetworkStats)) {
+	bbLen := len(bb)
+	stats := func(r sendResult) {
+		recordStats(s.seriesCount, s.histogramCount, s.metadataCount, s.newestTS, isMeta, parentstats, r, bbLen)
+	}
+	nw, nlErr := newWrite(cfg, l, stats, client)
+	if nlErr != nil {
+		level.Error(l).Log("msg", "error creating write", "err", nlErr)
+		return
+	}
+	nw.trySend(bb, ctx)
+}
+
+// buildWriteRequest takes returns the snappy encoded final buffer followed by the protobuf. Note even in error it returns the buffers
+// for reuse.
+func buildWriteRequest[T types.Datum](items []T, snappybuf []byte, protobuf []byte) ([]byte, []byte, error) {
+	defer func() {
+		for _, item := range items {
+			item.Free()
+		}
+	}()
+	if snappybuf == nil {
+		snappybuf = make([]byte, 0)
+	}
+	if protobuf == nil {
+		protobuf = make([]byte, 0)
+	}
+	data, err := generateWriteRequest(items, protobuf)
+	if err != nil {
+		return protobuf, snappybuf, err
+	}
+	snappybuf = snappy.Encode(snappybuf, data)
+	return snappybuf, protobuf, nil
+}
+
+// buildWriteRequestV2 returns the snappy encoded final buffer followed by the protobuf for v2.
+func buildWriteRequestV2[T types.Datum](items []T, metadataCache MetadataCache, symbolTable *writev2.SymbolsTable, snappybuf []byte, protobuf []byte) (*writev2.SymbolsTable, []byte, []byte, error) {
+	defer func() {
+		for _, item := range items {
+			item.Free()
+		}
+		symbolTable.Reset()
+	}()
+	if snappybuf == nil {
+		snappybuf = make([]byte, 0)
+	}
+	if protobuf == nil {
+		protobuf = make([]byte, 0)
+	}
+	if symbolTable == nil {
+		t := writev2.NewSymbolTable()
+		symbolTable = &t
+	}
+	data, err := generateWriteRequestV2(symbolTable, items, metadataCache, protobuf)
+	if err != nil {
+		return symbolTable, snappybuf, protobuf, err
+	}
+	snappybuf = snappy.Encode(snappybuf, data)
+	return symbolTable, snappybuf, protobuf, nil
+}
+
+// signalsInfo allows us to preallocate what type of signals and count, since once they are
+// serialized that information is lost.
+type signalsInfo struct {
+	seriesCount    int
+	histogramCount int
+	metadataCount  int
+	newestTS       int64
+}
+
+func newSignalsInfo[T types.Datum](signals []T) signalsInfo {
+	s := signalsInfo{}
+	s.seriesCount = getSeriesCount(signals)
+	s.histogramCount = getHistogramCount(signals)
+	s.metadataCount = getMetaDataCount(signals)
+	for _, ts := range signals {
+		mm, valid := any(ts).(types.MetricDatum)
+		if !valid {
+			continue
+		}
+		if mm.TimeStampMS() > s.newestTS {
+			s.newestTS = mm.TimeStampMS()
+		}
+	}
+	return s
+}

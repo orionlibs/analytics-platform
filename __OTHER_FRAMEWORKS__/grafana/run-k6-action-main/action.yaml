@@ -1,0 +1,59 @@
+name: 'Run Grafana k6 tests'
+description: 'Run Grafana k6 tests'
+
+branding:
+  icon: 'arrow-down-circle'
+  color: 'purple'
+
+inputs:
+  github-token:
+    description: 'GitHub API Access Token'
+    default: ${{ github.token }}
+    required: true
+  path:
+    description: 'Path to the k6 test files'
+    required: true
+  parallel:
+    description: 'If true, run tests in parallel'
+    default: "false"
+    required: false
+  fail-fast:
+    description: 'If true, fail on first test failure'
+    default: "false"
+    required: false
+  flags:
+    description: 'Additional flags to pass to k6 tests'
+    default: ""
+    required: false
+  inspect-flags:
+    description: 'Additional flags to pass to k6 inspection step'
+    default: ""
+    required: false
+  cloud-run-locally:
+    description: 'If true, run tests locally instead and upload results to Grafana Cloud k6'
+    default: "true"
+    required: false
+  cloud-comment-on-pr:
+    description: 'If true, comment the cloud test run URL on the pull request'
+    default: "true"
+    required: false
+  only-verify-scripts:
+    description: 'If true, only check if the test scripts are valid and skip test execution'
+    default: "false"
+    required: false
+  debug:
+    description: 'If true, the output from k6 will be shown in the action logs, else only the summary will be shown'
+    default: "false"
+    required: false
+  disable-analytics:
+    description: 'If true, the anonymous usage analytics reporting will be disabled'
+    default: "false"
+    required: false
+    
+outputs:
+  testRunIds:
+    description: 'Comma-separated list of GCk6 Test Run IDs executed by this step'
+
+runs:
+  using: node20
+  main: dist/index.js

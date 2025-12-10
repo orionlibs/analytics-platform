@@ -1,0 +1,170 @@
+# Description:
+# Run Dockerized Playwright E2E tests for the plugin.
+# The plugin must be built via the "ci" workflow and available as a GitHub artifact before running this workflow.
+# make sure your docker volume maps to the `report-path` for your artifacts to be uploaded.
+# eg e2e:/app/e2e
+
+name: Plugins - Dockerized Playwright E2E tests
+
+on:
+  workflow_call:
+    inputs:
+      id:
+        description: Plugin ID
+        type: string
+        required: true
+      version:
+        description: Plugin version
+        type: string
+        required: true
+      # https://github.com/grafana/plugin-actions/blob/main/e2e-version/action.yml
+      skip-grafana-dev-image:
+        default: false
+        required: false
+        type: boolean
+      version-resolver-type:
+        required: false
+        type: string
+        default: plugin-grafana-dependency
+      grafana-dependency:
+        required: false
+        type: string
+      upload-artifacts:
+        required: false
+        type: boolean
+        default: false
+      grafana-compose-file:
+        required: false
+        type: string
+        description: Path to the docker-compose file to use for testing
+      report-path:
+        required: false
+        type: string
+        description: Path to the folder to use to upload the artifacts
+        default: playwright-report/
+      secrets:
+        required: false
+        type: string
+        description: The secrets to use for Playwright tests
+      grafana-url:
+        description: The Grafana URL to wait for before running the tests
+        type: string
+        required: false
+        default: http://localhost:3000/
+
+permissions:
+  contents: read
+  id-token: write
+
+jobs:
+  resolve-versions:
+    name: Resolve Grafana images
+    runs-on: ubuntu-arm64-small
+    timeout-minutes: 3
+    outputs:
+      matrix: ${{ steps.resolve-versions.outputs.matrix }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@93cb6efe18208431cddfb8368fd83d5badbf9bfd # v5.0.1
+        with:
+          persist-credentials: false
+
+      - name: Resolve Grafana E2E versions
+        id: resolve-versions
+        uses: grafana/plugin-actions/e2e-version@e2e-version/v1.1.2
+        with:
+          skip-grafana-dev-image: ${{ inputs.skip-grafana-dev-image }}
+          version-resolver-type: ${{ inputs.version-resolver-type }}
+          grafana-dependency: ${{ inputs.grafana-dependency }}
+
+  playwright-tests:
+    needs: resolve-versions
+    timeout-minutes: 60
+    strategy:
+      fail-fast: false
+      matrix:
+        GRAFANA_IMAGE: ${{fromJson(needs.resolve-versions.outputs.matrix)}}
+    name: e2e ${{ matrix.GRAFANA_IMAGE.name }}@${{ matrix.GRAFANA_IMAGE.VERSION }}
+    runs-on: ubuntu-x64-large
+    steps:
+      - uses: actions/checkout@93cb6efe18208431cddfb8368fd83d5badbf9bfd # v5.0.1
+        with:
+          persist-credentials: false
+
+      - name: Download GitHub artifact
+        uses: actions/download-artifact@018cc2cf5baa6db3ef3c5f8a56943fffe632ef53 # v6.0.0
+        with:
+          name: dist-artifacts
+          path: /tmp/dist-artifacts
+
+      - name: Move dist artifacts
+        run: |
+          mkdir -p dist
+          src=$(pwd)
+
+          cd /tmp/dist-artifacts
+          # unzip the universal zip
+          unzip "${PLUGIN_ID}-${PLUGIN_VERSION}.zip" -d out
+          # Folder structure: /tmp/dist-artifacts/out/$PLUGIN_ID/plugin.json
+          cd out
+          cd "$(ls -1)"
+          mv ./* "$src/dist/"
+        env:
+          PLUGIN_ID: ${{ inputs.id }}
+          PLUGIN_VERSION: ${{ inputs.version }}
+
+      - name: Get secrets from Vault
+        if: inputs.secrets != ''
+        id: get-secrets
+        uses: grafana/shared-workflows/actions/get-vault-secrets@a37de51f3d713a30a9e4b21bcdfbd38170020593 # get-vault-secrets/v1.3.0
+        with:
+          repo_secrets: ${{ inputs.secrets }}
+          export_env: false
+
+      - name: Set secrets
+        if: inputs.secrets != ''
+        run: |
+          echo '${{ steps.get-secrets.outputs.secrets }}' | jq -r 'to_entries[] | "\(.key)=\(.value)"' >> .env
+        # No support for subdirectories when running with Docker
+        # working-directory: ${{ inputs.plugin-directory }}
+
+      - name: Start Grafana
+        # add the -f argument only if "inputs.grafana-compose-file" is defined
+        run: |
+          GRAFANA_VERSION=${{ matrix.GRAFANA_IMAGE.VERSION }} GRAFANA_IMAGE=${{ matrix.GRAFANA_IMAGE.NAME }} docker compose ${DOCKER_COMPOSE_FILE:+-f "$DOCKER_COMPOSE_FILE"} up -d
+        env:
+          DOCKER_COMPOSE_FILE: ${{ inputs.grafana-compose-file }}
+
+      - name: Wait for Grafana to start
+        uses: grafana/plugin-actions/wait-for-grafana@wait-for-grafana/v1.0.2
+        with:
+          url: "${{ inputs.grafana-url }}"
+
+      - name: Run Playwright Tests
+        id: run-tests
+        # add the -f argument only if "inputs.grafana-compose-file" is defined
+        run: |
+          docker compose --profile playwright ${DOCKER_COMPOSE_FILE:+-f "$DOCKER_COMPOSE_FILE"} up playwright --exit-code-from playwright
+        env:
+          DOCKER_COMPOSE_FILE: ${{ inputs.grafana-compose-file }}
+          GRAFANA_VERSION: ${{ matrix.GRAFANA_IMAGE.VERSION }}
+          GRAFANA_IMAGE: ${{ matrix.GRAFANA_IMAGE.NAME }}
+
+      - name: Upload artifacts
+        uses: actions/upload-artifact@330a01c490aca151604b8cf639adc76d48f6c5d4 # v5.0.0
+        if: ${{ (inputs.upload-artifacts == true) && ((always() && steps.run-tests.outcome == 'success') || (failure() && steps.run-tests.outcome == 'failure')) }}
+        with:
+          name: playwright-report-${{ matrix.GRAFANA_IMAGE.NAME }}-v${{ matrix.GRAFANA_IMAGE.VERSION }}-${{github.run_id}}
+          path: ${{ inputs.report-path }}
+          retention-days: 30
+
+  check-playwright-status:
+    needs: playwright-tests
+    name: Check Playwright E2E matrix status
+    runs-on: ubuntu-arm64-small
+    if: always()
+    steps:
+      - name: Check matrix job status
+        uses: grafana/plugin-ci-workflows/actions/internal/check-matrix-status@main
+        with:
+          results: ${{ needs.playwright-tests.result }}

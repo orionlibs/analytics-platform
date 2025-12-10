@@ -1,0 +1,8 @@
+# Dockerfile that will build a container that runs python with FastAPI and uvicorn on port 8080
+FROM python:3.12@sha256:872565c5ac89cafbab19419c699d80bda96e9d0f47a4790e5229bd3aeeeb5da9
+EXPOSE 8080
+RUN apt update
+RUN apt install -y libpq-dev
+RUN pip install fastapi uvicorn psycopg==3.2.9
+COPY main.py /main.py
+CMD ["uvicorn", "--port", "8080", "--host", "0.0.0.0", "main:app"]

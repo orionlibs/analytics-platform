@@ -1,0 +1,42 @@
+on:
+  push:
+    tags:
+      - "*"
+  workflow_dispatch: {}
+
+# These permissions are needed to assume roles from Github's OIDC.
+permissions:
+  contents: read
+
+name: Publish Extension
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+        with:
+          persist-credentials: false
+      - run: npm install
+      - id: get-secrets
+        uses: grafana/shared-workflows/actions/get-vault-secrets@main
+        with:
+          # Secrets placed in the ci/repo/grafana/<repo>/<path> path in Vault
+          repo_secrets: |
+            OPEN_VSX_TOKEN=openvsx:token
+            VS_MARKETPLACE_TOKEN=vscode-marketplace:token
+      - name: Publish to Open VSX
+        uses: HaaLeo/publish-vscode-extension@aae4c55fd9e724685834ff0a9488ad57c8f3ecf1 # v0
+        with:
+          pat: ${{ env.OPEN_VSX_TOKEN }}
+          registryUrl: https://open-vsx.org
+      - name: Publish to Visual Studio Marketplace
+        id: publishToMarketplace
+        uses: HaaLeo/publish-vscode-extension@aae4c55fd9e724685834ff0a9488ad57c8f3ecf1 # v0
+        with:
+          pat: ${{ env.VS_MARKETPLACE_TOKEN }}
+          registryUrl: https://marketplace.visualstudio.com
+      - uses: ncipollo/release-action@440c8c1cb0ed28b9f43e4d1d670870f059653174 # v1
+        with:
+          allowUpdates: true
+          artifacts: "${{ steps.publishToMarketplace.outputs.vsixPath }}"
+          token: ${{ secrets.GITHUB_TOKEN }}

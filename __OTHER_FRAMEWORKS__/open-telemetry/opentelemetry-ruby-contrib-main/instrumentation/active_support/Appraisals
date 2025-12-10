@@ -1,0 +1,15 @@
+# frozen_string_literal: true
+
+# Copyright The OpenTelemetry Authors
+#
+# SPDX-License-Identifier: Apache-2.0
+
+%w[7.1.0 7.2.0 8.0.0].each do |version|
+  appraise "activesupport-#{version}" do
+    gem 'activesupport', "~> #{version}"
+  end
+end
+
+appraise 'activesupport-latest' do
+  gem 'activesupport'
+end

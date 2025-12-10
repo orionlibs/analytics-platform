@@ -1,0 +1,728 @@
+[
+  {
+    "description": "A modern load testing tool, using Go and JavaScript",
+    "imports": [
+      "k6"
+    ],
+    "module": "go.k6.io/k6",
+    "repo": {
+      "description": "A modern load testing tool, using Go and JavaScript",
+      "homepage": "https://grafana.com/oss/k6/",
+      "license": "AGPL-3.0",
+      "name": "k6",
+      "owner": "grafana",
+      "public": true,
+      "topics": [
+        "es6",
+        "go",
+        "golang",
+        "hacktoberfest",
+        "javascript",
+        "k6",
+        "load-generator",
+        "load-testing",
+        "performance"
+      ],
+      "url": "https://github.com/grafana/k6"
+    },
+    "tier": "official",
+    "versions": [
+      "v1.3.0",
+      "v1.2.3",
+      "v1.2.2",
+      "v1.2.1",
+      "v1.2.0",
+      "v1.1.0",
+      "v1.0.0"
+    ]
+  },
+  {
+    "compliance": {
+      "issues": [
+        "security",
+        "vulnerability",
+        "module",
+        "versions",
+        "build"
+      ]
+    },
+    "description": "DNS resolution and lookups in your tests",
+    "imports": [
+      "k6/x/dns"
+    ],
+    "module": "github.com/grafana/xk6-dns",
+    "repo": {
+      "clone_url": "https://github.com/grafana/xk6-dns.git",
+      "description": "A k6 extension to resolve DNS names to IP addresses",
+      "homepage": "https://github.com/grafana/xk6-dns",
+      "license": "AGPL-3.0",
+      "name": "xk6-dns",
+      "owner": "grafana",
+      "public": true,
+      "stars": 6,
+      "timestamp": 1760551782,
+      "topics": [
+        "dns",
+        "k6",
+        "xk6"
+      ],
+      "url": "https://github.com/grafana/xk6-dns"
+    },
+    "tier": "official",
+    "versions": [
+      "v1.0.0"
+    ]
+  },
+  {
+    "compliance": {
+      "issues": [
+        "security",
+        "vulnerability",
+        "module",
+        "versions",
+        "build"
+      ]
+    },
+    "description": "Generate fake data in your tests",
+    "imports": [
+      "k6/x/faker"
+    ],
+    "module": "github.com/grafana/xk6-faker",
+    "repo": {
+      "clone_url": "https://github.com/grafana/xk6-faker.git",
+      "description": "Random fake data generator for k6.",
+      "homepage": "http://faker.x.k6.io/",
+      "license": "AGPL-3.0",
+      "name": "xk6-faker",
+      "owner": "grafana",
+      "public": true,
+      "stars": 110,
+      "timestamp": 1761751726,
+      "topics": [
+        "k6",
+        "xk6"
+      ],
+      "url": "https://github.com/grafana/xk6-faker"
+    },
+    "tier": "official",
+    "versions": [
+      "v0.4.4",
+      "v0.4.3",
+      "v0.4.2",
+      "v0.4.1",
+      "v0.4.0"
+    ]
+  },
+  {
+    "compliance": {},
+    "description": "ICMP protocol support for k6",
+    "imports": [
+      "k6/x/icmp"
+    ],
+    "module": "github.com/grafana/xk6-icmp",
+    "repo": {
+      "clone_url": "https://github.com/grafana/xk6-icmp.git",
+      "description": "ICMP protocol support for k6",
+      "homepage": "http://icmp.x.k6.io/",
+      "license": "AGPL-3.0",
+      "name": "xk6-icmp",
+      "owner": "grafana",
+      "public": true,
+      "timestamp": 1761505555,
+      "topics": [
+        "icmp",
+        "k6",
+        "ping",
+        "xk6"
+      ],
+      "url": "https://github.com/grafana/xk6-icmp"
+    },
+    "tier": "official",
+    "versions": [
+      "v0.1.0"
+    ]
+  },
+  {
+    "compliance": {
+      "issues": [
+        "security",
+        "vulnerability",
+        "module",
+        "versions",
+        "build"
+      ]
+    },
+    "description": "MQTT protocol support for k6",
+    "imports": [
+      "k6/x/mqtt"
+    ],
+    "module": "github.com/grafana/xk6-mqtt",
+    "repo": {
+      "clone_url": "https://github.com/grafana/xk6-mqtt.git",
+      "description": "MQTT protocol support for k6",
+      "homepage": "http://mqtt.x.k6.io/",
+      "license": "AGPL-3.0",
+      "name": "xk6-mqtt",
+      "owner": "grafana",
+      "public": true,
+      "stars": 2,
+      "timestamp": 1761837805,
+      "topics": [
+        "k6",
+        "mqtt",
+        "xk6"
+      ],
+      "url": "https://github.com/grafana/xk6-mqtt"
+    },
+    "tier": "official",
+    "versions": [
+      "v0.1.1"
+    ]
+  },
+  {
+    "compliance": {
+      "issues": [
+        "security",
+        "vulnerability",
+        "module",
+        "versions",
+        "build"
+      ]
+    },
+    "description": "Load-test SQL Servers",
+    "imports": [
+      "k6/x/sql"
+    ],
+    "module": "github.com/grafana/xk6-sql",
+    "repo": {
+      "clone_url": "https://github.com/grafana/xk6-sql.git",
+      "description": "Use SQL databases from k6 tests.",
+      "homepage": "http://sql.x.k6.io/",
+      "license": "Apache-2.0",
+      "name": "xk6-sql",
+      "owner": "grafana",
+      "public": true,
+      "stars": 169,
+      "timestamp": 1761753257,
+      "topics": [
+        "k6",
+        "sql",
+        "xk6"
+      ],
+      "url": "https://github.com/grafana/xk6-sql"
+    },
+    "tier": "official",
+    "versions": [
+      "v1.0.5",
+      "v1.0.4",
+      "v1.0.3",
+      "v1.0.2",
+      "v1.0.1",
+      "v1.0.0"
+    ]
+  },
+  {
+    "compliance": {
+      "issues": [
+        "security",
+        "vulnerability",
+        "module",
+        "versions",
+        "build"
+      ]
+    },
+    "description": "xk6-sql driver extension for MySQL database support",
+    "imports": [
+      "k6/x/sql/driver/mysql"
+    ],
+    "module": "github.com/grafana/xk6-sql-driver-mysql",
+    "repo": {
+      "clone_url": "https://github.com/grafana/xk6-sql-driver-mysql.git",
+      "description": "xk6-sql driver extension for MySQL database support",
+      "homepage": "https://github.com/grafana/xk6-sql-driver-mysql",
+      "license": "AGPL-3.0",
+      "name": "xk6-sql-driver-mysql",
+      "owner": "grafana",
+      "public": true,
+      "stars": 5,
+      "timestamp": 1751873375,
+      "topics": [
+        "k6",
+        "mysql",
+        "xk6",
+        "xk6-sql-driver"
+      ],
+      "url": "https://github.com/grafana/xk6-sql-driver-mysql"
+    },
+    "tier": "official",
+    "versions": [
+      "v0.2.1",
+      "v0.2.0",
+      "v0.1.0"
+    ]
+  },
+  {
+    "compliance": {
+      "issues": [
+        "security",
+        "vulnerability",
+        "module",
+        "versions",
+        "build"
+      ]
+    },
+    "description": "xk6-sql driver extension for Postgres database support",
+    "imports": [
+      "k6/x/sql/driver/postgres"
+    ],
+    "module": "github.com/grafana/xk6-sql-driver-postgres",
+    "repo": {
+      "clone_url": "https://github.com/grafana/xk6-sql-driver-postgres.git",
+      "description": "xk6-sql driver extension for PostgreSQL database support",
+      "homepage": "https://github.com/grafana/xk6-sql-driver-postgres",
+      "license": "AGPL-3.0",
+      "name": "xk6-sql-driver-postgres",
+      "owner": "grafana",
+      "public": true,
+      "stars": 11,
+      "timestamp": 1751877952,
+      "topics": [
+        "k6",
+        "postgres",
+        "postgresql",
+        "xk6",
+        "xk6-sql-driver"
+      ],
+      "url": "https://github.com/grafana/xk6-sql-driver-postgres"
+    },
+    "tier": "official",
+    "versions": [
+      "v0.1.1",
+      "v0.1.0"
+    ]
+  },
+  {
+    "compliance": {
+      "issues": [
+        "security",
+        "vulnerability",
+        "module",
+        "versions",
+        "build"
+      ]
+    },
+    "description": "Use SSH connections in your tests",
+    "imports": [
+      "k6/x/ssh"
+    ],
+    "module": "github.com/grafana/xk6-ssh",
+    "repo": {
+      "clone_url": "https://github.com/grafana/xk6-ssh.git",
+      "description": "Client extension for interacting with a host over SSH as part of your k6 test.",
+      "homepage": "https://github.com/grafana/xk6-ssh",
+      "license": "Apache-2.0",
+      "name": "xk6-ssh",
+      "owner": "grafana",
+      "public": true,
+      "stars": 12,
+      "timestamp": 1761761362,
+      "topics": [
+        "k6",
+        "ssh",
+        "ssh-client",
+        "xk6"
+      ],
+      "url": "https://github.com/grafana/xk6-ssh"
+    },
+    "tier": "official",
+    "versions": [
+      "v0.1.3",
+      "v0.1.2",
+      "v0.1.1",
+      "v0.1.0"
+    ]
+  },
+  {
+    "compliance": {
+      "issues": [
+        "security",
+        "vulnerability",
+        "module",
+        "versions",
+        "build"
+      ]
+    },
+    "description": "Test Prometheus Remote Write-compatible endpoints",
+    "imports": [
+      "k6/x/remotewrite"
+    ],
+    "module": "github.com/grafana/xk6-client-prometheus-remote",
+    "repo": {
+      "clone_url": "https://github.com/grafana/xk6-client-prometheus-remote.git",
+      "description": "A k6 extension for testing Prometheus Remote Write endpoints",
+      "homepage": "https://github.com/grafana/xk6-client-prometheus-remote",
+      "license": "Apache-2.0",
+      "name": "xk6-client-prometheus-remote",
+      "owner": "grafana",
+      "public": true,
+      "stars": 28,
+      "timestamp": 1755852702,
+      "topics": [
+        "k6",
+        "prometheus",
+        "remote-write",
+        "xk6"
+      ],
+      "url": "https://github.com/grafana/xk6-client-prometheus-remote"
+    },
+    "tier": "community",
+    "versions": [
+      "v0.3.2"
+    ]
+  },
+  {
+    "compliance": {
+      "issues": [
+        "security",
+        "vulnerability"
+      ]
+    },
+    "description": "This extension provides k6 with the required functionality required to load test distributed tracing backends.",
+    "imports": [
+      "k6/x/tracing"
+    ],
+    "module": "github.com/grafana/xk6-client-tracing",
+    "repo": {
+      "clone_url": "https://github.com/grafana/xk6-client-tracing.git",
+      "description": "A k6 extension for testing distributed tracing backends",
+      "homepage": "https://github.com/grafana/xk6-client-tracing",
+      "license": "AGPL-3.0",
+      "name": "xk6-client-tracing",
+      "owner": "grafana",
+      "public": true,
+      "stars": 60,
+      "timestamp": 1761571868,
+      "topics": [
+        "distributed-tracing",
+        "k6",
+        "opentelemetry",
+        "tracing",
+        "xk6"
+      ],
+      "url": "https://github.com/grafana/xk6-client-tracing"
+    },
+    "tier": "community",
+    "versions": [
+      "v0.0.9"
+    ]
+  },
+  {
+    "compliance": {
+      "issues": [
+        "security"
+      ]
+    },
+    "description": "Add fault injection capabilities to k6, following the chaos engineering principles.",
+    "imports": [
+      "k6/x/disruptor"
+    ],
+    "module": "github.com/grafana/xk6-disruptor",
+    "repo": {
+      "clone_url": "https://github.com/grafana/xk6-disruptor.git",
+      "description": "Extension for injecting faults into k6 tests",
+      "homepage": "https://grafana.com/docs/k6/latest/testing-guides/injecting-faults-with-xk6-disruptor/",
+      "license": "AGPL-3.0",
+      "name": "xk6-disruptor",
+      "owner": "grafana",
+      "public": true,
+      "stars": 114,
+      "timestamp": 1762099448,
+      "topics": [
+        "chaos-engineering",
+        "fault-injection",
+        "k6",
+        "xk6"
+      ],
+      "url": "https://github.com/grafana/xk6-disruptor"
+    },
+    "tier": "community",
+    "versions": [
+      "v0.3.17"
+    ]
+  },
+  {
+    "compliance": {
+      "issues": [
+        "security",
+        "vulnerability",
+        "module",
+        "versions",
+        "build"
+      ]
+    },
+    "description": "Load test Apache Kafka. Includes support for Avro messages.",
+    "imports": [
+      "k6/x/kafka"
+    ],
+    "module": "github.com/mostafa/xk6-kafka",
+    "repo": {
+      "clone_url": "https://github.com/mostafa/xk6-kafka.git",
+      "description": "k6 extension to load test Apache Kafka with support for various serialization formats, SASL, TLS, compression, Schema Registry client and beyond",
+      "homepage": "https://github.com/mostafa/xk6-kafka",
+      "license": "Apache-2.0",
+      "name": "xk6-kafka",
+      "owner": "mostafa",
+      "public": true,
+      "stars": 196,
+      "timestamp": 1760609950,
+      "topics": [
+        "apache-kafka",
+        "avro",
+        "extension",
+        "hacktoberfest",
+        "json-schema",
+        "jsonschema",
+        "k6",
+        "kafka",
+        "load-testing",
+        "performance-testing",
+        "sasl",
+        "schema-registry",
+        "xk6"
+      ],
+      "url": "https://github.com/mostafa/xk6-kafka"
+    },
+    "tier": "community",
+    "versions": [
+      "v1.0.0"
+    ]
+  },
+  {
+    "compliance": {},
+    "description": "A k6 extension for interacting with Kubernetes clusters while testing.",
+    "imports": [
+      "k6/x/kubernetes"
+    ],
+    "module": "github.com/grafana/xk6-kubernetes",
+    "repo": {
+      "clone_url": "https://github.com/grafana/xk6-kubernetes.git",
+      "description": "Client extension for interacting with Kubernetes clusters from your k6 tests.",
+      "homepage": "https://github.com/grafana/xk6-kubernetes",
+      "license": "Apache-2.0",
+      "name": "xk6-kubernetes",
+      "owner": "grafana",
+      "public": true,
+      "stars": 74,
+      "timestamp": 1761494815,
+      "topics": [
+        "k6",
+        "k8s",
+        "kubernetes",
+        "kubernetes-client",
+        "xk6"
+      ],
+      "url": "https://github.com/grafana/xk6-kubernetes"
+    },
+    "tier": "community",
+    "versions": [
+      "v0.10.3"
+    ]
+  },
+  {
+    "compliance": {
+      "issues": [
+        "security",
+        "vulnerability",
+        "module",
+        "versions",
+        "build"
+      ]
+    },
+    "description": "Test Grafana Loki log ingestion endpoints",
+    "imports": [
+      "k6/x/loki"
+    ],
+    "module": "github.com/grafana/xk6-loki",
+    "repo": {
+      "clone_url": "https://github.com/grafana/xk6-loki.git",
+      "description": "k6 extension for Loki",
+      "homepage": "https://github.com/grafana/xk6-loki",
+      "license": "Apache-2.0",
+      "name": "xk6-loki",
+      "owner": "grafana",
+      "public": true,
+      "stars": 52,
+      "timestamp": 1761837754,
+      "topics": [
+        "k6",
+        "loki",
+        "xk6"
+      ],
+      "url": "https://github.com/grafana/xk6-loki"
+    },
+    "tier": "community",
+    "versions": [
+      "v1.0.1",
+      "v1.0.0"
+    ]
+  },
+  {
+    "compliance": {
+      "issues": [
+        "security",
+        "vulnerability",
+        "module",
+        "versions",
+        "build"
+      ]
+    },
+    "description": "xk6-sql driver extension for Microsoft Azure SQL database support",
+    "imports": [
+      "k6/x/sql/driver/azuresql"
+    ],
+    "module": "github.com/grafana/xk6-sql-driver-azuresql",
+    "repo": {
+      "clone_url": "https://github.com/grafana/xk6-sql-driver-azuresql.git",
+      "description": "xk6-sql driver extension for Microsoft Azure SQL database support",
+      "homepage": "https://github.com/grafana/xk6-sql-driver-azuresql",
+      "license": "AGPL-3.0",
+      "name": "xk6-sql-driver-azuresql",
+      "owner": "grafana",
+      "public": true,
+      "stars": 3,
+      "timestamp": 1751872653,
+      "topics": [
+        "azuresql",
+        "k6",
+        "xk6",
+        "xk6-sql-driver"
+      ],
+      "url": "https://github.com/grafana/xk6-sql-driver-azuresql"
+    },
+    "tier": "community",
+    "versions": [
+      "v0.1.1",
+      "v0.1.0"
+    ]
+  },
+  {
+    "compliance": {
+      "issues": [
+        "security",
+        "vulnerability",
+        "module",
+        "versions",
+        "build"
+      ]
+    },
+    "description": "xk6-sql driver extension for ClickHouse database support",
+    "imports": [
+      "k6/x/sql/driver/clickhouse"
+    ],
+    "module": "github.com/grafana/xk6-sql-driver-clickhouse",
+    "repo": {
+      "clone_url": "https://github.com/grafana/xk6-sql-driver-clickhouse.git",
+      "description": "xk6-sql driver extension for ClickHouse database support",
+      "homepage": "https://github.com/grafana/xk6-sql-driver-clickhouse",
+      "license": "AGPL-3.0",
+      "name": "xk6-sql-driver-clickhouse",
+      "owner": "grafana",
+      "public": true,
+      "stars": 4,
+      "timestamp": 1751964273,
+      "topics": [
+        "clickhouse",
+        "k6",
+        "xk6",
+        "xk6-sql-driver"
+      ],
+      "url": "https://github.com/grafana/xk6-sql-driver-clickhouse"
+    },
+    "tier": "community",
+    "versions": [
+      "v0.1.1",
+      "v0.1.0"
+    ]
+  },
+  {
+    "compliance": {
+      "issues": [
+        "security",
+        "vulnerability",
+        "module",
+        "versions",
+        "build"
+      ]
+    },
+    "description": "xk6-sql driver extension for Microsoft SQL Server database support",
+    "imports": [
+      "k6/x/sql/driver/sqlserver"
+    ],
+    "module": "github.com/grafana/xk6-sql-driver-sqlserver",
+    "repo": {
+      "clone_url": "https://github.com/grafana/xk6-sql-driver-sqlserver.git",
+      "description": "xk6-sql driver extension for Microsoft SQL Server database support",
+      "homepage": "https://github.com/grafana/xk6-sql-driver-sqlserver",
+      "license": "AGPL-3.0",
+      "name": "xk6-sql-driver-sqlserver",
+      "owner": "grafana",
+      "public": true,
+      "stars": 6,
+      "timestamp": 1751878610,
+      "topics": [
+        "k6",
+        "mssql",
+        "mssqlserver",
+        "sqlserver",
+        "xk6",
+        "xk6-sql-driver"
+      ],
+      "url": "https://github.com/grafana/xk6-sql-driver-sqlserver"
+    },
+    "tier": "community",
+    "versions": [
+      "v0.1.1",
+      "v0.1.0"
+    ]
+  },
+  {
+    "compliance": {
+      "issues": [
+        "security",
+        "vulnerability",
+        "module",
+        "versions",
+        "build"
+      ]
+    },
+    "description": "Server Sent Event",
+    "imports": [
+      "k6/x/sse"
+    ],
+    "module": "github.com/phymbert/xk6-sse",
+    "repo": {
+      "clone_url": "https://github.com/phymbert/xk6-sse.git",
+      "description": "A k6 extension for Server-Sent Events (SSE)",
+      "homepage": "https://github.com/phymbert/xk6-sse",
+      "license": "Apache-2.0",
+      "name": "xk6-sse",
+      "owner": "phymbert",
+      "public": true,
+      "stars": 37,
+      "timestamp": 1759290926,
+      "topics": [
+        "k6",
+        "sse",
+        "sse-client",
+        "xk6",
+        "xk6-extension"
+      ],
+      "url": "https://github.com/phymbert/xk6-sse"
+    },
+    "tier": "community",
+    "versions": [
+      "v0.1.11",
+      "v0.1.10"
+    ]
+  }
+]

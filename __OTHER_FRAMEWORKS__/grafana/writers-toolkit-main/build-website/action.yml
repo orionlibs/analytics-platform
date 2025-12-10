@@ -1,0 +1,88 @@
+name: build-website
+description: |
+  Build the website using the container image and local documentation sources.
+
+inputs:
+  image:
+    default: grafana/docs-base:latest
+    description: Container image to run.
+  source_directory:
+    default: docs/sources
+    description: Path to source directory, relative to the project root, to sync documentation from.
+  website_directory:
+    description: Website directory to sync the documentation to.
+    required: true
+
+runs:
+  using: composite
+  steps:
+    - name: Check for binary assets
+      if: github.event_name == 'pull_request'
+      uses: actions/github-script@60a0d83039c74a4aee543508d2ffcb1c3799cdea # v7.0.1
+      with:
+        script: |
+          const sourceDirectory = core.getInput("source_directory", { required: false });
+
+          const { data: files } = await github.rest.pulls.listFiles({
+            owner: context.repo.owner,
+            repo: context.repo.repo,
+            pull_number: context.issue.number,
+          });
+
+          async function isBinary(path) {
+            try {
+              await exec.exec(`test -f ${path}`);
+            } catch {
+              core.info(`path ${path} is not a regular file, skipping binary test`);
+              return false;
+            }
+            return exec
+              .getExecOutput(`file --mime-encoding ${path}`)
+              .then(({ stdout }) => {
+                return stdout.includes("binary");
+              })
+              .catch((error) => {
+                return false;
+              });
+          }
+
+          const added = files.filter(
+            ({ status, filename }) =>
+              status === "added" && filename.startsWith(sourceDirectory),
+          );
+          const promises = added.map(({ filename }) =>
+            isBinary(filename).then((result) => {
+              return { filename, isBinary: result };
+            }),
+          );
+          Promise.all(promises).then((tuples) => {
+            tuples.forEach((tuple) => {
+              if (tuple.isBinary) {
+                core.error(
+                  `The file you have committed is a binary file which bloats the repository and the website.
+
+          Upload your file to the asset upload application: https://admin.grafana.com/upload/.
+          For instructions, refer to Where to store media assets: https://grafana.com/docs/writers-toolkit/write/image-guidelines/#where-to-store-media-assets.`,
+                  { file: tuple.filename },
+                );
+                core.setFailed('One or more binary files found');
+              }
+            });
+          });
+
+    - name: Check for renamed files using the shared shortcode
+      if: github.event_name == 'pull_request'
+      uses: actions/github-script@60a0d83039c74a4aee543508d2ffcb1c3799cdea # v7.0.1
+      with:
+        script: |
+          const script = require(`${process.env.GITHUB_ACTION_PATH}/shared-shortcode.js`);
+          await script({ context, core, github });
+
+    - name: Build website
+      env:
+        IMAGE: ${{ inputs.image }}
+        SOURCE_DIRECTORY: ${{ inputs.source_directory }}
+        WEBSITE_DIRECTORY: ${{ inputs.website_directory }}
+      run: |
+        docker run -v "${PWD}/${SOURCE_DIRECTORY}:/hugo/${WEBSITE_DIRECTORY}" --rm "${IMAGE}" /bin/bash -c 'make hugo'
+      shell: bash

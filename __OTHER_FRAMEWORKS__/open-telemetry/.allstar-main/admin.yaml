@@ -1,0 +1,5 @@
+# https://github.com/ossf/allstar#repository-administrators
+optConfig:
+  optOutStrategy: true
+action: issue
+userAdminsAllowed: false

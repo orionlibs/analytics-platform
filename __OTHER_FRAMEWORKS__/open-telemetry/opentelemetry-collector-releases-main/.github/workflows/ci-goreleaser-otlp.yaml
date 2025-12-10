@@ -1,0 +1,51 @@
+name: CI - OTLP - GoReleaser
+
+on:
+  merge_group:
+  push:
+    branches:
+      - main
+      - release/*
+    paths:
+      - "distributions/otelcol-otlp/**"
+      - "cmd/**"
+      - ".github/**"
+      - "scripts/**"
+      - "Makefile"
+      - "go.mod"
+      - "go.sum"
+  pull_request:
+    branches:
+      - main
+      - release/*
+    paths:
+      - "distributions/otelcol-otlp/**"
+      - "cmd/**"
+      - ".github/**"
+      - "scripts/**"
+      - "Makefile"
+      - "go.mod"
+      - "go.sum"
+
+permissions:
+  contents: read
+
+jobs:
+  check-goreleaser:
+    name: CI - OTLP - GoReleaser
+    uses: ./.github/workflows/base-ci-goreleaser.yaml
+    with:
+      distribution: otelcol-otlp
+      goos: '[ "linux", "darwin" ]'
+      goarch: '[ "386", "amd64", "arm", "arm64", "ppc64le", "riscv64", "s390x" ]'
+    secrets: inherit
+
+  check-goreleaser-windows:
+    name: CI - OTLP - GoReleaser
+    uses: ./.github/workflows/base-ci-goreleaser.yaml
+    with:
+      distribution: otelcol-otlp
+      goos: '[ "windows" ]'
+      goarch: '[ "386", "amd64", "arm64" ]'
+      runner_os: 'windows-2022'
+    secrets: inherit

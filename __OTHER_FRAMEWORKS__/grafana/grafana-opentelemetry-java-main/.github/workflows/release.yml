@@ -1,0 +1,50 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - "v*.*.*"
+
+permissions:
+  contents: write
+  id-token: write
+
+jobs:
+  release:
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Check out
+        with:
+          persist-credentials: false
+        uses: actions/checkout@1af3b93b6815bc44a9784bd300feb67ff0d1eeb3 # v6.0.0
+      - name: Set up JDK
+        uses: actions/setup-java@dded0888837ed1f317902acf8a20df0ad188d165 # v5.0.0
+        with:
+          java-version: 17
+          distribution: temurin
+      - name: Setup Gradle and run build
+        uses: gradle/actions/setup-gradle@4d9f0ba0025fe599b4ebab900eb7f3a1d93ef4c2 # v5.0.0
+        with:
+          cache-disabled: "true"
+      - name: Build
+        run: ./scripts/build-release.sh
+        env:
+          TAG: ${{ github.ref_name }}
+      - name: Release
+        uses: softprops/action-gh-release@5be0e66d93ac7ed76da52eca8bb058f665c3a5fe # v2.4.2
+        with:
+          files: |
+            agent/build/libs/grafana-opentelemetry-java.jar
+            LICENSE
+      - name: Push to Docker (for OpenTelemetry Operator)
+        uses: grafana/shared-workflows/actions/push-to-gar-docker@dc66ed7a5dc1f49848b06068ae024e96e26d4761 # push-to-gar-docker/v0.5.2
+        with:
+          registry: "us-docker.pkg.dev"
+          image_name: grafana-opentelemetry-java
+          context: .
+          file: scripts/otel_operator/Dockerfile
+          tags: |
+            type=match,pattern=v(.*),group=1
+            latest
+          environment: "prod"
+          platforms: linux/amd64,linux/arm64

@@ -1,0 +1,30 @@
+{
+  "scripts": {
+    "_check:format": "npx prettier --check .",
+    "_check:format:any": "npx prettier --check --ignore-path ''",
+    "check": "make check",
+    "check:format": "npm run _check:format || (echo '[help] Run: npm run format'; exit 1)",
+    "fix": "make fix",
+    "fix:format": "npm run _check:format -- --write",
+    "test": "npm run check"
+  },
+  "devDependencies": {
+    "markdown-toc": "1.2.0",
+    "markdownlint-cli": "0.45.0",
+    "prettier": "3.6.2"
+  },
+  "prettier": {
+    "proseWrap": "preserve",
+    "overrides": [
+      {
+        "files": [
+          "**/non-normative/groups/system/**/*.md"
+        ],
+        "options": {
+          "printWidth": 80,
+          "proseWrap": "always"
+        }
+      }
+    ]
+  }
+}

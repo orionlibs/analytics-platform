@@ -1,0 +1,8 @@
+required_labels:
+labels:
+  regex-labeler:
+    matchers:
+      - regex: "regex"
+  ic-assignment:
+    matchers:
+      - regex: "assignment"

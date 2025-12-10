@@ -1,0 +1,32 @@
+name: Test Docker build
+on:
+  pull_request:
+    branches: [ 'main', 'release-*' ]
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: ubuntu-latest-8-cores
+
+    strategy:
+      matrix:
+        platform: [linux/amd64] # linux/arm64 is too slow on GitHub Actions.
+        file: [Dockerfile, k8scache.Dockerfile]
+
+    steps:
+      - id: checkout
+        uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
+        with:
+          persist-credentials: 'false'
+      - id: docker-build-beyla
+        uses: grafana/shared-workflows/actions/build-push-to-dockerhub@fa48192dac470ae356b3f7007229f3ac28c48a25 # main
+        with:
+          context: .
+          file: ${{ matrix.file }}
+          platforms: |-
+            ${{ matrix.platform }}
+          tags: |-
+            "pr-test"
+          push: false

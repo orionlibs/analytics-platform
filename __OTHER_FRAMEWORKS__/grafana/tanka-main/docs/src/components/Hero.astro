@@ -1,0 +1,59 @@
+---
+import type { Props } from '@astrojs/starlight/props';
+import { Code, LinkButton } from '@astrojs/starlight/components';
+import { Content as Tagline } from './tagline.md';
+---
+
+<div
+  class="grid grid-cols-1 justify-items-center gap-3 pb-1.5 lg:grid-cols-[7fr_4fr] lg:gap-5 lg:pt-35"
+>
+  <div class="object-contain lg:order-2">
+    <div>
+      <Code
+        code={`
+local k = import "k.libsonnet";
+
+{
+    grafana: k.apps.v1.deployment.new(
+        name="grafana",
+        replicas=1,
+        containers=[k.core.v1.container.new(
+            name="grafana",
+            image="grafana/grafana",
+        )]
+    )
+}`}
+        lang="jsonnet"
+        title="main.libsonnet"
+      />
+
+      <div class="text-center opacity-60 lg:text-left">
+        Kubernetes Deployment. That's all it takes.
+      </div>
+    </div>
+  </div>
+  <div class="flex flex-col items-center gap-5">
+    <h1 class="text-3xl font-semibold lg:text-6xl/18" data-page-title>
+      Define. Reuse. Override.
+    </h1>
+
+    <div class="tagline max-w-[50ch] text-center lg:text-left lg:text-xl">
+      <Tagline />
+    </div>
+
+    <div class="flex flex-wrap gap-x-4 gap-y-8 self-center lg:self-start">
+      <LinkButton href="./install/" variant="primary" icon="right-arrow"
+        >Get started</LinkButton
+      >
+      <LinkButton href="./tutorial/overview/" variant="minimal" icon="laptop"
+        >Read the tutorial</LinkButton
+      >
+    </div>
+  </div>
+</div>
+
+<style>
+  :global([data-has-hero]) {
+    --sl-content-width: 66.7rem;
+  }
+</style>

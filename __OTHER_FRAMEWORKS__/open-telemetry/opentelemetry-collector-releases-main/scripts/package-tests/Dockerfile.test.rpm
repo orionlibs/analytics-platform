@@ -1,0 +1,9 @@
+# A rockylinux image with systemd enabled.  Must be run with:
+# `-d --privileged -v /sys/fs/cgroup:/sys/fs/cgroup:ro` flags
+FROM rockylinux/rockylinux:10.0@sha256:02564b26a5d147fcdbd1058abd9b358008f5608b382dcb288cfc718d627256cb
+
+ENV container docker
+
+RUN dnf install -y initscripts
+
+CMD ["/usr/sbin/init"]

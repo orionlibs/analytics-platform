@@ -1,0 +1,68 @@
+# This workflow will upload a Python Package using Twine when a release is created
+# For more information see: https://docs.github.com/en/actions/automating-builds-and-tests/building-and-testing-python#publishing-to-package-registries
+
+name: Test PyPI Release
+
+on:
+  workflow_dispatch:
+
+defaults:
+  run:
+    working-directory: ./python
+
+permissions:
+  contents: read
+
+jobs:
+  build-and-publish-test-pypi:
+    name: Test PyPI
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      
+      - name: Get changed files in the docs folder
+        id: changed-files-specific
+        uses: tj-actions/changed-files@v41
+        with:
+          files: python/**
+
+      - name: Install dependencies
+        if: steps.changed-files-specific.outputs.any_changed == 'true'
+        run: |
+          python -m pip install --upgrade pip twine
+          pip install build
+      
+      - name: Create a new pyproject.toml
+        if: steps.changed-files-specific.outputs.any_changed == 'true'
+        run: |
+          cat <<EOF > pyproject.toml
+          [tool.poetry]
+          name = "grafana-openai-monitoring"
+          version = "0.0.${{ github.run_number }}"
+          description = "Library to monitor your OpenAI usage and send metrics and logs to Grafana Cloud"
+          authors = ["Ishan Jain <ishan.jain@grafana.com>"]
+          repository = "https://github.com/grafana/grafana-openai-monitoring"
+          readme = "README.md"
+          homepage = "https://github.com/grafana/grafana-openai-monitoring"
+          keywords = ["observability", "monitoring", "openai", "grafana", "gpt"]
+
+          [tool.poetry.dependencies]
+          python = "^3.7.1"
+          requests = "^2.26.0"
+
+          [build-system]
+          requires = ["poetry-core>=1.1.0"]
+          build-backend = "poetry.core.masonry.api"
+          EOF
+      
+      - name: test
+        if: steps.changed-files-specific.outputs.any_changed == 'true'
+        run: cat pyproject.toml
+      
+      - name: Run build
+        if: steps.changed-files-specific.outputs.any_changed == 'true'
+        run: python -m build 
+      
+      - name: Upload Package
+        if: steps.changed-files-specific.outputs.any_changed == 'true'
+        run: python -m twine upload --repository testpypi dist/*  --username __token__ --password ${{ secrets.TEST_PYPI_API_TOKEN }}

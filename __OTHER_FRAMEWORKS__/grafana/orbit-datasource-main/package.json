@@ -1,0 +1,30 @@
+{
+  "name": "grafana-orbit-datasource",
+  "version": "0.1.1",
+  "description": "A data source for Orbit.",
+  "scripts": {
+    "build": "grafana-toolkit plugin:build",
+    "test": "grafana-toolkit plugin:test",
+    "dev": "grafana-toolkit plugin:dev",
+    "watch": "grafana-toolkit plugin:dev --watch",
+    "sign": "grafana-toolkit plugin:sign",
+    "start": "yarn watch"
+  },
+  "author": "Grafana Labs",
+  "license": "Apache-2.0",
+  "dependencies": {
+    "@grafana/data": "9.2.0",
+    "@grafana/runtime": "9.2.0",
+    "@grafana/toolkit": "9.2.0",
+    "@grafana/ui": "9.2.0",
+    "react": "17.0.2",
+    "react-dom": "17.0.2",
+    "tslib": "2.3.1"
+  },
+  "devDependencies": {    
+    "@types/lodash": "latest"
+  },
+  "engines": {
+    "node": ">=14"
+  }
+}

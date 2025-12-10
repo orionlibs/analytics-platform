@@ -1,0 +1,36 @@
+name: build-and-push-images
+
+on:
+  push:
+    branches:
+      - "main"
+  workflow_dispatch: # Allow manual dispatch for testing
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write
+    env:
+      GOENV: GOOS=linux
+      GOARCH: amd64
+      CGO_ENABLED: 0
+      GO111MODULE: on
+    steps:
+    - name: Checkout Code
+      uses: actions/checkout@08eba0b27e820071cde6df949e0beb9ba4906955 # v4.3.0
+      with:
+        'persist-credentials': false
+
+    - name: Set up Docker buildx
+      uses: docker/setup-buildx-action@1583c0f09d26c58c59d25b0eef29792b7ce99d9a
+
+    - name: Login to DockerHub (from Vault)
+      uses: grafana/shared-workflows/actions/dockerhub-login@bca48b60029f80d2ea7c1a6bd1a49ffa7915a9e3
+
+    - name: Build
+      run: make build
+
+    - name: Publish
+      run: make publish

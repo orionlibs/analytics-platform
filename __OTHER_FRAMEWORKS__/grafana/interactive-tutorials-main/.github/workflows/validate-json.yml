@@ -1,0 +1,49 @@
+name: Validate JSON
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  validate-json:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      with:
+        persist-credentials: false
+        submodules: false
+      
+    - name: Checkout validation scripts from main
+      uses: actions/checkout@v4
+      with:
+        ref: main
+        sparse-checkout: |
+          .github/scripts/
+        sparse-checkout-cone-mode: false
+        path: .github-trusted
+        persist-credentials: false
+      
+    - name: Validate index.json
+      run: |
+        echo "Validating index.json for well-formed JSON..."
+        
+        # Check if index.json exists
+        if [ ! -f "index.json" ]; then
+          echo "❌ Error: index.json file not found"
+          exit 1
+        fi
+        
+        # Validate JSON using the validation script
+        python3 .github-trusted/.github/scripts/validate_json.py index.json
+        
+        if [ $? -eq 0 ]; then
+          echo "🎉 All validations passed! index.json is well-formed and properly structured."
+        else
+          echo "❌ JSON validation failed!"
+          exit 1
+        fi

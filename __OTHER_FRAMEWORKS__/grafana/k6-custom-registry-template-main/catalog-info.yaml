@@ -1,0 +1,13 @@
+apiVersion: backstage.io/v1alpha1
+kind: Component
+metadata:
+  name: k6-custom-registry-template
+  title: k6-custom-registry-template
+  description: |
+    This repository automates the maintenance of a custom k6 extension registry/catalog.
+  annotations:
+    github.com/project-slug: grafana/k6-custom-registry-template
+spec:
+  type: library
+  owner: group:default/k6-extensions
+  lifecycle: production

@@ -1,0 +1,24 @@
+# Backstage override configuration for your local development environment
+grafanaCloudCatalogInfo:
+  enable: true
+  # stack_slug: <YOUR STACK SLUG>
+  # grafana_endpoint: https://grafana-dev.com
+  # token: <YOUR TOKEN>
+  allow: # These will be ORed together
+    - kind=Component
+    - kind=Group
+    - kind=User 
+    - kind=System
+    - kind=Domain
+    - kind=Resource
+
+catalog:
+  processingInterval: { seconds: 1 }
+  rules:
+    - allow: [Component, API, Resource, Location, Template, User, Group, System, Domain, Library]
+  locations:
+  - type: file
+    target: ../../catalog/all.yaml
+    rules:
+    - allow: [Component, Resource, Location, Template, User, Group, System, Domain, Library]
+

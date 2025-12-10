@@ -1,0 +1,6 @@
+jsonnetfile.lock.json
+vendor
+
+# Used during development
+custom/jsonnetfile.json
+gen/*/custom/jsonnetfile.json

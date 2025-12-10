@@ -1,0 +1,19 @@
+.temp
+
+# Binaries for programs and plugins
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+bin
+
+# editor and IDE paraphernalia
+.idea
+*.swp
+*.swo
+*~
+
+# A fake chart for holding the current Alloy helm chart
+charts/alloy-helm-chart/charts
+charts/alloy-helm-chart/Chart.lock

@@ -1,0 +1,272 @@
+apiVersion: tempo.grafana.com/v1alpha1
+kind: TempoMonolithic
+metadata:
+  name: monolithic-st
+  namespace: chainsaw-mst
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  labels:
+    app.kubernetes.io/component: tempo
+    app.kubernetes.io/instance: monolithic-st
+    app.kubernetes.io/managed-by: tempo-operator
+    app.kubernetes.io/name: tempo-monolithic
+  name: tempo-monolithic-st
+  namespace: chainsaw-mst
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/component: tempo
+      app.kubernetes.io/instance: monolithic-st
+      app.kubernetes.io/managed-by: tempo-operator
+      app.kubernetes.io/name: tempo-monolithic
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/component: tempo
+        app.kubernetes.io/instance: monolithic-st
+        app.kubernetes.io/managed-by: tempo-operator
+        app.kubernetes.io/name: tempo-monolithic
+    spec:
+      containers:
+      - args:
+        - -config.file=/conf/tempo.yaml
+        - -mem-ballast-size-mbs=1024
+        - -log.level=info
+        name: tempo
+        ports:
+        - containerPort: 3200
+          name: http
+          protocol: TCP
+        - containerPort: 3101
+          name: tempo-internal
+          protocol: TCP
+        - containerPort: 4317
+          name: otlp-grpc
+          protocol: TCP
+        - containerPort: 4318
+          name: otlp-http
+          protocol: TCP
+        readinessProbe:
+          failureThreshold: 3
+          httpGet:
+            path: /ready
+            port: tempo-internal
+            scheme: HTTP
+          initialDelaySeconds: 15
+          periodSeconds: 10
+          successThreshold: 1
+          timeoutSeconds: 1
+        resources: {}
+        securityContext:
+          allowPrivilegeEscalation: false
+          capabilities:
+            drop:
+            - ALL
+          readOnlyRootFilesystem: true
+        terminationMessagePath: /dev/termination-log
+        terminationMessagePolicy: File
+        volumeMounts:
+        - mountPath: /conf
+          name: tempo-conf
+          readOnly: true
+        - mountPath: /var/tempo
+          name: tempo-storage
+      - args:
+        - --query.base-path=/
+        - --span-storage.type=grpc
+        - --grpc-storage.server=localhost:7777
+        - --query.bearer-token-propagation=true
+        name: jaeger-query
+        ports:
+        - containerPort: 16685
+          name: jaeger-grpc
+          protocol: TCP
+        - containerPort: 16686
+          name: jaeger-ui
+          protocol: TCP
+        - containerPort: 16687
+          name: jaeger-metrics
+          protocol: TCP
+        resources: {}
+        securityContext:
+          allowPrivilegeEscalation: false
+          capabilities:
+            drop:
+            - ALL
+          readOnlyRootFilesystem: true
+        terminationMessagePath: /dev/termination-log
+        terminationMessagePolicy: File
+        volumeMounts:
+        - mountPath: /tmp
+          name: tempo-query-tmp
+      - args:
+        - -config=/conf/tempo-query.yaml
+        name: tempo-query
+        ports:
+        - containerPort: 7777
+          name: proxy-grpc
+          protocol: TCP
+        resources: {}
+        securityContext:
+          allowPrivilegeEscalation: false
+          capabilities:
+            drop:
+            - ALL
+          readOnlyRootFilesystem: true
+        terminationMessagePath: /dev/termination-log
+        terminationMessagePolicy: File
+        volumeMounts:
+        - mountPath: /conf
+          name: tempo-conf
+          readOnly: true
+      - args:
+        - --cookie-secret-file=/var/run/secrets/kubernetes.io/serviceaccount/token
+        - --https-address=:8443
+        - --openshift-service-account=tempo-monolithic-st
+        - --provider=openshift
+        - --tls-cert=/etc/tls/private/tls.crt
+        - --tls-key=/etc/tls/private/tls.key
+        - --upstream=http://localhost:16686
+        - --upstream-timeout=30s
+        - '--openshift-sar={"namespace": "chainsaw-mst", "resource": "pods", "verb":
+          "get"}'
+        name: oauth-proxy
+        ports:
+        - containerPort: 8443
+          name: oauth-proxy
+          protocol: TCP
+        readinessProbe:
+          failureThreshold: 3
+          httpGet:
+            path: /oauth/healthz
+            port: oauth-proxy
+            scheme: HTTPS
+          initialDelaySeconds: 10
+          periodSeconds: 10
+          successThreshold: 1
+          timeoutSeconds: 5
+        securityContext:
+          allowPrivilegeEscalation: false
+          capabilities:
+            drop:
+            - ALL
+          readOnlyRootFilesystem: true
+        terminationMessagePath: /dev/termination-log
+        terminationMessagePolicy: File
+        volumeMounts:
+        - mountPath: /etc/tls/private
+          name: monolithic-st-ui-oauth-proxy-tls
+      volumes:
+      - configMap:
+          defaultMode: 420
+          name: tempo-monolithic-st-config
+        name: tempo-conf
+      - emptyDir:
+          medium: Memory
+          sizeLimit: 2Gi
+        name: tempo-storage
+      - emptyDir: {}
+        name: tempo-query-tmp
+      - name: monolithic-st-ui-oauth-proxy-tls
+        secret:
+          defaultMode: 420
+          secretName: monolithic-st-ui-oauth-proxy-tls
+status:
+  availableReplicas: 1
+  currentReplicas: 1
+  readyReplicas: 1
+  replicas: 1
+---
+apiVersion: v1
+kind: Pod
+metadata:
+  labels:
+    app.kubernetes.io/component: tempo
+    app.kubernetes.io/instance: monolithic-st
+    app.kubernetes.io/managed-by: tempo-operator
+    app.kubernetes.io/name: tempo-monolithic
+  namespace: chainsaw-mst
+status:
+  containerStatuses:
+  - name: jaeger-query
+    ready: true
+    started: true
+  - name: oauth-proxy
+    ready: true
+    started: true
+  - name: tempo
+    ready: true
+    started: true
+  - name: tempo-query
+    ready: true
+    started: true
+  phase: Running
+---
+apiVersion: v1
+kind: Service
+metadata:
+  labels:
+    app.kubernetes.io/component: tempo
+    app.kubernetes.io/instance: monolithic-st
+    app.kubernetes.io/managed-by: tempo-operator
+    app.kubernetes.io/name: tempo-monolithic
+  name: tempo-monolithic-st
+  namespace: chainsaw-mst
+spec:
+  ipFamilyPolicy: SingleStack
+  ports:
+  - name: http
+    port: 3200
+    protocol: TCP
+    targetPort: http
+  - name: otlp-grpc
+    port: 4317
+    protocol: TCP
+    targetPort: otlp-grpc
+  - name: otlp-http
+    port: 4318
+    protocol: TCP
+    targetPort: otlp-http
+  selector:
+    app.kubernetes.io/component: tempo
+    app.kubernetes.io/instance: monolithic-st
+    app.kubernetes.io/managed-by: tempo-operator
+    app.kubernetes.io/name: tempo-monolithic
+---
+apiVersion: v1
+kind: Service
+metadata:
+  labels:
+    app.kubernetes.io/component: jaegerui
+    app.kubernetes.io/instance: monolithic-st
+    app.kubernetes.io/managed-by: tempo-operator
+    app.kubernetes.io/name: tempo-monolithic
+  name: tempo-monolithic-st-jaegerui
+  namespace: chainsaw-mst
+spec:
+  ipFamilyPolicy: SingleStack
+  ports:
+  - name: jaeger-grpc
+    port: 16685
+    protocol: TCP
+    targetPort: jaeger-grpc
+  - name: jaeger-ui
+    port: 16686
+    protocol: TCP
+    targetPort: jaeger-ui
+  - name: jaeger-metrics
+    port: 16687
+    protocol: TCP
+    targetPort: jaeger-metrics
+  - name: oauth-proxy
+    port: 8443
+    protocol: TCP
+    targetPort: oauth-proxy
+  selector:
+    app.kubernetes.io/component: tempo
+    app.kubernetes.io/instance: monolithic-st
+    app.kubernetes.io/managed-by: tempo-operator
+    app.kubernetes.io/name: tempo-monolithic

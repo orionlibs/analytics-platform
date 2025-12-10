@@ -1,0 +1,174 @@
+// Copyright The OpenTelemetry Authors
+// SPDX-License-Identifier: Apache-2.0
+
+#include <collector/kernel/nat_prober.h>
+#include <collector/kernel/probe_handler.h>
+#include <ctime>
+#include <iostream>
+#include <linux/netfilter/nfnetlink.h>
+#include <linux/netfilter/nfnetlink_conntrack.h>
+#include <linux/netlink.h>
+#include <sys/socket.h>
+#include <sys/types.h>
+#include <util/log.h>
+
+#define RCV_BUFFSIZE 8192 // see libnfnetlink/include/libnfnetlink.h for NFNL_BUFFSIZE
+
+NatProber::NatProber(ProbeHandler &probe_handler, struct render_bpf_bpf *skel, std::function<void(void)> periodic_cb)
+    : periodic_cb_(periodic_cb)
+{
+  // END (cleanup): nf_ct_delete
+  probe_handler.start_probe(skel, "on_nf_ct_delete", "nf_ct_delete");
+  periodic_cb();
+
+  // START (create): __nf_conntrack_confirm entry and return
+  probe_handler.start_probe(skel, "on___nf_conntrack_confirm", "__nf_conntrack_confirm");
+  periodic_cb();
+  probe_handler.start_kretprobe(skel, "onret___nf_conntrack_confirm", "__nf_conntrack_confirm");
+  periodic_cb();
+
+  // EXISTING
+  ProbeAlternatives probe_alternatives{
+      "ctnetlink_existing_conntrack",
+      {
+          // nf_ct_port_tuple_to_nlattr is more widely available and has the same parameters as ctnetlink_dump_tuples
+          {"on_ctnetlink_dump_tuples", "nf_ct_port_tuple_to_nlattr"},
+          {"on_ctnetlink_dump_tuples", "ctnetlink_dump_tuples"},
+          // Attaching probe to ctnetlink_dump_tuples fails on some distros and kernel builds, for example Ubuntu Jammy.
+          {"on_ctnetlink_dump_tuples", "ctnetlink_dump_tuples_ip"},
+      }};
+  std::string ctnetlink_existing_k_func_name = probe_handler.start_probe(skel, probe_alternatives);
+
+  periodic_cb();
+  int res = query_kernel();
+  if (res != 0) {
+    if (res == EAGAIN || res == EWOULDBLOCK) {
+      LOG::warn(
+          "While probing NAT, netfilter socket finished before seeing "
+          "NLMSG_DONE. {}",
+          std::strerror(res));
+    } else {
+      LOG::error("NatProber::NatProber() - Error calling query_kernel(): {}", std::strerror(res));
+    }
+  }
+  periodic_cb();
+
+  // Cleanup existing
+  probe_handler.cleanup_probe(ctnetlink_existing_k_func_name);
+  periodic_cb();
+}
+
+/* Creates a netlink socket and creates a request for the kernel to dump its
+ * conntrack table information. Returns 0 on success and errno on failure.
+ */
+int NatProber::query_kernel()
+{
+  // create a netlink socket
+  // domain: AF_NETLINK, type: SOCK_RAW | SOCK_NONBLOCK, protocol:
+  // NETLINK_NETFILTER
+  int sock_fd = socket(AF_NETLINK, SOCK_RAW | SOCK_NONBLOCK, NETLINK_NETFILTER);
+  if (sock_fd == -1) {
+    LOG::debug("NatProber::query_kernel() - Error opening netlink socket: {}", std::strerror(errno));
+    return errno;
+  }
+
+  // Source addr info (where to bind)
+  struct sockaddr_nl src_addr;
+  memset(&src_addr, 0, sizeof(src_addr));
+  src_addr.nl_family = AF_NETLINK;
+  src_addr.nl_pid = getpid(); // self pid
+  src_addr.nl_groups = 0;     // unicast
+  int err = bind(sock_fd, (struct sockaddr *)&src_addr, sizeof(src_addr));
+  if (err == -1) {
+    int saved_errno = errno;
+    LOG::debug("NatProber::query_kernel() - Error binding netlink socket: {}", std::strerror(saved_errno));
+    close(sock_fd);
+    return saved_errno;
+  }
+
+  // Dest addr_info (where to send)
+  struct sockaddr_nl dst_addr;
+  memset(&dst_addr, 0, sizeof(dst_addr));
+  dst_addr.nl_family = AF_NETLINK;
+  dst_addr.nl_pid = 0;    // for the linux kernel
+  dst_addr.nl_groups = 0; // unicast
+
+  // Setup a netlink/conntrack query message - this is based on the msg created
+  // in the conntrack tool. Specifically the codepath triggered by `sudo
+  // conntrack -L`
+  struct nlct_query_msg {
+    struct nlmsghdr nlh;
+    struct nfgenmsg nfmsg;
+    struct nfattr nfattr1;
+    u32 nfattr_data1;
+    struct nfattr nfattr2;
+    u32 nfattr_data2;
+  };
+  struct nlct_query_msg msg;
+  memset(&msg, 0, sizeof(msg));
+
+  // nlh
+  msg.nlh.nlmsg_len = sizeof(msg); // size of the entire msg
+  msg.nlh.nlmsg_type = (NFNL_SUBSYS_CTNETLINK << 8) | IPCTNL_MSG_CT_GET;
+  msg.nlh.nlmsg_flags = NLM_F_REQUEST | NLM_F_DUMP;
+  msg.nlh.nlmsg_seq = (u32)std::time(nullptr); // current unix time
+  msg.nlh.nlmsg_pid = 0;                       // for the linux kernel
+
+  // nfmsg
+  msg.nfmsg.nfgen_family = AF_INET;
+  msg.nfmsg.version = NFNETLINK_V0;
+  msg.nfmsg.res_id = 0;
+
+  // nfattrs
+  msg.nfattr1.nfa_len = 0x08; // size of nfattr1 + nfattr_data1
+  msg.nfattr1.nfa_type = CTA_MARK;
+  msg.nfattr_data1 = 0;       // empty
+  msg.nfattr2.nfa_len = 0x08; // size of nfattr2 + nfattr_data2
+  msg.nfattr2.nfa_type = CTA_MARK_MASK;
+  msg.nfattr_data2 = 0; // empty
+
+  // Send msg
+  err = sendto(sock_fd, (void *)&msg, sizeof(msg), 0, (struct sockaddr *)&dst_addr, sizeof(dst_addr));
+  if (err == -1) {
+    int saved_errno = errno;
+    LOG::debug("NatProber::query_kernel() - Error sending on netlink socket: {}", std::strerror(saved_errno));
+    close(sock_fd);
+    return saved_errno;
+  }
+
+  // Receive responses
+  while (1) {
+    socklen_t addrlen = sizeof(dst_addr);
+    unsigned char buf[RCV_BUFFSIZE];
+    err = recvfrom(sock_fd, buf, sizeof(buf), 0, (struct sockaddr *)&dst_addr, &addrlen);
+    if (err == -1) {
+      int saved_errno = errno;
+      LOG::debug("NatProber::query_kernel() - Error receiving on netlink socket: {}", std::strerror(saved_errno));
+      close(sock_fd);
+      return saved_errno;
+    }
+    // If no data was returned then we break - but this is an unexpected case,
+    // so log for debugging purposes.
+    if (err == 0) {
+      LOG::debug("NatProber::query_kernel() - recvfrom = 0");
+      break;
+      ;
+    }
+    // Break once we're done receiving messages
+    // According to netlink_dump() inside of netlink/af_netlink.c, we expect the
+    // last msg in a dump to consist of only an nlmsghdr with a flag for
+    // NLMSG_DONE.
+    struct nlmsghdr *nlh = (struct nlmsghdr *)buf;
+    if (nlh->nlmsg_type == NLMSG_DONE) {
+      break;
+    }
+
+    // Ensure we handle perf events in a timely fashion
+    // else we run the risk of overflowing the event buffer
+    periodic_cb_();
+  }
+
+  // Cleanup
+  close(sock_fd);
+  return 0;
+}

@@ -1,0 +1,9 @@
+.vscode
+*.sublime-workspace
+*.log
+*.syso
+.idea
+*.DS_Store
+.golangci.yml
+vendor
+k6

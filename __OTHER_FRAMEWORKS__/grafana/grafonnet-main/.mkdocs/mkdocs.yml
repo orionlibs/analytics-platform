@@ -1,0 +1,40 @@
+"docs_dir": "../docs/"
+"edit_uri": ""
+"use_directory_urls": false
+"markdown_extensions":
+  - "pymdownx.highlight"
+  - "pymdownx.superfences"
+  - "mdx_truly_sane_lists":
+      "nested_indent": 2
+      "truly_sane": True
+"plugins":
+  - "search":
+      "separator": "[\\s\\-\\.]+"
+  - "minify":
+      "minify_html": true
+"repo_name": "grafana/grafonnet"
+"repo_url": "https://github.com/grafana/grafonnet"
+"site_name": "Grafonnet"
+"site_url": "https://grafana.github.io/grafonnet"
+"extra_css": [ "assets/custom.css" ]
+"theme":
+  "features":
+    - "navigation.tabs"
+    - "navigation.indexes"
+  "name": "material"
+  "logo": "assets/logo.svg"
+  "palette":
+    - "accent": "deep orange"
+      "media": "(prefers-color-scheme: light)"
+      "primary": "black"
+      "scheme": "default"
+      "toggle":
+        "icon": "material/toggle-switch-off-outline"
+        "name": "Switch to dark mode"
+    - "accent": "deep-orange"
+      "media": "(prefers-color-scheme: dark)"
+      "primary": "black"
+      "scheme": "slate"
+      "toggle":
+        "icon": "material/toggle-switch"
+        "name": "Switch to light mode"

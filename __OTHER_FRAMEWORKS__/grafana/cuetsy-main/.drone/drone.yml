@@ -1,0 +1,42 @@
+---
+kind: pipeline
+name: default
+
+platform:
+  os: linux
+  arch: amd64
+
+steps:
+- name: download
+  image: golang:1.19
+  commands:
+  - go mod download
+  volumes:
+  - name: gopath
+    path: /go
+
+- name: lint
+  image: golang:1.19
+  commands:
+  - make lint
+  volumes:
+  - name: gopath
+    path: /go
+  depends_on:
+  - download
+
+- name: test
+  image: golang:1.19
+  commands:
+  - make test
+  volumes:
+  - name: gopath
+    path: /go
+  depends_on:
+  - download
+
+---
+kind: signature
+hmac: 3da164ae6427461c772a7df77a7be50f79b255bfe61821440492c01aa1333670
+
+...

@@ -1,0 +1,140 @@
+{
+  "type": "datasource",
+  "name": "Synthetic Monitoring API",
+  "id": "synthetic-monitoring-datasource",
+  "metrics": true,
+
+  "routes": [
+    {
+      "path": "viewer-token",
+      "method": "*",
+      "url": "{{.JsonData.apiHost}}/api/v1/register/viewer-token",
+      "reqAction": "grafana-synthetic-monitoring-app:write",
+      "headers": [
+        {
+          "name": "Authorization",
+          "content": "Bearer {{.SecureJsonData.accessToken}}"
+        }
+      ]
+    },
+    {
+      "path": "save",
+      "method": "*",
+      "url": "{{.JsonData.apiHost}}/api/v1/register/save",
+      "reqAction": "grafana-synthetic-monitoring-app.plugin:write",
+      "headers": [
+        {
+          "name": "Authorization",
+          "content": "Bearer {{.SecureJsonData.accessToken}}"
+        }
+      ]
+    },
+    {
+      "path": "sm",
+      "method": "GET",
+      "url": "{{.JsonData.apiHost}}/api/v1/",
+      "reqAction": "grafana-synthetic-monitoring-app:read",
+      "headers": [
+        {
+          "name": "Authorization",
+          "content": "Bearer {{.SecureJsonData.accessToken}}"
+        }
+      ]
+    },
+    {
+      "path": "sm",
+      "method": "POST",
+      "url": "{{.JsonData.apiHost}}/api/v1/",
+      "reqAction": "grafana-synthetic-monitoring-app:write",
+      "headers": [
+        {
+          "name": "Authorization",
+          "content": "Bearer {{.SecureJsonData.accessToken}}"
+        }
+      ]
+    },
+    {
+      "path": "sm",
+      "method": "PUT",
+      "url": "{{.JsonData.apiHost}}/api/v1/",
+      "reqAction": "grafana-synthetic-monitoring-app:write",
+      "headers": [
+        {
+          "name": "Authorization",
+          "content": "Bearer {{.SecureJsonData.accessToken}}"
+        }
+      ]
+    },
+    {
+      "path": "sm",
+      "method": "DELETE",
+      "url": "{{.JsonData.apiHost}}/api/v1/",
+      "reqAction": "grafana-synthetic-monitoring-app:write",
+      "headers": [
+        {
+          "name": "Authorization",
+          "content": "Bearer {{.SecureJsonData.accessToken}}"
+        }
+      ]
+    },
+    {
+      "path": "api/v1alpha1/secrets",
+      "method": "GET",
+      "url": "{{.JsonData.apiHost}}/api/v1alpha1/secrets",
+      "reqAction": "secret.securevalues:read",
+      "headers": [
+        {
+          "name": "Authorization",
+          "content": "Bearer {{.SecureJsonData.accessToken}}"
+        }
+      ]
+    },
+    {
+      "path": "api/v1alpha1/secrets",
+      "method": "PUT",
+      "url": "{{.JsonData.apiHost}}/api/v1alpha1/secrets",
+      "reqAction": "secret.securevalues:write",
+      "headers": [
+        {
+          "name": "Authorization",
+          "content": "Bearer {{.SecureJsonData.accessToken}}"
+        }
+      ]
+    },
+    {
+      "path": "api/v1alpha1/secrets",
+      "method": "POST",
+      "url": "{{.JsonData.apiHost}}/api/v1alpha1/secrets",
+      "reqAction": "secret.securevalues:create",
+      "headers": [
+        {
+          "name": "Authorization",
+          "content": "Bearer {{.SecureJsonData.accessToken}}"
+        }
+      ]
+    },
+    {
+      "path": "api/v1alpha1/secrets",
+      "method": "DELETE",
+      "url": "{{.JsonData.apiHost}}/api/v1alpha1/secrets",
+      "reqAction": "secret.securevalues:delete",
+      "headers": [
+        {
+          "name": "Authorization",
+          "content": "Bearer {{.SecureJsonData.accessToken}}"
+        }
+      ]
+    }
+  ],
+
+  "info": {
+    "description": "Synthetic Monitoring API",
+    "author": {
+      "name": "Grafana"
+    },
+    "logos": {
+      "small": "img/logo.svg",
+      "large": "img/logo.svg"
+    }
+  }
+}

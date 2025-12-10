@@ -1,0 +1,37 @@
+{
+  "ignorePaths": [
+    "**/node_modules/**",
+    "**/dist/**",
+    "lib/go/anyframer/testdata/**",
+    "data/provisioning/**",
+    "**/*_test.go"
+  ],
+  "words": [
+    "anyframer",
+    "basgys",
+    "datasource",
+    "datasources",
+    "endregion",
+    "golangci",
+    "GOPATH",
+    "goxml",
+    "grafana",
+    "hclient",
+    "httpadapter",
+    "httpclient",
+    "instancemgmt",
+    "jsonata",
+    "magefile",
+    "openapi",
+    "petstore",
+    "restds",
+    "sriram",
+    "sriramajeyam",
+    "stretchr",
+    "sugumaran",
+    "swaggest",
+    "testdata",
+    "vercel",
+    "yesoreyeram"
+  ]
+}

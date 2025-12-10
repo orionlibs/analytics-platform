@@ -1,0 +1,245 @@
+# Contributing to the OpenTelemetry Protocol with Apache Arrow project
+
+## Introduction
+
+Welcome to the OpenTelemetry Protocol with Apache Arrow project! :tada:
+This repository defines and supports Golang libraries for producing and
+consuming telemetry data streams using the OpenTelemetry Protocol with Apache
+Arrow.
+
+We value all contributions, whether big or small, and encourage you to join us
+in improving this project. If you have questions, don't hesitate to reach out to
+the OpenTelemetry community - we're here to help!
+
+## Pre-requisites
+
+To work with this repository, you'll need:
+
+- **Go (Golang):** v1.18 or higher. [Installation
+  Guide](https://golang.org/doc/install)
+- **Protocol Buffer Compiler (protoc):** Required for regenerating gRPC
+  services. [Installation Guide](https://grpc.io/docs/protoc-installation/)
+- **protoc-gen-go:** Install using:
+
+  ```shell
+  go install google.golang.org/protobuf/cmd/protoc-gen-go@v1.28
+  ```
+
+## Local Run/Build
+
+Initialize Git submodules so that the OpenTelemetry protocol references
+used in building from `.proto` definitions can succeed:
+
+```bash
+git submodule update --init --recursive
+```
+
+When successful, you will find the directory `proto/opentelemetry-proto/`
+populated with the OpenTelemetry protocol definition used in this repository.
+
+### How to set up and run a local OTel-Arrow collector
+
+See [collector/README.md](./collector/README.md) for instructions on running the
+examples. See [collector/BUILDING.md](./collector/BUILDING.md) for instructions
+on building a collector from local sources.
+
+## Testing
+
+-How to run the test suite for the repository. (TBD)
+
+-Explanation of different types of tests (e.g., unit, integration, or
+functional). (TBD)
+
+-Tools and frameworks used for testing (TBD)
+
+-How to interpret test results and resolve common test failures. (TBD)
+
+-Mention code coverage expectations or reporting tools if applicable. (TBD)
+
+### Micro Benchmarks
+
+With certain code changes in the rust code base, running micro benchmarks to
+see if there are any issues with the performace could be a good idea. In order
+to do this `cargobench` label can be added to the pull request, which will
+trigger the [Rust-Benchmarks](.github/workflows/rust-bench.yml) workflow.
+
+## Contribution Guidelines
+
+This guide outlines best practices and requirements to ensure a smooth and
+effective contribution process.
+
+### Adhering to Coding Standards
+
+All contributions must align with the project's coding standards and guidelines.
+These standards ensure consistency, readability, and maintainability of the
+codebase. Please review the following:
+
+- Use clear and concise naming conventions for variables, functions, and files.
+- Run linters or formatters where applicable to maintain consistent code style.
+
+### Writing Meaningful Commit Messages
+
+Commit messages are essential for understanding the history and context of
+changes. Follow these tips for writing effective commit messages:
+
+- Use the conventional commit format:
+
+Examples of `<type>`: `feat` (new feature), `fix` (bug fix), `docs`
+(documentation updates), `test` (test-related updates), etc.
+
+- Include a brief description of what and why, avoiding overly technical jargon.
+- Use present-tense verbs, e.g., "Add" instead of "Added."
+
+### Including Tests for New Features or Bug Fixes
+
+Testing is crucial to ensure code reliability. When contributing:
+
+- Write unit tests for new features and bug fixes.
+- Run the test suite before submitting a pull request to verify changes. -Ensure
+test coverage remains high, and add tests for edge cases when applicable.
+
+### Community Standards and Style Guides
+
+This project adheres to the OpenTelemetry community's standards. Please ensure
+you:
+
+Follow the [Code of
+Conduct](https://github.com/open-telemetry/community/blob/main/code-of-conduct.md).
+
+Align with any specific style guides, such as [Go Style
+Guide.](https://google.github.io/styleguide/go/)
+
+### Contributor License Agreement (CLA)
+
+Before contributing, you may need to sign a Contributor License Agreement (CLA).
+This ensures that the community can freely use your contributions.
+
+Instructions for signing the CLA:
+
+Visit [OpenTelemetry CLA
+Portal](https://docs.linuxfoundation.org/lfx/easycla/contributors) and follow
+the steps to sign electronically.
+
+## Further Help
+
+If you have any questions or run into issues:
+
+Join the OpenTelemetry
+[Slack](https://cloud-native.slack.com/archives/C07S4Q67LTF) Community.
+
+## Our Development Process
+
+### How to Receive Comments
+
+- If the PR is not ready for review, please put `[WIP]` in the title or mark it
+  as draft.
+- Make sure CLA is signed and all required CI checks are clear.
+- Submit small, focused PRs addressing a single concern/issue.
+- Make sure the PR title reflects the contribution.
+- Write a summary that helps understand the change.
+- Include usage examples in the summary, where applicable.
+- Include benchmarks (before/after) in the summary, for contributions that are
+  performance enhancements.
+
+### How to Get PRs Merged
+
+A PR is considered to be ready to merge when:
+
+- It has received approval from at least one Approver / Maintainer.
+- Major feedback is resolved.
+
+Any Maintainer can merge the PR once it is ready to merge. Note, that some PRs
+may not be merged immediately if the repo is in the process of a release and the
+maintainers decided to defer the PR to the next release train. Also, maintainers
+may decide to wait for more than one approval for certain PRs, particularly ones
+that are affecting multiple areas, or topics that may warrant more discussion.
+
+### Repository background
+
+The OpenTelemetry Protocol with Apache Arrow project was initially developed in
+the `github.com/f5/otel-arrow-adapter` repository.  At the time of the
+[OpenTelemetry donation][DONATION], this repository was a construction of
+original code and code copied from the [OpenTelemetry Protocol with Apache Arrow
+Collector][OACGH], which is a fork of the [OpenTelemetry Collector][OTCGH], as
+part of [our development process][DEVPROCESS].
+
+### Source locations
+
+This repository contains the OpenTelemetry Protocol with Apache Arrow
+definition and our Rust and Golang reference implementations.
+
+Exporter and receiver components for the [OpenTelemetry Collector][OTCDOCS] were
+developed in parallel, maintained in this repository through release v0.24.0,
+and now they are included in release of the OpenTelemetry Collector-Contrib
+repository.
+
+- [Exporter][EXPORTER]: Send telemetry data using OpenTelemetry Protocol with
+      Apache Arrow
+- [Receiver][RECEIVER]: Receive telemetry data using OpenTelemetry Protocol with
+      Apache Arrow.
+
+Historically, the exporter and receiver components were forked from the
+Collector's core [OTLP Exporter][OTLPEXPORTER] and [OTLP
+Receiver][OTLPRECEIVER], and the original branch history is now archived in the
+[OpenTelemetry Protocol with Apache Arrow Collector][OACGH] repository.
+
+### How to change the protobuf specification
+
+To (re)generate the ArrowStreamService gRPC service, you need to install the
+`protoc` compiler and the `protoc-gen-grpc` plugin.
+
+```shell
+go install google.golang.org/protobuf/cmd/protoc-gen-go@v1.28
+go install google.golang.org/grpc/cmd/protoc-gen-go-grpc@v1.2
+export PATH="$PATH:$(go env GOPATH)/bin"
+./proto/generate.sh
+```
+
+Once the `*.pb.go` files are generated, you need to replace the content of the
+`api/collector/arrow/v1` directory by the generated files present in the
+`./proto/api/collector/arrow/v1` directory.
+
+### Releasing this repository
+
+See the instructions in [RELEASING.md][].
+
+### Local development issues: Rust
+
+See the `otap-dataflow`-specific [CONTRIBUTING][OTAPDATAFLOWCONTRIBUTING].
+
+[OTAPDATAFLOWCONTRIBUTING]: ./rust/otap-dataflow/CONTRIBUTING.md
+
+### Local development issues: Golang
+
+This repository contains a top-level `go.work` file.  This enables the Go
+modules defined here to avoid relative replace statements, which interfere with
+the ability to run them via simple `go install` and `go run` commands.  The
+`go.work` file names all the module definitions inside this repository and
+allows them all to be used at once during local development.
+
+### Upgrading OpenTelemetry Collector dependencies
+
+When a new version of the OpenTelemetry collector, is available, the easiest way
+to upgrade this repository is:
+
+1. Update the `distribution::otelcol_version` field in `otelarrowcol-build.yaml`
+2. Modify any components from the core or contrib repositories to use the
+   corresponding versions (e.g., pprofextension's module version should match
+   the new collector release).
+3. Regenerate `otelarrowcol` via `make genotelarrowcol`
+4. Run `go work sync` to update the other modules with fresh dependencies.
+
+[RELEASING.md]: ./RELEASING.md
+[OTCDOCS]: https://opentelemetry.io/docs/collector/
+[OTCGH]: https://github.com/open-telemetry/opentelemetry-collector
+[OACGH]: https://github.com/open-telemetry/otel-arrow-collector
+[EXPORTER]:
+    https://github.com/open-telemetry/opentelemetry-collector-contrib/blob/main/exporter/otelarrowexporter/README.md
+[RECEIVER]:
+    https://github.com/open-telemetry/opentelemetry-collector-contrib/blob/main/receiver/otelarrowreceiver/README.md
+[DONATION]: https://github.com/open-telemetry/community/issues/1332
+[DEVPROCESS]: https://github.com/open-telemetry/otel-arrow-collector/issues/48
+[OTLPRECEIVER]:
+    https://github.com/open-telemetry/opentelemetry-collector/receiver/otlpreceiver
+[OTLPEXPORTER]:
+    https://github.com/open-telemetry/opentelemetry-collector/exporter/otlpexporter

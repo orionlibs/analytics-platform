@@ -1,0 +1,92 @@
+---
+name: Test Delay
+
+# yamllint disable-line rule:truthy
+on:
+  push:
+    branches: [main]
+    paths: [charts/delay/**]
+  pull_request:
+    paths: [charts/delay/**]
+  workflow_dispatch:
+
+permissions: {}
+
+jobs:
+  run-unit-tests:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@93cb6efe18208431cddfb8368fd83d5badbf9bfd  # v5.0.1
+        with:
+          persist-credentials: 'false'
+
+      - name: Set up Helm
+        uses: azure/setup-helm@1a275c3b69536ee54be43f2070a358922e12c8d4  # v4.3.1
+
+      - name: Set up chart-testing
+        uses: helm/chart-testing-action@6ec842c01de15ebb84c8627d2744a0c2f2755c9f  # v2.8.0
+
+      - name: Run tests
+        working-directory: charts/delay
+        run: make test
+
+  list-integration-tests:
+    name: List tests
+    runs-on: ubuntu-latest
+    outputs:
+      tests: ${{ steps.list_tests.outputs.tests }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@93cb6efe18208431cddfb8368fd83d5badbf9bfd  # v5.0.1
+        with:
+          persist-credentials: 'false'
+
+      - name: List tests
+        id: list_tests
+        working-directory: charts/delay/tests/integration
+        run: |
+          tests=$(find . -name test-plan.yaml -exec dirname {} \;)
+          echo "Tests: ${tests}"
+          echo "tests=$(echo "${tests}" | jq --raw-input --slurp --compact-output 'split("\n") | map(select(. != ""))')" >> "${GITHUB_OUTPUT}"
+
+  run-integration-tests:
+    name: Integration Test
+    needs: list-integration-tests
+    runs-on: ubuntu-latest
+    if: needs.list-integration-tests.outputs.tests != '[]'
+    strategy:
+      matrix:
+        test: ${{ fromJson(needs.list-integration-tests.outputs.tests) }}
+      fail-fast: false
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@93cb6efe18208431cddfb8368fd83d5badbf9bfd  # v5.0.1
+        with:
+          persist-credentials: 'false'
+          path: source
+
+      - name: Checkout code
+        uses: actions/checkout@93cb6efe18208431cddfb8368fd83d5badbf9bfd  # v5.0.1
+        with:
+          persist-credentials: 'false'
+          repository: grafana/helm-chart-toolbox
+          path: helm-chart-toolbox
+
+      - name: Install Flux CLI
+        uses: fluxcd/flux2/action@b6e76ca2534f76dcb8dd94fb057cdfa923c3b641  # v2.7.3
+
+      - name: Install Kind CLI
+        uses: helm/kind-action@92086f6be054225fa813e0a4b13787fc9088faab  # v1.13.0
+        with:
+          install_only: true
+
+      - name: Install Minikube CLI
+        uses: medyagh/setup-minikube@e3c7f79eb1e997eabccc536a6cf318a2b0fe19d9  # v0.0.20
+        with:
+          start: false
+
+      - name: Run test
+        run: helm-chart-toolbox/tools/helm-test/helm-test "${TEST_DIRECTORY}"
+        env:
+          TEST_DIRECTORY: "source/charts/delay/tests/integration/${{ matrix.test }}"
+          DELETE_CLUSTER: true

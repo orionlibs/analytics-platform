@@ -1,0 +1,12 @@
+/.devbox
+/build
+/bin
+/vendor
+/localdata
+/resources
+.idea
+.qodo
+
+# Integration testing artifacts
+test-dashboard.yaml
+test-*.yaml

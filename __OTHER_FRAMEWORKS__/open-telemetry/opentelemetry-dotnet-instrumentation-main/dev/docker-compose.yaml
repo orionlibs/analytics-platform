@@ -1,0 +1,25 @@
+version: "2"
+services:
+  otel-collector:
+    image: otel/opentelemetry-collector-contrib:0.88.0
+    volumes:
+      - ./otel-config.yaml:/etc/otel/config.yaml
+      - ./log:/log/otel
+    command: --config /etc/otel/config.yaml
+    environment:
+      - JAEGER_ENDPOINT=jaeger:4317
+    ports:
+      - "4317:4317"   # OTLP gRPC receiver
+      - "4318:4318"   # OTLP HTTP/protobuf receiver
+      - "8888:8888"   # Prometheus metrics scrape endpoint with collector telemetry
+      - "8889:8889"   # Prometheus metrics exporter (scrape endpoint)
+      - "9411:9411"   # Zipkin receiver
+      - "13133:13133" # health_check extension
+      - "55679:55679" # ZPages extension
+    depends_on:
+      - jaeger
+
+  jaeger:
+    image: jaegertracing/all-in-one:1.50.0
+    ports:
+      - "16686:16686"

@@ -1,0 +1,13 @@
+components:
+  schemas:
+    Overrides:
+      type: object
+      description: represents session override metadata.
+      properties:
+        serviceName:
+            type: string
+            x-go-type-skip-optional-pointer: true
+        geoLocationTrackingEnabled:
+            type: boolean
+            x-go-type-skip-optional-pointer: false
+      x-go-type-skip-optional-pointer: true

@@ -1,0 +1,109 @@
+name: "Check Issue Label"
+
+description: "Given a github issue for a github repository, checks if the issue is triageable and if so, adds the area and type labels to the issue."
+
+inputs:
+  token:
+    description: "GitHub token to access the issue information"
+    required: true
+    secret: true
+  issue_number:
+    description: "The number of the issue to check"
+    required: true
+  openai_api_key:
+    description: "OpenAI API key to use for the triager"
+    required: true
+  add_labels:
+    description: "Add the labels to the issue"
+    required: false
+    default: "false"
+  labels_file:
+    description: "Labels file. One label per line"
+    required: false
+    default: "fixtures/categoryLabels.txt"
+  types_file:
+    description: "Types file. One label per line"
+    required: false
+    default: "fixtures/typeLabels.txt"
+  prompt_file:
+    description: "Prompt to use for the categorizer"
+    required: false
+    default: "fixtures/prompt.txt"
+
+outputs:
+  triage_labels:
+    description: "The labels of the issue"
+    value: ${{ steps.triager.outputs.triage_labels }}
+
+runs:
+  using: "composite"
+  steps:
+    - name: Fetch issue labels and state
+      id: fetch-facts
+      env:
+        GH_TOKEN: ${{ inputs.token }}
+        ISSUE_NUMBER: ${{ inputs.issue_number }}
+      run: |
+        repo="${{ github.repository }}"
+        issue_info=$(curl -s -H "Authorization: token $GH_TOKEN" \
+                "https://api.github.com/repos/$repo/issues/$ISSUE_NUMBER")
+        labels=$(echo "$issue_info" | jq -r '.labels | map(.name) | join(",")')
+        state=$(echo "$issue_info" | jq -r '.state')
+
+        echo "Issue number: $ISSUE_NUMBER"
+        echo "Fetched labels: $labels"
+        echo "Fetched state: $state"
+
+        echo "labels=$labels" >> $GITHUB_OUTPUT
+        echo "state=$state" >> $GITHUB_OUTPUT
+      shell: bash
+
+    - name: check if state is open and no labels are assigned
+      id: check-state
+      env:
+        STATE: ${{ steps.fetch-facts.outputs.state }}
+        LABELS: ${{ steps.fetch-facts.outputs.labels }}
+      run: |
+        if [ "$STATE" = "open" ] && [ -z "$LABELS" ]; then
+          echo "should_triage=true" >> $GITHUB_OUTPUT
+        else
+          echo "should_triage=false" >> $GITHUB_OUTPUT
+        fi
+      shell: bash
+
+    - uses: actions/setup-go@v5
+      if: steps.check-state.outputs.should_triage == 'true'
+      with:
+        go-version-file: "${{ github.action_path }}/go.mod"
+        cache-dependency-path: "${{ github.action_path }}/go.sum"
+
+    - name: Run Auto Triager and add labels
+      if: steps.check-state.outputs.should_triage == 'true'
+      id: triager
+      run: |
+        cd ${{ github.action_path }}
+        # go mod download
+        echo "Running auto triager"
+        go run ${{ github.action_path }}/pkg/cmd/triager-openai/triager-openai.go \
+          -issueId $ISSUE_NUMBER \
+          -repo $REPO \
+          -addLabels=$ADD_LABELS \
+          -labelsFile=$LABELS_FILE \
+          -typesFile=$TYPES_FILE \
+          -promptFile=$PROMPT_FILE \
+          | tee triager_output.txt
+        echo "triager_output=$(cat triager_output.txt)" >> $GITHUB_OUTPUT
+        labels=$(cat triager_output.txt | jq -r '.categoryLabel + .typeLabel  | map("\\\"\(.)\\\"")| join(",")')
+        echo ""
+        echo "Final labels: $labels"
+        echo "triage_labels=$labels" >> $GITHUB_OUTPUT
+      shell: bash
+      env:
+        GH_TOKEN: ${{ inputs.token }}
+        OPENAI_API_KEY: ${{ inputs.openai_api_key }}
+        ISSUE_NUMBER: ${{ inputs.issue_number }}
+        REPO: ${{ github.repository }}
+        ADD_LABELS: ${{ inputs.add_labels }}
+        LABELS_FILE: ${{ inputs.labels_file }}
+        TYPES_FILE: ${{ inputs.types_file }}
+        PROMPT_FILE: ${{ inputs.prompt_file }}

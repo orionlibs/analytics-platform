@@ -1,0 +1,25 @@
+# This workflow is considered legacy, as it is included in the list of repos that platform-manages renovate manages.
+# Ref: https://github.com/grafana/deployment_tools/tree/master/ksonnet/lib/renovate-self-hosted
+name: (Legacy) Self-hosted Renovate
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: none
+
+jobs:
+  renovate:
+    permissions:
+      # Needed for logging into vault.
+      contents: read
+      id-token: write
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@1af3b93b6815bc44a9784bd300feb67ff0d1eeb3 # v6.0.0
+        with:
+          persist-credentials: false
+      - name: Self-hosted renovate
+        uses: grafana/sm-renovate/actions/renovate@main

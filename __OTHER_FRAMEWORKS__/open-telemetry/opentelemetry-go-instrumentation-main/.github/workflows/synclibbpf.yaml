@@ -1,0 +1,48 @@
+name: Automatic libbpf Sync
+on:
+  workflow_dispatch:
+    inputs:
+        version:
+          description: 'Version constraint'
+          default: '< 1.5, >= 1.4.7'
+          type: string
+  schedule:
+    - cron: '0 0 * * 0' # Sunday at midnight.
+
+permissions:
+  contents: read
+
+jobs:
+  synclibbpf:
+    permissions:
+      contents: write # required for pushing changes
+      pull-requests: write # required for creating pull requests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@1af3b93b6815bc44a9784bd300feb67ff0d1eeb3 # v6
+      - name: Setup Go
+        uses: actions/setup-go@4dc6199c7b1a012772edbd06daecab0f50c9053c # v6
+        with:
+          go-version: stable
+          check-latest: true
+          cache-dependency-path: "**/go.sum"
+      - id: sync
+        name: Sync libbpf
+        run: make synclibbpf
+        env:
+          LIBBPF_VERSION: ${{ inputs.version }}
+      - name: Create pull request
+        uses: peter-evans/create-pull-request@84ae59a2cdc2258d6fa0732dd66352dddae2a412 # v7
+        with:
+          commit-message: Update libbpf version
+          branch: automated/libbpf
+          delete-branch: true
+          title: '[chore] Update libbpf'
+          body: |
+            This is an automated PR to update the copied libbpf files.
+            
+            ### Update logs
+            
+            ```terminal
+            ${{join(steps.sync.outputs.*, '\n')}}
+            ```

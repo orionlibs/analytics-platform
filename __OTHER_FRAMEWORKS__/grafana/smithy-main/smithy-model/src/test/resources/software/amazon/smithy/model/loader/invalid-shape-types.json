@@ -1,0 +1,11 @@
+{
+    "smithy": "1.0",
+    "shapes": {
+        "example.namespace#Invalid": {
+            "type": "foobaz"
+        },
+        "example.namespace#String": {
+            "type": "string"
+        }
+    }
+}

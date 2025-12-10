@@ -1,0 +1,112 @@
+version: "2"
+run:
+  concurrency: 4
+  build-tags:
+    - ""
+    - integration
+linters:
+  default: none
+  enable:
+    - asasalint
+    - asciicheck
+    - bidichk
+    - bodyclose
+    - containedctx
+    - dupl
+    - dupword
+    - durationcheck
+    - errcheck
+    - errname
+    - errorlint
+    - gocognit
+    - goconst
+    - gocritic
+    - goheader
+    - gomoddirectives
+    - gomodguard
+    - goprintffuncname
+    - govet
+    - importas
+    - ineffassign
+    - loggercheck
+    - makezero
+    - misspell
+    - nakedret
+    - nestif
+    - noctx
+    - nolintlint
+    - nosprintfhostport
+    - prealloc
+    - predeclared
+    - promlinter
+    - reassign
+    - revive
+    - rowserrcheck
+    - sqlclosecheck
+    - staticcheck
+    - testableexamples
+    - tparallel
+    - unconvert
+    - unparam
+    - unused
+    - usestdlibvars
+  settings:
+    dupl:
+      threshold: 100
+    errcheck:
+      exclude-functions:
+        - io/ioutil.WriteFile
+        - io/ioutil.ReadFile
+        - (github.com/go-kit/log.Logger).Log
+        - io.Copy
+        - (github.com/opentracing/opentracing-go.Tracer).Inject
+    gocognit:
+      min-complexity: 31
+    goconst:
+      min-len: 2
+      min-occurrences: 4
+    gocritic:
+      disabled-checks:
+        - commentFormatting
+    gocyclo:
+      min-complexity: 10
+    gomoddirectives:
+      replace-allow-list:
+        - github.com/dolthub/go-mysql-server
+    govet:
+      enable:
+        - shadow
+    lll:
+      line-length: 140
+    nolintlint:
+      require-explanation: false
+      require-specific: false
+      allow-unused: false
+  exclusions:
+    generated: lax
+    presets:
+      - comments
+      - common-false-positives
+      - legacy
+      - std-error-handling
+    rules:
+      - linters:
+          - dupl
+          - govet
+        path: _test\.go
+    paths:
+      - internal/proxyproto
+      - third_party$
+      - builtin$
+      - examples$
+formatters:
+  enable:
+    - gofmt
+    - goimports
+  exclusions:
+    generated: lax
+    paths:
+      - internal/proxyproto
+      - third_party$
+      - builtin$
+      - examples$

@@ -1,0 +1,29 @@
+apiVersion: compute.azure.upbound.io/v1beta1
+kind: WindowsVirtualMachine
+metadata:
+  annotations:
+    upjet.upbound.io/manual-intervention: "This resource requires manual intervention."
+  name: example
+spec:
+  forProvider:
+    adminPasswordSecretRef:
+      key: example-key
+      name: example-secret
+      namespace: crossplane-system
+    adminUsername: adminuser
+    location: West Europe
+    networkInterfaceIds:
+    - '...'
+    osDisk:
+    - caching: ReadWrite
+      storageAccountType: Standard_LRS
+    resourceGroupNameRef:
+      name: example-compute
+    size: Standard_F2
+    sourceImageReference:
+    - offer: WindowsServer
+      publisher: MicrosoftWindowsServer
+      sku: 2016-Datacenter
+      version: latest
+  providerConfigRef:
+    name: example

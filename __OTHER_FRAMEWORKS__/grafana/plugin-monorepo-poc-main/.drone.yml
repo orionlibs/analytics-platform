@@ -1,0 +1,175 @@
+---
+kind: pipeline
+type: docker
+name: bar-datasource
+
+platform:
+  os: linux
+  arch: amd64
+
+steps:
+- name: build
+  image: node:16
+  commands:
+  - cd ./plugins/bar-datasource
+  - yarn install
+  - yarn build
+  environment:
+    PLUGIN: bar-datasource
+
+image_pull_secrets:
+- dockerconfigjson
+
+trigger:
+  paths:
+  - plugins/bar-datasource/*
+  ref:
+  - refs/pull/**
+  - refs/heads/main
+
+---
+kind: pipeline
+type: docker
+name: foo-datasource
+
+platform:
+  os: linux
+  arch: amd64
+
+steps:
+- name: build
+  image: node:16
+  commands:
+  - cd ./plugins/foo-datasource
+  - yarn install
+  - yarn build
+  environment:
+    PLUGIN: foo-datasource
+
+image_pull_secrets:
+- dockerconfigjson
+
+trigger:
+  paths:
+  - plugins/foo-datasource/*
+  ref:
+  - refs/pull/**
+  - refs/heads/main
+
+---
+kind: pipeline
+type: docker
+name: yesoreyeram-blank-datasource
+
+platform:
+  os: linux
+  arch: amd64
+
+steps:
+- name: build
+  image: node:16
+  commands:
+  - cd ./plugins/yesoreyeram-blank-datasource
+  - yarn install
+  - yarn build
+  environment:
+    PLUGIN: yesoreyeram-blank-datasource
+
+image_pull_secrets:
+- dockerconfigjson
+
+trigger:
+  paths:
+  - plugins/yesoreyeram-blank-datasource/*
+  ref:
+  - refs/pull/**
+  - refs/heads/main
+
+---
+kind: pipeline
+type: docker
+name: yesoreyeram-hello-datasource
+
+platform:
+  os: linux
+  arch: amd64
+
+steps:
+- name: build
+  image: node:16
+  commands:
+  - cd ./plugins/yesoreyeram-hello-datasource
+  - yarn install
+  - yarn build
+  environment:
+    PLUGIN: yesoreyeram-hello-datasource
+
+image_pull_secrets:
+- dockerconfigjson
+
+trigger:
+  paths:
+  - plugins/yesoreyeram-hello-datasource/*
+  ref:
+  - refs/pull/**
+  - refs/heads/main
+
+---
+kind: pipeline
+type: docker
+name: yesoreyeram-petstore-datasource
+
+platform:
+  os: linux
+  arch: amd64
+
+steps:
+- name: build
+  image: node:16
+  commands:
+  - cd ./plugins/yesoreyeram-petstore-datasource
+  - yarn install
+  - yarn build
+  environment:
+    PLUGIN: yesoreyeram-petstore-datasource
+
+image_pull_secrets:
+- dockerconfigjson
+
+trigger:
+  paths:
+  - plugins/yesoreyeram-petstore-datasource/*
+  ref:
+  - refs/pull/**
+  - refs/heads/main
+
+---
+kind: pipeline
+type: docker
+name: yesoreyeram-vercel-datasource
+
+platform:
+  os: linux
+  arch: amd64
+
+steps:
+- name: build
+  image: node:16
+  commands:
+  - cd ./plugins/yesoreyeram-vercel-datasource
+  - yarn install
+  - yarn build
+  environment:
+    PLUGIN: yesoreyeram-vercel-datasource
+
+image_pull_secrets:
+- dockerconfigjson
+
+trigger:
+  paths:
+  - plugins/yesoreyeram-vercel-datasource/*
+  ref:
+  - refs/pull/**
+  - refs/heads/main
+
+...

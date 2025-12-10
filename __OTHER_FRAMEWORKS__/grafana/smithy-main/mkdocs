@@ -1,0 +1,89 @@
+#!/bin/bash
+# This script updates the documentation hosted at
+# http://awslabs.github.io/smithy/. There is a y/n prompt before a publish
+# is performed to allow for a spot-check of the changes.
+#
+# This script will run `pip install -r requirements.txt` in the docs
+# directory. If you don't want to globally install dependencies, ensure that
+# you are first in a virtual environment of some kind before running this
+# script.
+
+set -e
+
+#### Load library version ####
+
+# Load the version number of the library (used to version javadocs)
+library_version=$(cat VERSION)
+library_version=${library_version%%*( )}
+
+if [ -z "${library_version}" ]; then
+    echo "Unable to find the version property or it is empty"
+    exit 1
+fi
+
+#### Clone the docs branch ####
+
+# Clone a copy of smithy into a staging directory
+rm -rf /tmp/_smithy-docs
+git clone https://github.com/awslabs/smithy.git --branch gh-pages --single-branch /tmp/_smithy-docs
+cd /tmp/_smithy-docs
+git checkout gh-pages
+cd -
+
+#### Build javadoc ####
+
+./gradlew javadoc
+# Always build javadoc into each version.
+cp -R build/docs/javadoc/* /tmp/_smithy-docs/javadoc/${library_version}
+# Remove this unnecessary duplicate copy of the docs.
+rm -rf /tmp/_smithy-docs/javadoc/${library_version}/latest
+# Create a redirect from "latest" to the version:
+rm -rf /tmp/_smithy-docs/javadoc/latest
+mkdir -p /tmp/_smithy-docs/javadoc/latest
+
+# Create an HTML redirect from javadoc/latest/ to, for example, javadoc/1.0.0
+cat << EOF > /tmp/_smithy-docs/javadoc/latest/index.html
+<!DOCTYPE html>
+<meta charset="utf-8">
+<title>Redirecting to latest javadocs</title>
+<meta http-equiv="refresh" content="0; URL=../${library_version}/">
+EOF
+
+#### Build Sphinx docs ####
+
+cd docs
+pip install -r requirements.txt
+make clean && make html
+cp -R build/html/* /tmp/_smithy-docs
+
+# Delete unnecessary files
+rm /tmp/_smithy-docs/.buildinfo || true
+rm /tmp/_smithy-docs/objects.inv || true
+
+cd -
+
+cd /tmp/_smithy-docs
+git status
+
+#### Deploy the docs ####
+
+# We can automate this eventually
+
+read -p "Show full diff? [y/n]" -n 1 -r
+echo
+if [[ $REPLY =~ ^[Yy]$ ]]
+then
+    git diff
+fi
+
+read -p "Publish docs? [y/n]" -n 1 -r
+echo
+if [[ $REPLY =~ ^[Yy]$ ]]
+then
+    git add -A
+    git commit -m 'Update documentation'
+    git push origin gh-pages
+    echo "Documentation has been published"
+else
+    echo "Documentation was not published"
+fi

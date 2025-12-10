@@ -1,0 +1,37 @@
+name: "[release hook] Process release"
+
+on:
+  pull_request:
+    types: [closed]
+
+permissions:
+  contents: read
+
+jobs:
+  release-process-request:
+    permissions:
+      contents: write # required for creating releases
+      pull-requests: write # required for updating release PRs
+      issues: write # required to create issues for failed releases
+    if: ${{ github.repository == 'open-telemetry/opentelemetry-ruby-contrib' }}
+    env:
+      RUBY_VERSION: "3.2"
+    runs-on: ubuntu-latest
+    steps:
+      - name: Install Ruby ${{ env.RUBY_VERSION }}
+        uses: ruby/setup-ruby@8aeb6ff8030dd539317f8e1769a044873b56ea71 # v1.268.0
+        with:
+          ruby-version: ${{ env.RUBY_VERSION }}
+      - name: Checkout repo
+        uses: actions/checkout@1af3b93b6815bc44a9784bd300feb67ff0d1eeb3 # v6.0.0
+      - name: Install Toys
+        run: "gem install --no-document toys -v 0.15.5"
+      - name: Process release request
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          toys release _onclosed --verbose \
+            "--enable-releases=${{ secrets.ENABLE_RELEASES }}" \
+            "--event-path=${{ github.event_path }}" \
+            "--rubygems-api-key=${{ secrets.RUBYGEMS_API_KEY }}" \
+            < /dev/null

@@ -1,0 +1,29 @@
+name: "Wait for Grafana"
+description: "Wait for a server to respond with a specific status code"
+inputs:
+  url:
+    description: "The URL to check"
+    required: true
+    default: "http://localhost:3000/"
+  responseCode:
+    description: "The expected HTTP response code"
+    required: true
+    default: "200"
+  timeout:
+    description: "Timeout in seconds"
+    required: true
+    default: "60"
+  interval:
+    description: "Interval between checks in seconds"
+    required: true
+    default: "0.5"
+runs:
+  using: "composite"
+  steps:
+    - run: ${{ github.action_path }}/wait-for-grafana.sh "${GRAFANA_URL}" "${GRAFANA_RESPONSE_CODE}" "${GRAFANA_TIMEOUT}" "${GRAFANA_INTERVAL}"
+      shell: bash
+      env:
+        GRAFANA_URL: ${{ inputs.url }}
+        GRAFANA_RESPONSE_CODE: ${{ inputs.responseCode }}
+        GRAFANA_TIMEOUT: ${{ inputs.timeout }}
+        GRAFANA_INTERVAL: ${{ inputs.interval }}

@@ -1,0 +1,17 @@
+name: Crowdin automatic task management
+
+on:
+  workflow_dispatch:
+  # once a month on the first day of the month at midnight
+  schedule:
+    - cron: '0 0 1 * *'
+
+jobs:
+  create-tasks-in-crowdin:
+    uses: grafana/grafana-github-actions/.github/workflows/crowdin-create-tasks.yml@7d2b4af1112747f82e12adfbc00be44fecb3b616
+    with:
+      crowdin_project_id: 36
+    
+    permissions:
+      contents: read
+      id-token: write # needed to get vault secrets

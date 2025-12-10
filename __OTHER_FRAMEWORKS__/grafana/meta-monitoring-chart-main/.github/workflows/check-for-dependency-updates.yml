@@ -1,0 +1,155 @@
+---
+name: Check for dependency updates
+
+on:
+    workflow_dispatch:
+    schedule:
+      # Run once a day
+      - cron: '0 7 * * *'
+
+permissions:
+    contents: "write"
+    pull-requests: "write"
+
+env:
+    UPDATECLI_CONFIG_DIR: "${{ github.workspace }}/.github/configs/updatecli.d"
+    UPDATECLI_GITHUB_TOKEN: "${{ secrets.GITHUB_TOKEN }}"
+
+jobs:
+    updateVersions:
+        name: Update the subcharts
+        runs-on: "ubuntu-latest"
+        permissions:
+          contents: write
+          id-token: write
+        steps:
+            - name: Checkout
+              uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af6838  # v4
+              with:
+                persist-credentials: false
+
+            - name: Install Updatecli
+              uses: updatecli/updatecli-action@ae3030ce1710c6496214fb1f8fd3bd9437b2a69d  # v2.82.0
+
+            - name: Run Updatecli for Loki
+              id: update-loki
+              run: |
+                updatecli apply --config ${UPDATECLI_CONFIG_DIR}/loki.yaml
+                if ! git diff --exit-code > /dev/null; then
+                  echo "changed=true" >> "${GITHUB_OUTPUT}"
+                fi
+
+            - name: Run Updatecli for Alloy
+              id: update-grafana-alloy
+              run: |
+                updatecli apply --config ${UPDATECLI_CONFIG_DIR}/alloy.yaml
+                if ! git diff --exit-code > /dev/null; then
+                  echo "changed=true" >> "${GITHUB_OUTPUT}"
+                fi
+
+            - name: Run Updatecli for Mimir
+              id: update-mimir-distributed
+              run: |
+                updatecli apply --config ${UPDATECLI_CONFIG_DIR}/mimir-distributed.yaml
+                if ! git diff --exit-code > /dev/null; then
+                  echo "changed=true" >> "${GITHUB_OUTPUT}"
+                fi
+
+            - name: Run Updatecli for Tempo
+              id: update-tempo-distributed
+              run: |
+                updatecli apply --config ${UPDATECLI_CONFIG_DIR}/tempo-distributed.yaml
+                if ! git diff --exit-code > /dev/null; then
+                  echo "changed=true" >> "${GITHUB_OUTPUT}"
+                fi
+
+            - name: Run Updatecli for Minio
+              id: update-minio
+              run: |
+                updatecli apply --config ${UPDATECLI_CONFIG_DIR}/minio.yaml
+                if ! git diff --exit-code > /dev/null; then
+                  echo "changed=true" >> "${GITHUB_OUTPUT}"
+                fi
+
+            - id: get-secrets
+              uses: grafana/shared-workflows/actions/get-vault-secrets@4ea1476b297f17f388a7d9003ae28216c05bdb59  # main
+              with:
+                # Secrets placed in the ci/repo/grafana/<repo>/<path> path in Vault
+                repo_secrets: |
+                  APP_ID=github-app:app-id
+                  PRIVATE_KEY=github-app:private-key
+
+            - uses: actions/create-github-app-token@d72941d797fd3113feb6b93fd0dec494b13a2547  # v1
+              id: app-token
+              with:
+                app-id: ${{ env.APP_ID }}
+                private-key: ${{ env.PRIVATE_KEY }}
+
+            - name: Create pull request
+              if: steps.update-loki.outputs.changed == 'true' || steps.update-grafana-alloy.outputs.changed == 'true' || steps.update-mimir-distributed.outputs.changed == 'true' || steps.update-tempo-distributed.outputs.changed == 'true' || steps.update-minio.outputs.changed == 'true'
+              uses: peter-evans/create-pull-request@4e1beaa7521e8b457b572c090b25bd3db56bf1c5  # v5
+              with:
+                title: "[dependency] Update the subcharts"
+                body: "Updates the subcharts"
+                base: main
+                author: "${{ github.actor }} <${{ github.actor }}@users.noreply.github.com>"
+                committer: "GitHub <noreply@github.com>"
+                commit-message: Update dependencies
+                labels: dependencies
+                branch: chore/update-dependencies
+                delete-branch: true
+                team-reviewers: "@grafana/loki-squad"
+                token: ${{ steps.app-token.outputs.token }}
+
+    updateGrafana:
+        name: Update the Grafana version
+        runs-on: "ubuntu-latest"
+        permissions:
+          contents: write
+          id-token: write
+        steps:
+            - name: Checkout
+              uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683  # v4
+              with:
+                persist-credentials: false
+
+            - name: Install Updatecli
+              uses: updatecli/updatecli-action@ae3030ce1710c6496214fb1f8fd3bd9437b2a69d  # v2.82.0
+
+            - name: Run Updatecli
+              id: update-grafana
+              run: |
+                updatecli apply --config ${UPDATECLI_CONFIG_DIR}/grafana.yaml
+                if ! git diff --exit-code > /dev/null; then
+                  echo "changed=true" >> "${GITHUB_OUTPUT}"
+                fi
+
+            - id: get-secrets
+              uses: grafana/shared-workflows/actions/get-vault-secrets@4ea1476b297f17f388a7d9003ae28216c05bdb59  # main
+              with:
+                # Secrets placed in the ci/repo/grafana/<repo>/<path> path in Vault
+                repo_secrets: |
+                  APP_ID=github-app:app-id
+                  PRIVATE_KEY=github-app:private-key
+
+            - uses: actions/create-github-app-token@d72941d797fd3113feb6b93fd0dec494b13a2547  # v1
+              id: app-token
+              with:
+                app-id: ${{ env.APP_ID }}
+                private-key: ${{ env.PRIVATE_KEY }}
+
+            - name: Create pull request
+              if: steps.update-grafana.outputs.changed == 'true'
+              uses: peter-evans/create-pull-request@4e1beaa7521e8b457b572c090b25bd3db56bf1c5  # v5
+              with:
+                title: "[dependency] Update the Grafana version"
+                body: "Updates the Grafana version"
+                base: main
+                author: "${{ github.actor }} <${{ github.actor }}@users.noreply.github.com>"
+                committer: "GitHub <noreply@github.com>"
+                commit-message: Update Grafana version
+                labels: dependencies
+                branch: chore/update-minio
+                delete-branch: true
+                team-reviewers: "@grafana/loki-squad"
+                token: ${{ steps.app-token.outputs.token }}

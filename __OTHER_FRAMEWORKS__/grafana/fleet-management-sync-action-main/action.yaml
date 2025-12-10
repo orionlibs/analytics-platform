@@ -1,0 +1,61 @@
+name: 'Fleet Management Sync'
+description: 'Sync pipeline configurations to Grafana Fleet Management'
+author: 'Grafana Labs'
+
+inputs:
+  pipelines-root-path:
+    description: 'Root path to start searching for pipeline files'
+    required: true
+  fm-url:
+    description: 'Fleet Management API URL'
+    required: true
+  fm-username:
+    description: 'Fleet Management username for authentication'
+    required: true
+  fm-token:
+    description: 'Fleet Management API token for authentication'
+    required: true
+  timeout:
+    description: 'Timeout for the GitHub Action (e.g., "30s", "2m")'
+    required: false
+    default: '1m'
+  verbose:
+    description: 'Enable verbose logging for debugging'
+    required: false
+    default: 'false'
+  dry-run:
+    description: 'Run without making actual changes (shows what would be synced)'
+    required: false
+    default: 'false'
+  namespace:
+    description: "Namespace for the pipelines, used to scope syncs"
+    required: true
+  global-matcher:
+    description: 'Global matcher to add to all pipelines (optional)'
+    required: false
+    default: ''
+
+runs:
+  using: 'composite'
+  steps:
+    - name: Setup Go
+      uses: actions/setup-go@faf52423ec0d44c58f68e83b614bfcd99dded66f
+      with:
+        go-version-file: '${{ github.action_path }}/go.mod'
+        cache-dependency-path: '${{ github.action_path }}/go.sum'
+
+    - name: Run Fleet Management Sync
+      shell: bash
+      env:
+        INPUT_FM_URL: ${{ inputs.fm-url }}
+        INPUT_FM_USERNAME: ${{ inputs.fm-username }}
+        INPUT_FM_TOKEN: ${{ inputs.fm-token }}
+        INPUT_TIMEOUT: ${{ inputs.timeout }}
+        INPUT_VERBOSE: ${{ inputs.verbose }}
+        INPUT_DRY_RUN: ${{ inputs.dry-run }}
+        INPUT_NAMESPACE: ${{ inputs.namespace }}
+        INPUT_GLOBAL_MATCHER: ${{ inputs.global-matcher }}
+        INPUT_PIPELINES_ROOT_PATH: ${{ github.workspace }}/${{ inputs.pipelines-root-path }}
+      run: |
+        cd "${{ github.action_path }}"
+        go run cmd/sync/main.go

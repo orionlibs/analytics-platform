@@ -1,0 +1,31 @@
+version: "3.8"
+
+services:
+  k8s-mcp-server:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: k8s-mcp-server:latest # This image will be built using the Dockerfile in the current context
+    # image: ginnux/k8s-mcp-server:latest # Uncomment this line to use the pre-built image from Docker Hub
+    # Uncomment the line above if you want to use the pre-built image from Docker Hub instead of building locally
+    container_name: k8s-mcp-server
+    ports:
+      - "8080:8080" # Adjust host port if SERVER_PORT is different and you want to map it
+    volumes:
+      - ${HOME}/.kube:/root/.kube:ro # Mount kubeconfig as read-only
+    environment:
+      - KUBECONFIG=/root/.kube/config
+      - SERVER_MODE=sse # Explicitly set server mode (stdio, sse, or streamable-http)
+      - SERVER_PORT=8080 # Explicitly set server port for SSE mode
+    # command: ["--read-only"] # Uncomment to enable read-only mode
+    # command: ["--no-k8s"] # Uncomment to disable Kubernetes tools
+    # command: ["--no-helm"] # Uncomment to disable Helm tools
+    # command: ["--read-only", "--no-helm"] # Uncomment for read-only with only Kubernetes tools
+    restart: unless-stopped
+    healthcheck:
+      # Ensure 'curl' is installed in your Docker image (e.g., RUN apk --no-cache add curl in Dockerfile)
+      test: ["CMD", "curl", "-f", "-s", "http://localhost:8080/"] # Check if the server responds on the root path
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s

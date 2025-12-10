@@ -1,0 +1,66 @@
+{
+  $schema: 'https://docs.renovatebot.com/renovate-schema.json',
+  extends: [
+    'config:best-practices',
+    'helpers:pinGitHubActionDigestsToSemver',
+    'customManagers:githubActionsVersions',
+  ],
+  packageRules: [
+    {
+      // this is to reduce the number of renovate PRs by consolidating them into a weekly batch
+      matchManagers: [
+        'github-actions',
+      ],
+      extends: [
+        'schedule:weekly',
+      ],
+      groupName: 'github actions',
+    },
+    {
+      // pin opentelemetry-api dependency to: avoid churn, for conservative api version requirement,
+      // and because opentelemetry-api is a compileOnly dependency
+      matchPackageNames: [
+        'io.opentelemetry:opentelemetry-api',
+      ],
+      matchCurrentVersion: '1.33.0',
+      enabled: false,
+    },
+    {
+      // junit 6+ requires Java 17+
+      matchPackageNames: [
+        'org.junit:**',
+        'org.junit.jupiter:**',
+      ],
+      matchUpdateTypes: [
+        'major',
+      ],
+      enabled: false,
+    },
+  ],
+  customManagers: [
+    {
+      customType: 'regex',
+      datasourceTemplate: 'docker',
+      managerFilePatterns: [
+        '/^build.gradle.kts$/',
+      ],
+      matchStrings: [
+        '(?<depName>otel/weaver):(?<currentValue>[^@"]+)(?:@(?<currentDigest>sha256:[a-f0-9]+))?',
+      ],
+      autoReplaceStringTemplate: '{{depName}}:{{newValue}}{{#if newDigest}}@{{newDigest}}{{/if}}',
+      versioningTemplate: 'docker',
+    },
+    {
+      customType: 'regex',
+      datasourceTemplate: 'java-version',
+      managerFilePatterns: [
+        '.github/workflows/**',
+      ],
+      matchStrings: [
+        '(?<currentValue>\\d+) # renovate\\(java-version\\)',
+      ],
+      depNameTemplate: 'java',
+      extractVersionTemplate: '^(?<version>\\d+)',
+    },
+  ],
+}

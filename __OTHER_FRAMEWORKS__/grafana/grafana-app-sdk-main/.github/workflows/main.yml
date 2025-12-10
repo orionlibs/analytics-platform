@@ -1,0 +1,12 @@
+name: Build Main
+
+on:
+  push:
+    branches:
+    - main
+
+jobs:
+  test:
+    permissions:
+      contents: read
+    uses: ./.github/workflows/test.yml

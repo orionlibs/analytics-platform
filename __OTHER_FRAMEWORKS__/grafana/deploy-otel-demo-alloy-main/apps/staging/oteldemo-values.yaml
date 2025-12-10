@@ -1,0 +1,36 @@
+---
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: open-telemetry
+  namespace: open-telemetry
+spec:
+  values:
+
+    # point the services to Alloy as their OTel Collector
+    default:
+      envOverrides:
+        - name: OTEL_COLLECTOR_NAME
+          value: alloy.collector
+
+    # turn off the included olly stack
+    opentelemetry-collector:
+      enabled: false
+
+    jaeger:
+      enabled: false
+
+    prometheus:
+      enabled: false
+
+    grafana:
+      enabled: false
+
+    opensearch:
+      enabled: false
+
+    # uncommment 4 lines below to expose the frontend proxy with an external IP address (tested only on GKE)
+    # components:
+    #   frontendProxy:
+    #     service:
+    #       type: LoadBalancer

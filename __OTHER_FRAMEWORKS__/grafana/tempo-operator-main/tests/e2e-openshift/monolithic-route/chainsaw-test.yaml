@@ -1,0 +1,34 @@
+apiVersion: chainsaw.kyverno.io/v1alpha1
+kind: Test
+metadata:
+  name: monolithic-route
+spec:
+  namespace: chainsaw-mono-route
+  steps:
+  - name: Create Tempo Monolithic instance
+    try:
+    - apply:
+        file: install-tempo.yaml
+    - assert:
+        file: install-tempo-assert.yaml
+  - name: Run the must-gather and verify the contents
+    try:
+    - command:
+        entrypoint: oc
+        args:
+        - get
+        - pods
+        - -A
+        - -l control-plane=controller-manager
+        - -l app.kubernetes.io/name=tempo-operator
+        - -o 
+        - jsonpath={.items[0].metadata.namespace}
+        outputs:
+        - name: TEMPO_NAMESPACE
+          value: ($stdout)
+    - script:
+        env:
+        - name: temponamespace
+          value: ($TEMPO_NAMESPACE)
+        timeout: 5m
+        content: ./check-must-gather.sh

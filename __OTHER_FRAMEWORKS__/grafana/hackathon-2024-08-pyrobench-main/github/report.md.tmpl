@@ -1,0 +1,30 @@
+{{- $global := . -}}
+### Benchmark Report
+{{- if .Report.Error }}
+
+```
+{{.Report.Error}}
+```
+{{- else }}
+
+{{ if .Report.Finished }}__Finished__{{ else }}__In progress__
+{{ end }}
+
+{{- if .Report.Message }}
+{{.Report.Message}}{{end}}
+
+{{- if .Compare }}
+{{.Compare}}
+{{- end}}
+{{- range .Report.Runs }}
+<details>
+    <summary><tt>{{.Name}}</tt>{{.Status}}</summary>
+
+| Resource | Base | Head | Diff % |
+|----------|-----:|-----:|-------:|
+{{- range .Results }}
+| {{.Name}} | {{.BaseMarkdown}} | {{.HeadMarkdown}} | {{.DiffMarkdown}} |
+{{- end }}
+</details>
+{{- end }}
+{{- end }}

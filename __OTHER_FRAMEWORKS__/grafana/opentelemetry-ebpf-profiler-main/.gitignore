@@ -1,0 +1,10 @@
+*.o
+*.d
+*.pb.go
+.cache
+/.idea
+/go
+ebpf-profiler
+ci-kernels
+# Ignore target directory
+target/*

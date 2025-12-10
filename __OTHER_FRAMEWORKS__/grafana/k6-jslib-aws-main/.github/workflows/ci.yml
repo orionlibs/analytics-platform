@@ -1,0 +1,59 @@
+name: CI
+on:
+    # Enables running the workflow manually from the Actions tab
+    workflow_dispatch:
+
+    push:
+        branches:
+            - main
+        tags:
+            - v*
+
+    pull_request:
+
+jobs:
+    test:
+        runs-on: ubuntu-latest
+        timeout-minutes: 10
+        permissions:
+          contents: read
+
+        steps:
+            - uses: actions/checkout@v4
+              with:
+                  persist-credentials: false
+
+            - name: Setup Deno
+              uses: denoland/setup-deno@909cc5acb0fdd60627fb858598759246509fa755 # v2.0.2
+              with:
+                deno-version: v2.x
+
+            - name: Check Formatting
+              run: deno task fmt
+
+            - name: Check Linting
+              run: deno task lint
+
+            - name: Build
+              run: deno task build
+
+            - name: Install Go
+              uses: actions/setup-go@v4
+              with:
+                  go-version: 1.22.x
+                  cache: false
+
+            - name: Install k6
+              run: go install go.k6.io/k6@latest
+
+            - name: Build the docker-compose stack
+              uses: hoverkraft-tech/compose-action@c4d1d8e06d46515645492e74ce683a209c5151be
+              with:
+                  up-flags: '-d'
+                  down-flags: '-v'
+
+            - name: Wait for the localstack scripts to have been applied
+              run: sleep 30
+
+            - name: Test
+              run: deno task test:ci

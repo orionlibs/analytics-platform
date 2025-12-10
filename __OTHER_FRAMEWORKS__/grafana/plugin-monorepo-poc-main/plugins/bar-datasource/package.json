@@ -1,0 +1,16 @@
+{
+  "name": "bar-datasource",
+  "version": "0.0.1",
+  "scripts": {
+    "clean": "rm -rf dist/",
+    "build": "echo 'build bar'"
+  },
+  "dependencies": {
+    "@grafana/data": "9.1.3",
+    "@grafana/ui": "9.1.3",
+    "@grafana/runtime": "9.1.3"
+  },
+  "devDependencies": {
+    "@yesoreyeram/grafana-plugins-config": "*"
+  }
+}

@@ -1,0 +1,165 @@
+{
+    "ColumnInfo": [
+        {
+            "Name": "availability_zone",
+            "Type": {
+                "ArrayColumnInfo": null,
+                "RowColumnInfo": null,
+                "ScalarType": "VARCHAR",
+                "TimeSeriesMeasureValueColumnInfo": null
+            }
+        },
+        {
+            "Name": "microservice_name",
+            "Type": {
+                "ArrayColumnInfo": null,
+                "RowColumnInfo": null,
+                "ScalarType": "VARCHAR",
+                "TimeSeriesMeasureValueColumnInfo": null
+            }
+        },
+        {
+            "Name": "hostname",
+            "Type": {
+                "ArrayColumnInfo": null,
+                "RowColumnInfo": null,
+                "ScalarType": "VARCHAR",
+                "TimeSeriesMeasureValueColumnInfo": null
+            }
+        },
+        {
+            "Name": "instance_name",
+            "Type": {
+                "ArrayColumnInfo": null,
+                "RowColumnInfo": null,
+                "ScalarType": "VARCHAR",
+                "TimeSeriesMeasureValueColumnInfo": null
+            }
+        },
+        {
+            "Name": "process_name",
+            "Type": {
+                "ArrayColumnInfo": null,
+                "RowColumnInfo": null,
+                "ScalarType": "VARCHAR",
+                "TimeSeriesMeasureValueColumnInfo": null
+            }
+        },
+        {
+            "Name": "os_version",
+            "Type": {
+                "ArrayColumnInfo": null,
+                "RowColumnInfo": null,
+                "ScalarType": "VARCHAR",
+                "TimeSeriesMeasureValueColumnInfo": null
+            }
+        },
+        {
+            "Name": "az",
+            "Type": {
+                "ArrayColumnInfo": null,
+                "RowColumnInfo": null,
+                "ScalarType": "VARCHAR",
+                "TimeSeriesMeasureValueColumnInfo": null
+            }
+        },
+        {
+            "Name": "jdk_version",
+            "Type": {
+                "ArrayColumnInfo": null,
+                "RowColumnInfo": null,
+                "ScalarType": "VARCHAR",
+                "TimeSeriesMeasureValueColumnInfo": null
+            }
+        },
+        {
+            "Name": "region",
+            "Type": {
+                "ArrayColumnInfo": null,
+                "RowColumnInfo": null,
+                "ScalarType": "VARCHAR",
+                "TimeSeriesMeasureValueColumnInfo": null
+            }
+        },
+        {
+            "Name": "cell",
+            "Type": {
+                "ArrayColumnInfo": null,
+                "RowColumnInfo": null,
+                "ScalarType": "VARCHAR",
+                "TimeSeriesMeasureValueColumnInfo": null
+            }
+        },
+        {
+            "Name": "silo",
+            "Type": {
+                "ArrayColumnInfo": null,
+                "RowColumnInfo": null,
+                "ScalarType": "VARCHAR",
+                "TimeSeriesMeasureValueColumnInfo": null
+            }
+        },
+        {
+            "Name": "instance_type",
+            "Type": {
+                "ArrayColumnInfo": null,
+                "RowColumnInfo": null,
+                "ScalarType": "VARCHAR",
+                "TimeSeriesMeasureValueColumnInfo": null
+            }
+        },
+        {
+            "Name": "measure_name",
+            "Type": {
+                "ArrayColumnInfo": null,
+                "RowColumnInfo": null,
+                "ScalarType": "VARCHAR",
+                "TimeSeriesMeasureValueColumnInfo": null
+            }
+        },
+        {
+            "Name": "time",
+            "Type": {
+                "ArrayColumnInfo": null,
+                "RowColumnInfo": null,
+                "ScalarType": "TIMESTAMP",
+                "TimeSeriesMeasureValueColumnInfo": null
+            }
+        },
+        {
+            "Name": "measure_value::double",
+            "Type": {
+                "ArrayColumnInfo": null,
+                "RowColumnInfo": null,
+                "ScalarType": "DOUBLE",
+                "TimeSeriesMeasureValueColumnInfo": null
+            }
+        },
+        {
+            "Name": "measure_value::bigint",
+            "Type": {
+                "ArrayColumnInfo": null,
+                "RowColumnInfo": null,
+                "ScalarType": "BIGINT",
+                "TimeSeriesMeasureValueColumnInfo": null
+            }
+        },
+        {
+            "Name": "measure_value::varchar",
+            "Type": {
+                "ArrayColumnInfo": null,
+                "RowColumnInfo": null,
+                "ScalarType": "VARCHAR",
+                "TimeSeriesMeasureValueColumnInfo": null
+            }
+        }
+    ],
+    "NextToken": "AYABeJRwXhB-6hZlvWPahx4UUjkAAAABAAdhd3Mta21zAEthcm46YXdzOmttczp1cy13ZXN0LTI6MzgzODMzNTc4NDA0OmtleS84ZjRlZDIxMi0wMzg5LTQ1OWYtYjQxZS02NmI4MTIxMjA2MmUAuAECAQB47FVc-qzrKMOsb5lSepzJ9P6ss4oCRc6NyTCWMg8A-4wBd-uye_xRj0_5Eg6QKDeD5QAAAH4wfAYJKoZIhvcNAQcGoG8wbQIBADBoBgkqhkiG9w0BBwEwHgYJYIZIAWUDBAEuMBEEDCjWRHDNLf1pr5nJAQIBEIA7QDBNdG_zjnlyGuuDphlR9RKyWqrYaeUtjz7-AHRKw52QD7xp1GsohPcw-Ywg-_RX_5-L6GOxu6MZEMwCAAAAAAwAABAAAAAAAAAAAAAAAAAAXUAM_6OEWymXNuNJcv2_3_____8AAAABAAAAAAAAAAAAAAABAAABJNrzoqp1JXxS2QavYmT0yTWSZJcTAgW2DLz4Gx_lSf5DmGzOb6Y5LZ86nBBCy2kb7ciogMku4lsuDn-epSn7Ee4SF7Qr9NKeeQGmCz-EuZhgNbwm9iRY-bAXCTuPKzrkMQj5EMzKZp_92QXWcb8uUXlTIc4dOeLEgqkcqi4O5KvQKKEpjsrTNagHrobVL-qBI6GFaLSQiTxcmM8vgydfoL-LkBkO_zwwl6eXSgPAcE_wkcn4y00vAHBGhyzd8XVg5Mjic-Ie67OLYNP9NOJe2Rh20qPwm_u00fq7PLwU5SvCxvUJidfOD0C0YxpzRXOhAeO_SlR9W9GEcpVQ3CFzxdwhD-2tELPtujCpbzSAv5yUIiwah1dA2aICcgm4TZ9N2FwZeXK1s1z1hmfXG2ZG6NBf_dZA",
+    "QueryId": "#QueryId#",
+    "QueryStatus": {
+        "CumulativeBytesMetered": 10000000,
+        "CumulativeBytesScanned": 0,
+        "ProgressPercentage": 0
+    },
+    "Rows": []
+}

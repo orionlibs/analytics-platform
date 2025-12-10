@@ -1,0 +1,45 @@
+#!/usr/bin/env bash
+set -eo pipefail  # Exit immediately if a command fails.
+
+usage() {
+  echo "USAGE: run-tests [<test-dir>]"
+  echo ""
+  echo "Runs any installed toolbox tests"
+  echo ""
+  echo "  <test-dir>           - The test directory. If not provided, the current directory is used."
+  echo "                         Expects this file to exist:"
+  echo "    test-plan.yaml        - The test plan."
+}
+
+# Argument parsing
+if [ "${1}" == "-h" ] || [ "${1}" == "-help" ] || [ "${1}" == "--help" ]; then
+  usage
+  exit 0
+fi
+
+testDir=$1
+if [ -z "${testDir}" ]; then
+  testDir=$(pwd)
+elif [ ! -d "${testDir}" ]; then
+  echo "Argument is not a valid directory: ${testDir}"
+  usage
+  exit 1
+fi
+testPlan=$(realpath "${testDir}/test-plan.yaml")
+
+if [ ! -f "${testPlan}" ]; then
+  echo "test-plan.yaml file not found in ${testDir}"
+  usage
+  exit 1
+fi
+
+# Start of script
+echo; echo "### Running tests"
+testCount=$(yq eval '.tests | length - 1' "${testPlan}")
+if [ "${testCount}" -ge 0 ]; then
+  for i in $(seq 0 "${testCount}"); do
+    testType=$(yq eval ".tests[${i}].type" "${testPlan}")
+    echo "#### Running test: ${testType}"
+    helm test "${testType}" --namespace toolbox --logs
+  done
+fi

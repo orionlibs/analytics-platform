@@ -1,0 +1,31 @@
+apiVersion: appo11y.grafana.com/v1alpha1
+kind: Instrumenter
+metadata:
+  labels:
+    app.kubernetes.io/name: instrumenter
+    app.kubernetes.io/instance: instrumenter-sample
+    app.kubernetes.io/part-of: ebpf-autoinstrument-operator
+    app.kubernetes.io/managed-by: kustomize
+    app.kubernetes.io/created-by: ebpf-autoinstrument-operator
+  name: instrumenter-sample
+spec:
+  export: [ "Prometheus" ] # Also valid: OpenTelemetryMetrics, OpenTelemetryTraces
+  image: grafana/beyla:latest
+  imagePullPolicy: IfNotPresent
+  selector:
+    portLabel: grafana.com/instrument-port
+  prometheus:
+    path: "/metrics"
+    port: 9102
+    annotations:
+      scrape: "prometheus.io/scrape"
+      scheme: "prometheus.io/scheme"
+      port: "prometheus.io/port"
+      path: "prometheus.io/path"
+  openTelemetry:
+    endpoint: ""
+    insecureSkipVerify: false
+    interval: 5s
+  overrideEnv:
+    - name: PRINT_TRACES
+      value: "true"

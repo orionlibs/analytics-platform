@@ -1,0 +1,23 @@
+name: Lint - Markdown
+
+on:
+  workflow_call:
+
+permissions:
+  contents: read
+
+jobs:
+  run-markdownlint:
+    runs-on: ubuntu-24.04
+
+    steps:
+    - name: check out code
+      uses: actions/checkout@1af3b93b6815bc44a9784bd300feb67ff0d1eeb3 # v6.0.0
+
+    - name: run markdownlint
+      uses: DavidAnson/markdownlint-cli2-action@30a0e04f1870d58f8d717450cc6134995f993c63 # v21.0.0
+      with:
+        globs: |
+          **/*.md
+          !.github/**/*.md
+          !**/*-report-github.md

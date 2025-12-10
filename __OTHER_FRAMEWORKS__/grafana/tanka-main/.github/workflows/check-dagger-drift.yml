@@ -1,0 +1,56 @@
+name: "Check for drift in Dagger files"
+
+on:
+  pull_request:
+    types:
+      - edited
+      - opened
+      - ready_for_review
+      - synchronize
+    branches:
+      - main
+  merge_group:
+
+jobs:
+  check-dagger-drift:
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout
+        uses: actions/checkout@1af3b93b6815bc44a9784bd300feb67ff0d1eeb3 # v6.0.0
+        with:
+          persist-credentials: false
+
+      - name: Determine Dagger version
+        id: dagger_version
+        run: |
+          sudo wget https://github.com/mikefarah/yq/releases/latest/download/yq_linux_amd64 -O /usr/bin/yq
+          sudo chmod +x /usr/bin/yq
+          cat .github/workflows/acceptance-tests.yml| yq -r '.jobs.build.steps[] | select(.id == "dagger") | .with.version | select(test("^([0-9]+\.[0-9]+\.[0-9]+)$"))' > .version
+          echo "version=$(<.version)" > $GITHUB_OUTPUT
+          rm -rf .version
+
+      - uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0
+        id: cache_daggercli
+        with:
+          path: bin
+          key: daggercli-download-${{ steps.dagger_version.outputs.version }}
+
+      - name: Install Dagger CLI
+        if: steps.cache_daggercli.outputs.cache-hit != 'true'
+        shell: bash
+        run: "curl -L https://dl.dagger.io/dagger/install.sh | DAGGER_VERSION=${{ steps.dagger_version.outputs.version }} sh" # zizmor: ignore[template-injection] Covered by regex check in dagger_version step
+
+      - name: Check drift
+        run: |
+          set -e
+          export PATH=$PATH:$PWD/bin
+          make dagger-develop
+          if [[ -z "$(git status --porcelain ./dagger)" ]]; then
+            echo "No drift detected"
+          else
+            echo "Drift detected. Run 'make dagger-develop' and commit the changed files."
+            git diff
+            exit 1
+          fi

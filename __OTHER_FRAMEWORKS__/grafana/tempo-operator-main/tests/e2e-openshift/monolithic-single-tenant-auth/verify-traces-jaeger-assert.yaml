@@ -1,0 +1,7 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: verify-traces-jaeger
+  namespace: chainsaw-mst
+status:
+  succeeded: 1

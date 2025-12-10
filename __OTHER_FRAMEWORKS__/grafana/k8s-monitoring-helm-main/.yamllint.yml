@@ -1,0 +1,30 @@
+---
+yaml-files:
+  - "*.yaml"
+  - "*.yml"
+  - ".yamllint"
+
+ignore:
+  - .git
+  - data-alloy
+  - node_modules
+  - charts/k8s-monitoring/vendir.lock.yml
+  - charts/k8s-monitoring/collectors/upstream/alloy-values.yaml
+  - charts/k8s-monitoring/docs/examples/**/output.yaml
+  - charts/k8s-monitoring/tests/integration/**/kubeconfig.yaml
+  - charts/k8s-monitoring/tests/integration/**/output.yaml
+  - charts/k8s-monitoring/tests/platform/**/kubeconfig.yaml
+  - charts/k8s-monitoring/tests/platform/**/output.yaml
+  - charts/k8s-monitoring/tests/platform/**/*-installer-files/**
+  - charts/k8s-monitoring/tests/platform/**/flux-manifest.yaml
+  - charts/k8s-monitoring-v1/docs/examples/**/output.yaml
+  - charts/k8s-monitoring-v1/tests/integration/**/output.yaml
+  - charts/**/templates
+
+
+extends: default
+
+rules:
+  line-length:
+    max: 200
+    level: warning

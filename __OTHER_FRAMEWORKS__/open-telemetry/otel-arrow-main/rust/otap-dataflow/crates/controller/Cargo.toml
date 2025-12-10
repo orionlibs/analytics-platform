@@ -1,0 +1,29 @@
+[package]
+name = "otap-df-controller"
+description = "OTAP dataflow engine controller"
+version.workspace = true
+authors.workspace = true
+repository.workspace = true
+license.workspace = true
+publish.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+
+[lints]
+workspace = true
+
+[features]
+testing = []
+
+[dependencies]
+otap-df-config = { path = "../config" }
+otap-df-state = { path = "../state" }
+otap-df-engine = { path = "../engine" }
+otap-df-telemetry = { path = "../telemetry" }
+otap-df-admin = { path = "../admin" }
+
+thiserror = { workspace = true }
+miette = { workspace = true }
+core_affinity = { workspace = true }
+tokio = { workspace = true }
+tokio-util = { workspace = true }

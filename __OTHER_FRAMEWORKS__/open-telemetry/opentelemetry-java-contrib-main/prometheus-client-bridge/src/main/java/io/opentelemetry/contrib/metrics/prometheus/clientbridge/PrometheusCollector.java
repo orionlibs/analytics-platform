@@ -1,0 +1,86 @@
+/*
+ * Copyright The OpenTelemetry Authors
+ * SPDX-License-Identifier: Apache-2.0
+ */
+
+package io.opentelemetry.contrib.metrics.prometheus.clientbridge;
+
+import static java.util.Collections.unmodifiableList;
+
+import io.opentelemetry.sdk.common.CompletableResultCode;
+import io.opentelemetry.sdk.metrics.InstrumentType;
+import io.opentelemetry.sdk.metrics.data.AggregationTemporality;
+import io.opentelemetry.sdk.metrics.data.MetricData;
+import io.opentelemetry.sdk.metrics.export.CollectionRegistration;
+import io.opentelemetry.sdk.metrics.export.MetricReader;
+import io.prometheus.client.Collector;
+import io.prometheus.client.CollectorRegistry;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.List;
+import java.util.function.Supplier;
+
+/**
+ * A reader of OpenTelemetry metrics that exports into Prometheus as a Collector.
+ *
+ * <p>Usage: <code>sdkMeterProvider.registerMetricReader(PrometheusCollector.create());</code>
+ */
+public final class PrometheusCollector implements MetricReader {
+
+  private final Collector collector;
+  private volatile CollectionRegistration collectionRegistration = CollectionRegistration.noop();
+
+  PrometheusCollector() {
+    this.collector = new CollectorImpl(() -> collectionRegistration.collectAllMetrics());
+    this.collector.register();
+  }
+
+  /**
+   * Returns a new {@link PrometheusCollector} to be registered with a {@link
+   * io.opentelemetry.sdk.metrics.SdkMeterProviderBuilder}.
+   */
+  public static PrometheusCollector create() {
+    return new PrometheusCollector();
+  }
+
+  @Override
+  public void register(CollectionRegistration registration) {
+    this.collectionRegistration = registration;
+  }
+
+  @Override
+  public AggregationTemporality getAggregationTemporality(InstrumentType instrumentType) {
+    return AggregationTemporality.CUMULATIVE;
+  }
+
+  // Prometheus cannot flush.
+  @Override
+  public CompletableResultCode forceFlush() {
+    return CompletableResultCode.ofSuccess();
+  }
+
+  @Override
+  public CompletableResultCode shutdown() {
+    CollectorRegistry.defaultRegistry.unregister(collector);
+    return CompletableResultCode.ofSuccess();
+  }
+
+  private static class CollectorImpl extends Collector {
+
+    private final Supplier<Collection<MetricData>> metricSupplier;
+
+    private CollectorImpl(Supplier<Collection<MetricData>> metricSupplier) {
+      this.metricSupplier = metricSupplier;
+    }
+
+    @Override
+    public List<MetricFamilySamples> collect() {
+      Collection<MetricData> allMetrics = metricSupplier.get();
+      List<MetricFamilySamples> allSamples = new ArrayList<>(allMetrics.size());
+      for (MetricData metricData : allMetrics) {
+        allSamples.add(MetricAdapter.toMetricFamilySamples(metricData));
+      }
+      return unmodifiableList(allSamples);
+    }
+  }
+}

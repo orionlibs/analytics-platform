@@ -1,0 +1,33 @@
+name: helm-ci
+on: pull_request
+permissions:
+  contents: read
+jobs:
+  # We used to import this from grafana/helm-charts/.github/workflows/linter.yml@main, but we want to update to later version of helm-docs.
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+        with:
+          persist-credentials: false
+      - name: Check Docs
+        run: |
+          make helm/docs
+          if ! git diff --exit-code -- operations/pyroscope/helm/pyroscope/; then
+              echo 'Documentation not up to date. Please run "make helm/docs" and commit changes!' >&2
+              exit 1
+          fi
+
+  call-lint-test-pyroscope:
+    uses: grafana/helm-charts/.github/workflows/lint-test.yaml@5d1c59cf8ed277f232fd9df56c6b62dd5fca087a
+    with:
+      ct_configfile: operations/pyroscope/helm/ct.yaml
+      ct_check_version_increment: false
+      helm_version: v3.14.3
+  call-lint-test-pyroscope-monitoring:
+    uses: grafana/helm-charts/.github/workflows/lint-test.yaml@5d1c59cf8ed277f232fd9df56c6b62dd5fca087a
+    with:
+      ct_configfile: operations/monitoring/helm/ct.yaml
+      ct_check_version_increment: false
+      helm_version: v3.14.3

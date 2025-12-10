@@ -1,0 +1,11 @@
+### for now, production is identical to staging
+---
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+namespace: open-telemetry
+resources:
+  - ../base/oteldemo
+patches:
+  - path: oteldemo-values.yaml
+    target:
+      kind: HelmRelease

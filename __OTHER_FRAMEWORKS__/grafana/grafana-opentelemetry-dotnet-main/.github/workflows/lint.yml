@@ -1,0 +1,52 @@
+name: lint
+
+on:
+  pull_request:
+    branches: [ main ]
+  workflow_dispatch:
+
+permissions: {}
+
+env:
+  FORCE_COLOR: 3
+  TERM: xterm
+
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+
+    permissions:
+      contents: read
+
+    steps:
+
+    - name: Checkout code
+      uses: actions/checkout@1af3b93b6815bc44a9784bd300feb67ff0d1eeb3 # v6.0.0
+      with:
+        filter: 'tree:0'
+        persist-credentials: false
+        show-progress: false
+
+    - name: Add actionlint problem matcher
+      run: echo "::add-matcher::.github/actionlint-matcher.json"
+
+    - name: Lint workflows
+      uses: docker://rhysd/actionlint:1.7.9@sha256:a0383f60d92601e2694e24b24d37df7b6a40bed7cedbc447611c50009bf02d94
+      with:
+        args: -color
+
+    - name: Lint markdown
+      uses: DavidAnson/markdownlint-cli2-action@30a0e04f1870d58f8d717450cc6134995f993c63 # v21.0.0
+      with:
+        config: '.markdownlint.yaml'
+        globs: |
+          **/*.md
+
+    - name: Install markdown-link-check
+      env:
+        # renovate: datasource=npm depName=markdown-link-check packageName=markdown-link-check
+        MARKDOWN_LINK_CHECK_VERSION: 3.14.2
+      run: sudo npm install -g "markdown-link-check@${MARKDOWN_LINK_CHECK_VERSION}"
+
+    - name: Check markdown links
+      run: "find . -name '*.md' -print0 | xargs -0 -n1 markdown-link-check --config .markdown_link_check_config.json"

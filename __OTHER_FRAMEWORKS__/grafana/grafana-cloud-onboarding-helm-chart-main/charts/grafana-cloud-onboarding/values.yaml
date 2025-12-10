@@ -1,0 +1,159 @@
+global: {}
+
+cluster:
+  # Required. This is used to identify the cluster in Grafana Cloud.
+  # You can use helm install --set cluster.name=$(kubectl config current-context) to set the name matching your kubeconfig.
+  name: ""
+
+# Connection information for Grafana Cloud Services
+grafanaCloud:
+  # Fleet Management for fetching Alloy configuration remotely
+  fleetManagement:
+    url: https://fleet.grafana.com
+    auth:
+      type: basic
+      username: 123456
+      password: glc_thisismypassword
+
+    # -- The frequency at which to poll the remote config server for updates.
+    # @section -- Remote Configuration
+    pollFrequency: 30s
+
+    # -- Attributes to be added to all collectors when requesting configuration.
+    # @section -- Remote Configuration
+    extraAttributes: {}
+
+# The list of collectors to deploy. This is an object, so you can define multiple collectors.
+# Each collectors.<name> field will deploy Alloy helm chart using <name>.
+# Under <name> field you can configure all options from the Alloy CRD, which matches the Alloy Helm chart values.yaml.
+# To see available fields, consult Alloy helm chart's values.yaml: https://github.com/grafana/alloy/tree/main/operations/helm/charts/alloy
+collectors:
+  alloy-daemon:
+    # Additional attributes to send to Fleet Management.
+    attributes: {}
+    alloy:
+      # Storage path for Alloy data (Write-Ahead Log, positions files, etc.)
+      storagePath: /var/lib/alloy
+      mounts:
+        varlog: true
+        # Extra volume mount for Alloy's storage
+        extra:
+          - name: alloy-storage
+            mountPath: /var/lib/alloy
+            readOnly: false
+      securityContext:
+        privileged: true
+    controller:
+      hostPID: true
+      hostNetwork: true
+      dnsPolicy: ClusterFirstWithHostNet
+      volumes:
+        # Extra volume for Alloy's storage. Using hostPath for DaemonSet to avoid issues with PVC management.
+        extra:
+          - name: alloy-storage
+            hostPath:
+              path: /var/lib/alloy
+              type: DirectoryOrCreate
+
+# The Alloy Operator is a Kubernetes Operator that manages Alloy instances and their lifecycle.
+# To see all valid settings, please see the [Alloy Operator documentation](https://github.com/grafana/alloy-operator/tree/main/charts/alloy-operator).
+alloy-operator:
+  # -- Deploy the Alloy Operator.
+  # @section -- Alloy Operator
+  deploy: true
+
+  waitForAlloyRemoval:
+    # -- Utilize a Helm Hook to wait for all Alloy instances to be removed before uninstalling the Alloy Operator.
+    # This ensures that all Alloy instances are properly cleaned up before the operator is removed.
+    # @section -- Alloy Operator
+    enabled: true
+
+    # -- The image to use for the Helm Hook that ensures that Alloy instances are removed during uninstall.
+    # @section -- Alloy Operator
+    image:
+      registry: ghcr.io
+      repository: grafana/helm-chart-toolbox-kubectl
+      tag: 0.1.1
+      digest: ""
+      pullPolicy: IfNotPresent
+      pullSecrets: []
+
+    # -- Annotations to apply to the Pod for the Helm Hook to wait for all Alloy instances to be removed before
+    # uninstalling the Alloy Operator
+    # @section -- Alloy Operator
+    podAnnotations: {}
+
+    # -- Labels to apply to the Pod for the Helm Hook to wait for all Alloy instances to be removed before uninstalling
+    # the Alloy Operator
+    # @section -- Alloy Operator
+    podLabels:
+      sidecar.istio.io/inject: "false"
+      linkerd.io/inject: disabled
+
+    # -- Tolerations to apply to the Helm Hook that ensures that Alloy instances are removed during uninstall.
+    # @section -- Alloy Operator
+    tolerations: []
+
+    # -- Node selector to use for the Helm Hook that ensures that Alloy instances are removed during uninstall.
+    # @section -- Alloy Operator
+    nodeSelector:
+      kubernetes.io/os: linux
+
+# Extra components to deploy to the cluster to provide additional metric sources.
+# Beyla provides service discovery and auto-instrumentation.
+beyla:
+  # Whether to deploy the Beyla standalone DaemonSet. As we're using the Beyla
+  # embedded into Alloy (via the beyla.ebpf component), we set this to false.
+  # @section Beyla
+  enabled: false
+
+  k8sCache:
+    # The number of beyla-k8s-cache replicas, set to 0 to disable. Beyla's K8s
+    # Cache deployment reduces load on the Kubernetes API server.
+    # @section Beyla
+    replicas: 1
+
+    resources:
+      requests:
+        cpu: "0.1"
+        memory: "256Mi"
+
+      # Generous limits to allow for startup spike.
+      limits:
+        cpu: "3.0"
+        memory: "2Gi"
+
+    image:
+      # Match major version of Beyla embedded into Alloy.
+      tag: "2"
+
+# kube-state-metrics can be used to get metrics about the state of the kubernetes cluster health and performance.
+# Installed by default, so you can dynamically enable or disable it through Fleet Management remote configuration.
+kube-state-metrics:
+  # Deploy kube-state-metrics.
+  # @section kube-state-metrics
+  enabled: true
+
+# Node Exporter is used to collect metrics about the health and performance of Linux nodes in the cluster.
+# Installed by default, so you can dynamically enable or disable it through Fleet Management remote configuration.
+prometheus-node-exporter:
+  # Deploy Node Exporter.
+  # @section Node Exporter
+  enabled: true
+
+# Windows Exporter is used to collect metrics about the health and performance of Windows nodes in the cluster.
+# Not installed by default. It must be enabled before utilizing it through Fleet Management remote configuration.
+prometheus-windows-exporter:
+  # Deploy Windows Exporter.
+  # @section Windows Exporter
+  enabled: false
+
+# kepler is used to collect metrics about power usage of Kubernetes cluster resources.
+# Not installed by default. It must be enabled before utilizing it through Fleet Management remote configuration.
+kepler:
+  # Deploy Kepler.
+  # @section Kepler
+  enabled: false
+
+
+extraManifests: []

@@ -1,0 +1,11 @@
+apiVersion: compute.azure.upbound.io/v1beta1
+kind: ProximityPlacementGroup
+metadata:
+  name: example
+spec:
+  forProvider:
+    location: West Europe
+    resourceGroupNameRef:
+      name: example-compute
+    tags:
+      environment: Production

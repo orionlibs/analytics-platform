@@ -1,0 +1,43 @@
+name: Issue Opened Action
+on:
+  issues:
+    types: [opened]
+
+permissions:
+  contents: read
+  id-token: write
+
+jobs:
+  main:
+    runs-on: ubuntu-latest
+    steps:
+      - name: "Get vault secrets"
+        id: vault-secrets
+        uses: grafana/shared-workflows/actions/get-vault-secrets@main
+        with:
+          # Secrets placed in the ci/repo/grafana/<repo>/<path> path in Vault
+          repo_secrets: |
+            APP_ID=triager_bot_github:app_id
+            APP_PEM=triager_bot_github:app_pem
+
+      - name: "Generate token"
+        id: generate_token
+        uses: tibdex/github-app-token@b62528385c34dbc9f38e5f4225ac829252d1ea92
+        with:
+          app_id: ${{ env.APP_ID }}
+          private_key: ${{ env.APP_PEM }}
+
+      - name: Checkout
+        uses: actions/checkout@v3
+
+      - name: Send issue to the auto triager action
+        id: auto_triage
+        uses: grafana/auto-triager@main
+        with:
+          token: ${{ steps.generate_token.outputs.token }}
+          issue_number: ${{ github.event.issue.number }}
+          openai_api_key: ${{ secrets.AUTOTRIAGER_OPENAI_API_KEY }}
+          add_labels: true
+          labels_file: ${{ github.workspace }}/.github/auto-triager/labels.txt
+          types_file: ${{ github.workspace }}/.github/auto-triager/types.txt
+          prompt_file: ${{ github.workspace }}/.github/auto-triager/prompt.txt

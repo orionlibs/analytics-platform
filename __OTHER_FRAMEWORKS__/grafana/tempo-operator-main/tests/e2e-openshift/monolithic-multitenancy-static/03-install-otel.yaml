@@ -1,0 +1,39 @@
+apiVersion: opentelemetry.io/v1alpha1
+kind: OpenTelemetryCollector
+metadata:
+  name: opentelemetry
+spec:
+  mode: deployment
+  config: |
+    extensions:
+      oauth2client:
+        client_id: tenant1-oidc-client
+        client_secret: ZXhhbXBsZS1hcHAtc2VjcmV0
+        endpoint_params:
+          audience: tenant1-oidc-client
+        token_url: http://hydra:4444/oauth2/token
+
+    receivers:
+      otlp:
+        protocols:
+          grpc:
+
+    exporters:
+      otlp:
+        endpoint: tempo-sample-gateway.chainsaw-monolithic-multitenancy-static.svc.cluster.local:4317
+        tls:
+          ca_file: /var/run/secrets/kubernetes.io/serviceaccount/service-ca.crt
+        auth:
+          authenticator: oauth2client
+        headers:
+          X-Scope-OrgID: tenant1
+
+    service:
+      telemetry:
+        logs:
+          level: debug
+      extensions: [oauth2client]
+      pipelines:
+        traces:
+          exporters: [otlp]
+          receivers: [otlp]

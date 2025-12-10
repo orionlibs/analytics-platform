@@ -1,0 +1,12 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: k6-loadtester
+  namespace: flagger
+spec:
+  ports:
+  - name: http-k6-loadtester-metrics
+    port: 8000
+    targetPort: 8000
+  selector:
+    name: k6-loadtester

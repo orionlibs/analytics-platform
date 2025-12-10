@@ -1,0 +1,18 @@
+{
+    "entryPoints": ["./index.d.ts"],
+    "out": "build/docs",
+    "name": "devcontainer-feature-demo-xk6",
+    "readme": "none",
+    "hideGenerator": true,
+    "disableSources": true,
+    "navigation": {
+      "includeCategories": false,
+      "includeGroups": false,
+      "includeFolders": false
+    },
+    "categorizeByGroup": false,
+    "visibilityFilters": {},
+    "navigationLinks": {
+      "GitHub": "https://github.com/grafana/devcontainer-feature-demo-xk6"
+    }
+}

@@ -1,0 +1,89 @@
+# Refer to https://github.com/open-telemetry/opentelemetry-collector/blob/main/cmd/mdatagen/metadata-schema.yaml
+# for the full schema
+type: dronereceiver
+
+sem_conv_version: 1.9.0
+
+tests:
+  goleak:
+    ignore:
+      top:
+        # see https://github.com/jackc/pgx/issues/1641
+        - github.com/jackc/pgx/v5/pgxpool.(*Pool).backgroundHealthCheck
+
+status:
+  class: receiver
+  stability:
+    deprecated: [logs, traces, metrics]
+  deprecation:
+    logs:
+      migration: "fork for long term use"
+      date: "2025-10-30"
+    traces:
+      migration: "fork for long term use"
+      date: "2025-10-30"
+    metrics:
+      migration: "fork for long term use"
+      date: "2025-10-30"
+  distributions:
+    - grafana-ci-otel-collector
+  codeowners:
+    active: [Elfo404, dsotirakis]
+
+resource_attributes:
+
+attributes:
+  ci.workflow_item.status:
+    description: Build status
+    enum:
+      [
+        skipped,
+        blocked,
+        declined,
+        waiting_on_dependencies,
+        pending,
+        running,
+        success,
+        failure,
+        killed,
+        error,
+      ]
+    type: string
+  git.branch.name:
+    description: Branch name
+    type: string
+  git.repo.name:
+    description: Repository name
+    type: string
+
+metrics:
+  builds_number:
+    enabled: true
+    description: Number of builds.
+    extended_documentation:
+      Currently there's no way to differentiate between restarted builds and manually triggered builds.
+      This means builds started manually (i.e. via Drone UI or via APis) will count towards this metric
+      should they run against a branch for which a build has already been executed.
+    unit: "{build}"
+    sum:
+      value_type: int
+      monotonic: false
+      aggregation_temporality: cumulative
+    attributes: [ci.workflow_item.status, git.repo.name, git.branch.name]
+  repo_info:
+    enabled: true
+    description: Repo status.
+    unit: "{repository}"
+    sum:
+      value_type: int
+      monotonic: false
+      aggregation_temporality: cumulative
+    attributes: [ci.workflow_item.status, git.repo.name, git.branch.name]
+  restarts_total:
+    enabled: true
+    description: Total number build restarts.
+    unit: "{restart}"
+    sum:
+      value_type: int
+      monotonic: true
+      aggregation_temporality: cumulative

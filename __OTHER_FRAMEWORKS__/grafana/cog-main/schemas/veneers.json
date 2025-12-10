@@ -1,0 +1,1077 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://raw.githubusercontent.com/grafana/cog/main/schemas/veneers.json",
+  "$ref": "#/$defs/YamlVeneers",
+  "$defs": {
+    "AstArgument": {
+      "properties": {
+        "name": {
+          "type": "string"
+        },
+        "type": {
+          "$ref": "#/$defs/AstType"
+        }
+      },
+      "additionalProperties": false,
+      "type": "object"
+    },
+    "AstArrayType": {
+      "properties": {
+        "value_type": {
+          "$ref": "#/$defs/AstType"
+        }
+      },
+      "additionalProperties": false,
+      "type": "object"
+    },
+    "AstBuilderFactory": {
+      "properties": {
+        "name": {
+          "type": "string"
+        },
+        "comments": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "arguments": {
+          "items": {
+            "$ref": "#/$defs/AstArgument"
+          },
+          "type": "array"
+        },
+        "options": {
+          "items": {
+            "$ref": "#/$defs/AstOptionCall"
+          },
+          "type": "array"
+        }
+      },
+      "additionalProperties": false,
+      "type": "object"
+    },
+    "AstComposableSlotType": {
+      "properties": {
+        "variant": {
+          "type": "string"
+        }
+      },
+      "additionalProperties": false,
+      "type": "object"
+    },
+    "AstConstantReferenceType": {
+      "properties": {
+        "referred_pkg": {
+          "type": "string"
+        },
+        "referred_type": {
+          "type": "string"
+        },
+        "reference_value": true
+      },
+      "additionalProperties": false,
+      "type": "object"
+    },
+    "AstDisjunctionType": {
+      "properties": {
+        "branches": {
+          "$ref": "#/$defs/AstTypes"
+        },
+        "discriminator": {
+          "type": "string",
+          "description": "If the branches are references to structs, some languages will need\nextra context to be able to distinguish between them. Golang, for\nexample, doesn't support sum types (disjunctions of fixed types).\nTo emulate sum types for these languages, we need a way to\ndiscriminate against every possible type.\n\nTo do that, we need two things:\n\t- a discriminator: the name of a field that is present in all types.\n\t  The value of which identifies the type being used.\n - a mapping: associating a \"discriminator value\" to a type."
+        },
+        "discriminator_mapping": {
+          "additionalProperties": {
+            "type": "string"
+          },
+          "type": "object"
+        }
+      },
+      "additionalProperties": false,
+      "type": "object"
+    },
+    "AstEnumType": {
+      "properties": {
+        "values": {
+          "items": {
+            "$ref": "#/$defs/AstEnumValue"
+          },
+          "type": "array",
+          "description": "possible values. Value types might be different"
+        }
+      },
+      "additionalProperties": false,
+      "type": "object"
+    },
+    "AstEnumValue": {
+      "properties": {
+        "type": {
+          "$ref": "#/$defs/AstType"
+        },
+        "name": {
+          "type": "string"
+        },
+        "value": true
+      },
+      "additionalProperties": false,
+      "type": "object"
+    },
+    "AstFactoryCall": {
+      "properties": {
+        "ref": {
+          "$ref": "#/$defs/AstFactoryRef"
+        },
+        "parameters": {
+          "items": {
+            "$ref": "#/$defs/AstOptionCallParameter"
+          },
+          "type": "array"
+        }
+      },
+      "additionalProperties": false,
+      "type": "object"
+    },
+    "AstFactoryRef": {
+      "properties": {
+        "package": {
+          "type": "string"
+        },
+        "builder": {
+          "type": "string"
+        },
+        "factory": {
+          "type": "string"
+        }
+      },
+      "additionalProperties": false,
+      "type": "object"
+    },
+    "AstIntersectionType": {
+      "properties": {
+        "branches": {
+          "items": {
+            "$ref": "#/$defs/AstType"
+          },
+          "type": "array"
+        }
+      },
+      "additionalProperties": false,
+      "type": "object"
+    },
+    "AstJenniesHints": {
+      "type": "object",
+      "description": "JenniesHints meant to be used by jennies, to gain a finer control on the codegen from schemas"
+    },
+    "AstMapType": {
+      "properties": {
+        "indextype": {
+          "$ref": "#/$defs/AstType"
+        },
+        "valuetype": {
+          "$ref": "#/$defs/AstType"
+        }
+      },
+      "additionalProperties": false,
+      "type": "object"
+    },
+    "AstOptionCall": {
+      "properties": {
+        "name": {
+          "type": "string"
+        },
+        "parameters": {
+          "items": {
+            "$ref": "#/$defs/AstOptionCallParameter"
+          },
+          "type": "array"
+        }
+      },
+      "additionalProperties": false,
+      "type": "object"
+    },
+    "AstOptionCallParameter": {
+      "properties": {
+        "argument": {
+          "$ref": "#/$defs/AstArgument"
+        },
+        "constant": {
+          "$ref": "#/$defs/AstTypedConstant"
+        },
+        "factory": {
+          "$ref": "#/$defs/AstFactoryCall"
+        }
+      },
+      "additionalProperties": false,
+      "type": "object"
+    },
+    "AstRefType": {
+      "properties": {
+        "referred_pkg": {
+          "type": "string"
+        },
+        "referred_type": {
+          "type": "string"
+        }
+      },
+      "additionalProperties": false,
+      "type": "object"
+    },
+    "AstScalarType": {
+      "properties": {
+        "scalar_kind": {
+          "type": "string",
+          "description": "bool, bytes, string, int, float, ..."
+        },
+        "value": {
+          "description": "if value isn't nil, we're representing a constant scalar"
+        },
+        "constraints": {
+          "items": {
+            "$ref": "#/$defs/AstTypeConstraint"
+          },
+          "type": "array"
+        }
+      },
+      "additionalProperties": false,
+      "type": "object"
+    },
+    "AstStructField": {
+      "properties": {
+        "name": {
+          "type": "string"
+        },
+        "comments": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "type": {
+          "$ref": "#/$defs/AstType"
+        },
+        "required": {
+          "type": "boolean"
+        },
+        "passestrail": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        }
+      },
+      "additionalProperties": false,
+      "type": "object"
+    },
+    "AstStructType": {
+      "properties": {
+        "fields": {
+          "items": {
+            "$ref": "#/$defs/AstStructField"
+          },
+          "type": "array"
+        }
+      },
+      "additionalProperties": false,
+      "type": "object"
+    },
+    "AstType": {
+      "properties": {
+        "kind": {
+          "type": "string"
+        },
+        "nullable": {
+          "type": "boolean"
+        },
+        "default": true,
+        "disjunction": {
+          "$ref": "#/$defs/AstDisjunctionType"
+        },
+        "array": {
+          "$ref": "#/$defs/AstArrayType"
+        },
+        "enum": {
+          "$ref": "#/$defs/AstEnumType"
+        },
+        "map": {
+          "$ref": "#/$defs/AstMapType"
+        },
+        "struct": {
+          "$ref": "#/$defs/AstStructType"
+        },
+        "ref": {
+          "$ref": "#/$defs/AstRefType"
+        },
+        "constantreference": {
+          "$ref": "#/$defs/AstConstantReferenceType"
+        },
+        "scalar": {
+          "$ref": "#/$defs/AstScalarType"
+        },
+        "intersection": {
+          "$ref": "#/$defs/AstIntersectionType"
+        },
+        "composable_slot": {
+          "$ref": "#/$defs/AstComposableSlotType"
+        },
+        "hints": {
+          "$ref": "#/$defs/AstJenniesHints"
+        },
+        "passestrail": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        }
+      },
+      "additionalProperties": false,
+      "type": "object",
+      "description": "Type representing every type defined by the IR."
+    },
+    "AstTypeConstraint": {
+      "properties": {
+        "op": {
+          "type": "string"
+        },
+        "args": {
+          "items": true,
+          "type": "array"
+        }
+      },
+      "additionalProperties": false,
+      "type": "object"
+    },
+    "AstTypedConstant": {
+      "properties": {
+        "type": {
+          "$ref": "#/$defs/AstType"
+        },
+        "value": true
+      },
+      "additionalProperties": false,
+      "type": "object"
+    },
+    "AstTypes": {
+      "items": {
+        "$ref": "#/$defs/AstType"
+      },
+      "type": "array"
+    },
+    "VeneersAssignment": {
+      "properties": {
+        "path": {
+          "type": "string"
+        },
+        "method": {
+          "type": "string"
+        },
+        "value": {
+          "$ref": "#/$defs/VeneersAssignmentValue"
+        }
+      },
+      "additionalProperties": false,
+      "type": "object"
+    },
+    "VeneersAssignmentEnvelope": {
+      "properties": {
+        "values": {
+          "items": {
+            "$ref": "#/$defs/VeneersEnvelopeFieldValue"
+          },
+          "type": "array"
+        }
+      },
+      "additionalProperties": false,
+      "type": "object"
+    },
+    "VeneersAssignmentValue": {
+      "properties": {
+        "argument": {
+          "$ref": "#/$defs/AstArgument"
+        },
+        "constant": true,
+        "envelope": {
+          "$ref": "#/$defs/VeneersAssignmentEnvelope"
+        }
+      },
+      "additionalProperties": false,
+      "type": "object"
+    },
+    "VeneersEnvelopeFieldValue": {
+      "properties": {
+        "field": {
+          "type": "string",
+          "description": "where to assign within the struct/ref"
+        },
+        "value": {
+          "$ref": "#/$defs/VeneersAssignmentValue",
+          "description": "what to assign"
+        }
+      },
+      "additionalProperties": false,
+      "type": "object"
+    },
+    "VeneersOption": {
+      "properties": {
+        "name": {
+          "type": "string"
+        },
+        "comments": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "arguments": {
+          "items": {
+            "$ref": "#/$defs/AstArgument"
+          },
+          "type": "array"
+        },
+        "assignments": {
+          "items": {
+            "$ref": "#/$defs/VeneersAssignment"
+          },
+          "type": "array"
+        }
+      },
+      "additionalProperties": false,
+      "type": "object"
+    },
+    "YamlAddAssignment": {
+      "properties": {
+        "by_name": {
+          "type": "string",
+          "description": "objectName.optionName"
+        },
+        "by_builder": {
+          "type": "string",
+          "description": "builderName.optionName\nTODO: ByName should be called ByObject\nand ByBuilder should be called ByName"
+        },
+        "by_names": {
+          "$ref": "#/$defs/YamlByNamesSelector"
+        },
+        "assignment": {
+          "$ref": "#/$defs/VeneersAssignment"
+        }
+      },
+      "additionalProperties": false,
+      "type": "object"
+    },
+    "YamlAddComments": {
+      "properties": {
+        "by_name": {
+          "type": "string",
+          "description": "objectName.optionName"
+        },
+        "by_builder": {
+          "type": "string",
+          "description": "builderName.optionName\nTODO: ByName should be called ByObject\nand ByBuilder should be called ByName"
+        },
+        "by_names": {
+          "$ref": "#/$defs/YamlByNamesSelector"
+        },
+        "comments": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        }
+      },
+      "additionalProperties": false,
+      "type": "object"
+    },
+    "YamlAddFactory": {
+      "properties": {
+        "by_object": {
+          "type": "string"
+        },
+        "by_name": {
+          "type": "string"
+        },
+        "by_variant": {
+          "type": "string"
+        },
+        "generated_from_disjunction": {
+          "type": "boolean",
+          "description": "noop?"
+        },
+        "factory": {
+          "$ref": "#/$defs/AstBuilderFactory"
+        }
+      },
+      "additionalProperties": false,
+      "type": "object"
+    },
+    "YamlAddOption": {
+      "properties": {
+        "by_object": {
+          "type": "string"
+        },
+        "by_name": {
+          "type": "string"
+        },
+        "by_variant": {
+          "type": "string"
+        },
+        "generated_from_disjunction": {
+          "type": "boolean",
+          "description": "noop?"
+        },
+        "option": {
+          "$ref": "#/$defs/VeneersOption"
+        }
+      },
+      "additionalProperties": false,
+      "type": "object"
+    },
+    "YamlArrayToAppend": {
+      "properties": {
+        "by_name": {
+          "type": "string",
+          "description": "objectName.optionName"
+        },
+        "by_builder": {
+          "type": "string",
+          "description": "builderName.optionName\nTODO: ByName should be called ByObject\nand ByBuilder should be called ByName"
+        },
+        "by_names": {
+          "$ref": "#/$defs/YamlByNamesSelector"
+        }
+      },
+      "additionalProperties": false,
+      "type": "object"
+    },
+    "YamlBuilderRule": {
+      "properties": {
+        "omit": {
+          "$ref": "#/$defs/YamlBuilderSelector"
+        },
+        "rename": {
+          "$ref": "#/$defs/YamlRenameBuilder"
+        },
+        "merge_into": {
+          "$ref": "#/$defs/YamlMergeInto"
+        },
+        "compose": {
+          "$ref": "#/$defs/YamlComposeBuilders"
+        },
+        "properties": {
+          "$ref": "#/$defs/YamlProperties"
+        },
+        "duplicate": {
+          "$ref": "#/$defs/YamlDuplicate"
+        },
+        "initialize": {
+          "$ref": "#/$defs/YamlInitialize"
+        },
+        "promote_options_to_constructor": {
+          "$ref": "#/$defs/YamlPromoteOptsToConstructor"
+        },
+        "add_option": {
+          "$ref": "#/$defs/YamlAddOption"
+        },
+        "add_factory": {
+          "$ref": "#/$defs/YamlAddFactory"
+        }
+      },
+      "additionalProperties": false,
+      "type": "object"
+    },
+    "YamlBuilderSelector": {
+      "properties": {
+        "by_object": {
+          "type": "string"
+        },
+        "by_name": {
+          "type": "string"
+        },
+        "by_variant": {
+          "type": "string"
+        },
+        "generated_from_disjunction": {
+          "type": "boolean",
+          "description": "noop?"
+        }
+      },
+      "additionalProperties": false,
+      "type": "object"
+    },
+    "YamlByNamesSelector": {
+      "properties": {
+        "object": {
+          "type": "string"
+        },
+        "builder": {
+          "type": "string"
+        },
+        "options": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        }
+      },
+      "additionalProperties": false,
+      "type": "object"
+    },
+    "YamlComposeBuilders": {
+      "properties": {
+        "by_object": {
+          "type": "string"
+        },
+        "by_name": {
+          "type": "string"
+        },
+        "by_variant": {
+          "type": "string"
+        },
+        "generated_from_disjunction": {
+          "type": "boolean",
+          "description": "noop?"
+        },
+        "source_builder_name": {
+          "type": "string"
+        },
+        "plugin_discriminator_field": {
+          "type": "string"
+        },
+        "exclude_options": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "composition_map": {
+          "additionalProperties": {
+            "type": "string"
+          },
+          "type": "object"
+        },
+        "composed_builder_name": {
+          "type": "string"
+        },
+        "preserve_original_builders": {
+          "type": "boolean"
+        }
+      },
+      "additionalProperties": false,
+      "type": "object"
+    },
+    "YamlDisjunctionAsOptions": {
+      "properties": {
+        "by_name": {
+          "type": "string",
+          "description": "objectName.optionName"
+        },
+        "by_builder": {
+          "type": "string",
+          "description": "builderName.optionName\nTODO: ByName should be called ByObject\nand ByBuilder should be called ByName"
+        },
+        "by_names": {
+          "$ref": "#/$defs/YamlByNamesSelector"
+        },
+        "argument_index": {
+          "type": "integer"
+        }
+      },
+      "additionalProperties": false,
+      "type": "object"
+    },
+    "YamlDuplicate": {
+      "properties": {
+        "by_object": {
+          "type": "string"
+        },
+        "by_name": {
+          "type": "string"
+        },
+        "by_variant": {
+          "type": "string"
+        },
+        "generated_from_disjunction": {
+          "type": "boolean",
+          "description": "noop?"
+        },
+        "as": {
+          "type": "string"
+        },
+        "exclude_options": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        }
+      },
+      "additionalProperties": false,
+      "type": "object"
+    },
+    "YamlDuplicateOption": {
+      "properties": {
+        "by_name": {
+          "type": "string",
+          "description": "objectName.optionName"
+        },
+        "by_builder": {
+          "type": "string",
+          "description": "builderName.optionName\nTODO: ByName should be called ByObject\nand ByBuilder should be called ByName"
+        },
+        "by_names": {
+          "$ref": "#/$defs/YamlByNamesSelector"
+        },
+        "as": {
+          "type": "string"
+        }
+      },
+      "additionalProperties": false,
+      "type": "object"
+    },
+    "YamlInitialization": {
+      "properties": {
+        "property": {
+          "type": "string"
+        },
+        "value": true
+      },
+      "additionalProperties": false,
+      "type": "object"
+    },
+    "YamlInitialize": {
+      "properties": {
+        "by_object": {
+          "type": "string"
+        },
+        "by_name": {
+          "type": "string"
+        },
+        "by_variant": {
+          "type": "string"
+        },
+        "generated_from_disjunction": {
+          "type": "boolean",
+          "description": "noop?"
+        },
+        "set": {
+          "items": {
+            "$ref": "#/$defs/YamlInitialization"
+          },
+          "type": "array"
+        }
+      },
+      "additionalProperties": false,
+      "type": "object"
+    },
+    "YamlMapToIndex": {
+      "properties": {
+        "by_name": {
+          "type": "string",
+          "description": "objectName.optionName"
+        },
+        "by_builder": {
+          "type": "string",
+          "description": "builderName.optionName\nTODO: ByName should be called ByObject\nand ByBuilder should be called ByName"
+        },
+        "by_names": {
+          "$ref": "#/$defs/YamlByNamesSelector"
+        }
+      },
+      "additionalProperties": false,
+      "type": "object"
+    },
+    "YamlMergeInto": {
+      "properties": {
+        "destination": {
+          "type": "string"
+        },
+        "source": {
+          "type": "string"
+        },
+        "under_path": {
+          "type": "string"
+        },
+        "exclude_options": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "rename_options": {
+          "additionalProperties": {
+            "type": "string"
+          },
+          "type": "object"
+        }
+      },
+      "additionalProperties": false,
+      "type": "object"
+    },
+    "YamlOptionRule": {
+      "properties": {
+        "omit": {
+          "$ref": "#/$defs/YamlOptionSelector"
+        },
+        "rename": {
+          "$ref": "#/$defs/YamlRenameOption"
+        },
+        "rename_arguments": {
+          "$ref": "#/$defs/YamlRenameArguments"
+        },
+        "unfold_boolean": {
+          "$ref": "#/$defs/YamlUnfoldBoolean"
+        },
+        "struct_fields_as_arguments": {
+          "$ref": "#/$defs/YamlStructFieldsAsArguments"
+        },
+        "struct_fields_as_options": {
+          "$ref": "#/$defs/YamlStructFieldsAsOptions"
+        },
+        "array_to_append": {
+          "$ref": "#/$defs/YamlArrayToAppend"
+        },
+        "map_to_index": {
+          "$ref": "#/$defs/YamlMapToIndex"
+        },
+        "disjunction_as_options": {
+          "$ref": "#/$defs/YamlDisjunctionAsOptions"
+        },
+        "duplicate": {
+          "$ref": "#/$defs/YamlDuplicateOption"
+        },
+        "add_assignment": {
+          "$ref": "#/$defs/YamlAddAssignment"
+        },
+        "add_comments": {
+          "$ref": "#/$defs/YamlAddComments"
+        }
+      },
+      "additionalProperties": false,
+      "type": "object"
+    },
+    "YamlOptionSelector": {
+      "properties": {
+        "by_name": {
+          "type": "string",
+          "description": "objectName.optionName"
+        },
+        "by_builder": {
+          "type": "string",
+          "description": "builderName.optionName\nTODO: ByName should be called ByObject\nand ByBuilder should be called ByName"
+        },
+        "by_names": {
+          "$ref": "#/$defs/YamlByNamesSelector"
+        }
+      },
+      "additionalProperties": false,
+      "type": "object"
+    },
+    "YamlPromoteOptsToConstructor": {
+      "properties": {
+        "by_object": {
+          "type": "string"
+        },
+        "by_name": {
+          "type": "string"
+        },
+        "by_variant": {
+          "type": "string"
+        },
+        "generated_from_disjunction": {
+          "type": "boolean",
+          "description": "noop?"
+        },
+        "options": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        }
+      },
+      "additionalProperties": false,
+      "type": "object"
+    },
+    "YamlProperties": {
+      "properties": {
+        "by_object": {
+          "type": "string"
+        },
+        "by_name": {
+          "type": "string"
+        },
+        "by_variant": {
+          "type": "string"
+        },
+        "generated_from_disjunction": {
+          "type": "boolean",
+          "description": "noop?"
+        },
+        "set": {
+          "items": {
+            "$ref": "#/$defs/AstStructField"
+          },
+          "type": "array"
+        }
+      },
+      "additionalProperties": false,
+      "type": "object"
+    },
+    "YamlRenameArguments": {
+      "properties": {
+        "by_name": {
+          "type": "string",
+          "description": "objectName.optionName"
+        },
+        "by_builder": {
+          "type": "string",
+          "description": "builderName.optionName\nTODO: ByName should be called ByObject\nand ByBuilder should be called ByName"
+        },
+        "by_names": {
+          "$ref": "#/$defs/YamlByNamesSelector"
+        },
+        "as": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        }
+      },
+      "additionalProperties": false,
+      "type": "object"
+    },
+    "YamlRenameBuilder": {
+      "properties": {
+        "by_object": {
+          "type": "string"
+        },
+        "by_name": {
+          "type": "string"
+        },
+        "by_variant": {
+          "type": "string"
+        },
+        "generated_from_disjunction": {
+          "type": "boolean",
+          "description": "noop?"
+        },
+        "as": {
+          "type": "string"
+        }
+      },
+      "additionalProperties": false,
+      "type": "object"
+    },
+    "YamlRenameOption": {
+      "properties": {
+        "by_name": {
+          "type": "string",
+          "description": "objectName.optionName"
+        },
+        "by_builder": {
+          "type": "string",
+          "description": "builderName.optionName\nTODO: ByName should be called ByObject\nand ByBuilder should be called ByName"
+        },
+        "by_names": {
+          "$ref": "#/$defs/YamlByNamesSelector"
+        },
+        "as": {
+          "type": "string"
+        }
+      },
+      "additionalProperties": false,
+      "type": "object"
+    },
+    "YamlStructFieldsAsArguments": {
+      "properties": {
+        "by_name": {
+          "type": "string",
+          "description": "objectName.optionName"
+        },
+        "by_builder": {
+          "type": "string",
+          "description": "builderName.optionName\nTODO: ByName should be called ByObject\nand ByBuilder should be called ByName"
+        },
+        "by_names": {
+          "$ref": "#/$defs/YamlByNamesSelector"
+        },
+        "fields": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        }
+      },
+      "additionalProperties": false,
+      "type": "object"
+    },
+    "YamlStructFieldsAsOptions": {
+      "properties": {
+        "by_name": {
+          "type": "string",
+          "description": "objectName.optionName"
+        },
+        "by_builder": {
+          "type": "string",
+          "description": "builderName.optionName\nTODO: ByName should be called ByObject\nand ByBuilder should be called ByName"
+        },
+        "by_names": {
+          "$ref": "#/$defs/YamlByNamesSelector"
+        },
+        "fields": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        }
+      },
+      "additionalProperties": false,
+      "type": "object"
+    },
+    "YamlUnfoldBoolean": {
+      "properties": {
+        "by_name": {
+          "type": "string",
+          "description": "objectName.optionName"
+        },
+        "by_builder": {
+          "type": "string",
+          "description": "builderName.optionName\nTODO: ByName should be called ByObject\nand ByBuilder should be called ByName"
+        },
+        "by_names": {
+          "$ref": "#/$defs/YamlByNamesSelector"
+        },
+        "true_as": {
+          "type": "string"
+        },
+        "false_as": {
+          "type": "string"
+        }
+      },
+      "additionalProperties": false,
+      "type": "object"
+    },
+    "YamlVeneers": {
+      "properties": {
+        "language": {
+          "type": "string"
+        },
+        "package": {
+          "type": "string"
+        },
+        "builders": {
+          "items": {
+            "$ref": "#/$defs/YamlBuilderRule"
+          },
+          "type": "array"
+        },
+        "options": {
+          "items": {
+            "$ref": "#/$defs/YamlOptionRule"
+          },
+          "type": "array"
+        }
+      },
+      "additionalProperties": false,
+      "type": "object"
+    }
+  }
+}

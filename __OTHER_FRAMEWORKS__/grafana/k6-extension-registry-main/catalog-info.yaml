@@ -1,0 +1,13 @@
+apiVersion: backstage.io/v1alpha1
+kind: Component
+metadata:
+  name: k6-extension-registry
+  title: k6-extension-registry
+  description: |
+    The source of the k6 Extension Registry https://registry.k6.io
+  annotations:
+    github.com/project-slug: grafana/k6-extension-registry
+spec:
+  type: website
+  owner: group:default/k6-extensions
+  lifecycle: production

@@ -1,0 +1,26 @@
+/collector
+/config.yaml
+.env
+
+# Editor junk
+*.sublime-workspace
+*.swp
+.idea/
+.fleet/
+*.iml
+*.tmp
+.DS_Store
+.vscode/
+.vs/
+
+*.pem
+cover.out
+
+# Tools directory where local binaries are installed
+.tools
+
+# Debug manifest
+config/manifest-debug.yaml
+
+build/
+coverage.out

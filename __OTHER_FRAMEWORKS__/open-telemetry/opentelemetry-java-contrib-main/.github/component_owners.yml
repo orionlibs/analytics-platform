@@ -1,0 +1,103 @@
+# this file is used by .github/workflows/assign-reviewers.yml and .github/workflows/assign-issue-owners.yml
+#
+# NOTE component owners must be members of the GitHub OpenTelemetry organization
+# so that they can be added to @open-telemetry/java-contrib-triagers
+# which in turn is required for them to be auto-assigned as reviewers and issue assignees by the automation
+#
+# NOTE when updating this file, don't forget to update the README.md files in the associated
+# components also
+#
+# NOTE when adding/updating one of the component names, don't forget to update the associated
+# `component:*` labels (used for both PR reviews and issue assignment)
+components:
+  aws-resources:
+    - wangzlei
+    - srprash
+  aws-xray:
+    - wangzlei
+    - srprash
+  aws-xray-propagator:
+    - wangzlei
+    - srprash
+  azure-resources:
+    - trask
+    - zeitlinger
+  baggage-processor:
+    - mikegoldsmith
+    - zeitlinger
+  cel-sampler:
+    - dol
+    - trask
+    - jack-berg
+    - breedx-splk
+  cloudfoundry-resources:
+    - KarstenSchnitter
+  compressors:
+    - jack-berg
+  consistent-sampling:
+    - oertl
+    - PeterF778
+  disk-buffering:
+    - LikeTheSalad
+    - zeitlinger
+  gcp-resources:
+    - jsuereth
+    - psx95
+  gcp-auth-extension:
+    - jsuereth
+    - psx95
+  jfr-connection:
+    - breedx-splk
+    - jeanbisutti
+    - dsgrieve
+  jfr-events:
+    - sfriberg
+  jmx-metrics:
+    - breedx-splk
+    - sylvainjuge
+  jmx-scraper:
+    - breedx-splk
+    - robsunday
+    - sylvainjuge
+  maven-extension:
+    - cyrille-leclerc
+    - kenfinnigan
+  micrometer-meter-provider:
+    - HaloFour
+  noop-api:
+    - jack-berg
+  processors:
+    - LikeTheSalad
+    - breedx-splk
+    - jack-berg
+  prometheus-client-bridge:
+    - jkwatson
+  resource-providers:
+    - breedx-splk
+    - mateuszrzeszutek
+    - laurit
+  runtime-attach:
+    - jeanbisutti
+  samplers:
+    - trask
+    - jack-berg
+  kafka-exporter:
+    - spockz
+    - vincentfree
+  span-stacktrace:
+    - jackshirazi
+    - jonaskunz
+    - sylvainjuge
+  inferred-spans:
+    - jackshirazi
+    - jonaskunz
+    - sylvainjuge
+  opamp-client:
+    - LikeTheSalad
+    - jackshirazi
+  ibm-mq-metrics:
+    - breedx-splk
+    - atoulme
+  dynamic-control:
+    - jackshirazi
+    - LikeTheSalad

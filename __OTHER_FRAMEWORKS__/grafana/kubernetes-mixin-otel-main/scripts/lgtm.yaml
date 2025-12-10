@@ -1,0 +1,117 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: lgtm
+spec:
+  selector:
+    app: lgtm
+  ports:
+    - name: grafana
+      protocol: TCP
+      port: 3000
+      targetPort: 3000
+    - name: otel-grpc
+      protocol: TCP
+      port: 4317
+      targetPort: 4317
+    - name: otel-http
+      protocol: TCP
+      port: 4318
+      targetPort: 4318
+    - name: prometheus
+      protocol: TCP
+      port: 9090
+      targetPort: 9090
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: lgtm
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: lgtm
+  template:
+    metadata:
+      labels:
+        app: lgtm
+    spec:
+      containers:
+        - name: lgtm
+          image: grafana/otel-lgtm:latest
+          ports:
+            - containerPort: 3000
+            - containerPort: 4317
+            - containerPort: 4318
+            - containerPort: 9090
+          resources:
+            requests:
+              memory: "1Gi"
+              cpu: "1"
+            limits:
+              memory: "1Gi"
+              cpu: "4"
+          readinessProbe:
+            exec:
+              command:
+                - cat
+                - /tmp/ready
+          # NOTE: By default OpenShift does not allow writing the root directory.
+          # Thats why the data dirs for grafana, prometheus and loki can not be
+          # created and the pod never becomes ready.
+          # See: https://github.com/grafana/docker-otel-lgtm/issues/132
+          volumeMounts:
+            - name: tempo-data
+              mountPath: /data/tempo
+            - name: grafana-data
+              mountPath: /data/grafana
+            - name: loki-data
+              mountPath: /data/loki
+            - name: loki-storage
+              mountPath: /loki
+            - name: p8s-storage
+              mountPath: /data/prometheus
+            - name: pyroscope-storage
+              mountPath: /data/pyroscope
+
+            - name: dashboards
+              mountPath: /otel-lgtm/grafana/conf/provisioning/dashboards
+            - name: dashboards-out
+              mountPath: /kubernetes-mixin-otel/dashboards_out
+
+          env:
+            - name: ENABLE_LOGS_ALL
+              value: "true"
+            # Grafana feature toggles
+            # Disabled for now: sharingDashboardImage,renderAuthJWT
+            # - name: GF_FEATURE_TOGGLES_ENABLE
+            # value: "provisioning,kubernetesDashboards,kubernetesClientDashboardsFolders,unifiedStorageSearch"
+            # Grafana rendering configuration
+            # - name: GF_RENDERING_RENDERER_TOKEN
+            #   value: "-"
+            # - name: GF_RENDERING_SERVER_URL
+            #   value: "http://image-renderer.default.svc.cluster.local.:8081/render"
+            # - name: GF_RENDERING_CALLBACK_URL
+            #   value: "http://lgtm.default.svc.cluster.local.:3000/"
+
+      volumes:
+        - name: tempo-data
+          emptyDir: {}
+        - name: loki-data
+          emptyDir: {}
+        - name: grafana-data
+          emptyDir: {}
+        - name: loki-storage
+          emptyDir: {}
+        - name: p8s-storage
+          emptyDir: {}
+        - name: pyroscope-storage
+          emptyDir: {}
+
+        - name: dashboards
+          hostPath:
+            path: /kubernetes-mixin-otel/provisioning/dashboards
+        - name: dashboards-out
+          hostPath:
+            path: /kubernetes-mixin-otel/dashboards_out

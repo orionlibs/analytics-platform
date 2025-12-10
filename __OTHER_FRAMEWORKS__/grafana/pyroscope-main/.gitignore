@@ -1,0 +1,53 @@
+# Binaries for programs and plugins
+/phlare
+/pyroscope
+/profilecli
+/playground
+# Test binary, built with `go test -c`
+*.test
+# Output of the go coverage tool, specifically when used with LiteIDE
+*.out
+# Debug binaries
+__debug_bin*
+
+/cmd/phlare/data
+/cmd/pyroscope/data
+pyroscope-sync/
+data/
+data-shared/
+data-compactor/
+data-metastore/
+.DS_Store
+**/dist
+
+# IDE
+.cursor
+.idea
+.vscode
+.zed
+
+# Frontend
+public/build
+cypress/screenshots
+.eslintcache
+node_modules
+/grafana/flamegraph/coverage/
+# Yarn
+**/.yarn/*
+!**/.yarn/patches
+!**/.yarn/releases
+!**/.yarn/plugins
+!**/.yarn/sdks
+!**/.yarn/versions
+.pnp.*
+yarn-error.log
+
+# Contains the docker image digest for pyroscope
+/.docker-image-digest-pyroscope
+# Contains the docker image digest for frontend
+/.docker-image-digest-frontend
+# Contains the docker image name for pyroscope
+/.docker-image-name-pyroscope
+
+/.tmp
+tools/k6/.env

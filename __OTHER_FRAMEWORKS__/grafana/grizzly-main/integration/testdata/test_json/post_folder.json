@@ -1,0 +1,11 @@
+{
+  "apiVersion": "grizzly.grafana.com/v1alpha1",
+  "kind": "DashboardFolder",
+  "metadata": {
+    "name": "newFolder"
+  },
+  "spec": {
+    "title": "New Folder",
+    "uid": "newFolder"
+  }
+}

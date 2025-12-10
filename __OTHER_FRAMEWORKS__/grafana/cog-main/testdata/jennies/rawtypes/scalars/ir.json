@@ -1,0 +1,201 @@
+{
+  "Package": "scalars",
+  "Objects": {
+    "constTypeString": {
+      "Name": "constTypeString",
+      "SelfRef": {
+        "ReferredPkg": "scalars",
+        "ReferredType": "constTypeString"
+      },
+      "Type": {
+        "Kind": "scalar",
+        "Scalar": {
+          "ScalarKind": "string",
+          "Value": "foo"
+        }
+      }
+    },
+    "scalarTypeAny": {
+      "Name": "scalarTypeAny",
+      "SelfRef": {
+        "ReferredPkg": "scalars",
+        "ReferredType": "scalarTypeAny"
+      },
+      "Type": {
+        "Kind": "scalar",
+        "Scalar": {
+          "ScalarKind": "any"
+        }
+      }
+    },
+    "ScalarTypeBool": {
+      "Name": "ScalarTypeBool",
+      "SelfRef": {
+        "ReferredPkg": "scalars",
+        "ReferredType": "ScalarTypeBool"
+      },
+      "Type": {
+        "Kind": "scalar",
+        "Scalar": {
+          "ScalarKind": "bool"
+        }
+      }
+    },
+    "ScalarTypeBytes": {
+      "Name": "ScalarTypeBytes",
+      "SelfRef": {
+        "ReferredPkg": "scalars",
+        "ReferredType": "ScalarTypeBytes"
+      },
+      "Type": {
+        "Kind": "scalar",
+        "Scalar": {
+          "ScalarKind": "bytes"
+        }
+      }
+    },
+    "ScalarTypeString": {
+      "Name": "ScalarTypeString",
+      "SelfRef": {
+        "ReferredPkg": "scalars",
+        "ReferredType": "ScalarTypeString"
+      },
+      "Type": {
+        "Kind": "scalar",
+        "Scalar": {
+          "ScalarKind": "string"
+        }
+      }
+    },
+    "ScalarTypeFloat32": {
+      "Name": "ScalarTypeFloat32",
+      "SelfRef": {
+        "ReferredPkg": "scalars",
+        "ReferredType": "ScalarTypeFloat32"
+      },
+      "Type": {
+        "Kind": "scalar",
+        "Scalar": {
+          "ScalarKind": "float32"
+        }
+      }
+    },
+    "ScalarTypeFloat64": {
+      "Name": "ScalarTypeFloat64",
+      "SelfRef": {
+        "ReferredPkg": "scalars",
+        "ReferredType": "ScalarTypeFloat64"
+      },
+      "Type": {
+        "Kind": "scalar",
+        "Scalar": {
+          "ScalarKind": "float64"
+        }
+      }
+    },
+    "ScalarTypeUint8": {
+      "Name": "ScalarTypeUint8",
+      "SelfRef": {
+        "ReferredPkg": "scalars",
+        "ReferredType": "ScalarTypeUint8"
+      },
+      "Type": {
+        "Kind": "scalar",
+        "Scalar": {
+          "ScalarKind": "uint8"
+        }
+      }
+    },
+    "ScalarTypeUint16": {
+      "Name": "ScalarTypeUint16",
+      "SelfRef": {
+        "ReferredPkg": "scalars",
+        "ReferredType": "ScalarTypeUint16"
+      },
+      "Type": {
+        "Kind": "scalar",
+        "Scalar": {
+          "ScalarKind": "uint16"
+        }
+      }
+    },
+    "ScalarTypeUint32": {
+      "Name": "ScalarTypeUint32",
+      "SelfRef": {
+        "ReferredPkg": "scalars",
+        "ReferredType": "ScalarTypeUint32"
+      },
+      "Type": {
+        "Kind": "scalar",
+        "Scalar": {
+          "ScalarKind": "uint32"
+        }
+      }
+    },
+    "ScalarTypeUint64": {
+      "Name": "ScalarTypeUint64",
+      "SelfRef": {
+        "ReferredPkg": "scalars",
+        "ReferredType": "ScalarTypeUint64"
+      },
+      "Type": {
+        "Kind": "scalar",
+        "Scalar": {
+          "ScalarKind": "uint64"
+        }
+      }
+    },
+    "ScalarTypeInt8": {
+      "Name": "ScalarTypeInt8",
+      "SelfRef": {
+        "ReferredPkg": "scalars",
+        "ReferredType": "ScalarTypeInt8"
+      },
+      "Type": {
+        "Kind": "scalar",
+        "Scalar": {
+          "ScalarKind": "int8"
+        }
+      }
+    },
+    "ScalarTypeInt16": {
+      "Name": "ScalarTypeInt16",
+      "SelfRef": {
+        "ReferredPkg": "scalars",
+        "ReferredType": "ScalarTypeInt16"
+      },
+      "Type": {
+        "Kind": "scalar",
+        "Scalar": {
+          "ScalarKind": "int16"
+        }
+      }
+    },
+    "ScalarTypeInt32": {
+      "Name": "ScalarTypeInt32",
+      "SelfRef": {
+        "ReferredPkg": "scalars",
+        "ReferredType": "ScalarTypeInt32"
+      },
+      "Type": {
+        "Kind": "scalar",
+        "Scalar": {
+          "ScalarKind": "int32"
+        }
+      }
+    },
+    "ScalarTypeInt64": {
+      "Name": "ScalarTypeInt64",
+      "SelfRef": {
+        "ReferredPkg": "scalars",
+        "ReferredType": "ScalarTypeInt64"
+      },
+      "Type": {
+        "Kind": "scalar",
+        "Scalar": {
+          "ScalarKind": "int64"
+        }
+      }
+    }
+  }
+}

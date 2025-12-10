@@ -1,0 +1,2 @@
+--config-file=/etc/opentelemetry-ebpf/reducer.yaml
+--log-console

@@ -1,0 +1,53 @@
+name: Lint & test "Lint PR title" action
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - .github/workflows/test-lint-pr-title.yml
+      - actions/lint-pr-title/**
+
+  pull_request:
+    paths:
+      - .github/workflows/test-lint-pr-title.yml
+      - actions/lint-pr-title/**
+    types:
+      - edited
+      - opened
+      - ready_for_review
+      - synchronize
+
+  merge_group:
+
+permissions:
+  contents: read
+
+jobs:
+  build-lint-pr-title:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+
+    steps:
+      - name: Harden the runner (Audit all outbound calls)
+        uses: step-security/harden-runner@95d9a5deda9de15063e7595e9719c11c38c90ae2 # v2.13.2
+        with:
+          egress-policy: audit
+
+      - uses: actions/checkout@1af3b93b6815bc44a9784bd300feb67ff0d1eeb3 # v6.0.0
+        with:
+          persist-credentials: false
+
+      - name: Install bun package manager
+        uses: oven-sh/setup-bun@735343b667d3e6f658f44d0eca948eb6282f2b76 # v2.0.2
+        with:
+          bun-version-file: .bun-version
+
+      - name: Install lint-pr-title dependencies
+        run: bun install --frozen-lockfile --linker hoisted --filter lint-pr-title
+
+      - name: Lint
+        run: bun run eslint actions/lint-pr-title
+
+      - name: Test
+        run: bun run --filter lint-pr-title test

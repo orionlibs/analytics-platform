@@ -1,0 +1,57 @@
+name: "Scorecard tests"
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.head_ref || github.run_id }}
+  cancel-in-progress: true
+
+permissions: {}
+
+jobs:
+  scorecard-tests:
+    name: Scorecard test ${{ matrix.name }}
+    runs-on: ubuntu-22.04
+    strategy:
+      matrix:
+        include:
+          - name: min
+            kube-version: "1.25"
+          - name: max
+            kube-version: "1.30"
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+        with:
+          persist-credentials: false
+
+      - name: Set up Go
+        uses: actions/setup-go@v6
+        with:
+          go-version-file: go.mod
+
+      - name: Install chainsaw
+        run: |
+          set -e
+          make chainsaw
+
+      - name: "start kind"
+        env:
+          KUBE_VERSION: ${{ matrix.kube-version }}
+        run: |
+          make start-kind
+
+      - name: "run community scorecard tests"
+        run: for i in {1..5}; do make scorecard-tests && break || sleep 10; done
+        env:
+          BUNDLE_VARIANT: community
+
+      - name: "run OpenShift scorecard tests"
+        run: for i in {1..5}; do make scorecard-tests && break || sleep 10; done
+        env:
+          BUNDLE_VARIANT: openshift

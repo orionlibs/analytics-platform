@@ -1,0 +1,140 @@
+{
+  "Package": "maps",
+  "Objects": {
+    "MapOfStringToAny": {
+      "Name": "MapOfStringToAny",
+      "Comments": [
+        "String to... something."
+      ],
+      "SelfRef": {
+        "ReferredPkg": "maps",
+        "ReferredType": "MapOfStringToAny"
+      },
+      "Type": {
+        "Kind": "map",
+        "Map": {
+          "IndexType": {
+            "Kind": "scalar",
+            "Scalar": {
+              "ScalarKind": "string"
+            }
+          },
+          "ValueType": {
+            "Kind": "scalar",
+            "Scalar": {
+              "ScalarKind": "any"
+            }
+          }
+        }
+      }
+    },
+    "MapOfStringToString": {
+      "Name": "MapOfStringToString",
+      "SelfRef": {
+        "ReferredPkg": "maps",
+        "ReferredType": "MapOfStringToString"
+      },
+      "Type": {
+        "Kind": "map",
+        "Map": {
+          "IndexType": {
+            "Kind": "scalar",
+            "Scalar": {
+              "ScalarKind": "string"
+            }
+          },
+          "ValueType": {
+            "Kind": "scalar",
+            "Scalar": {
+              "ScalarKind": "string"
+            }
+          }
+        }
+      }
+    },
+    "SomeStruct": {
+      "Name": "SomeStruct",
+      "SelfRef": {
+        "ReferredPkg": "maps",
+        "ReferredType": "SomeStruct"
+      },
+      "Type": {
+        "Kind": "struct",
+        "Struct": {
+          "Fields": [
+            {
+              "Name": "FieldAny",
+              "Required": true,
+              "Type": {
+                "Kind": "scalar",
+                "Scalar": {
+                  "ScalarKind": "any"
+                }
+              }
+            }
+          ]
+        }
+      }
+    },
+    "MapOfStringToRef": {
+      "Name": "MapOfStringToRef",
+      "SelfRef": {
+        "ReferredPkg": "maps",
+        "ReferredType": "MapOfStringToRef"
+      },
+      "Type": {
+        "Kind": "map",
+        "Map": {
+          "IndexType": {
+            "Kind": "scalar",
+            "Scalar": {
+              "ScalarKind": "string"
+            }
+          },
+          "ValueType": {
+            "Kind": "ref",
+            "Ref": {
+              "ReferredPkg": "maps",
+              "ReferredType": "SomeStruct"
+            }
+          }
+        }
+      }
+    },
+    "MapOfStringToMapOfStringToBool": {
+      "Name": "MapOfStringToMapOfStringToBool",
+      "SelfRef": {
+        "ReferredPkg": "maps",
+        "ReferredType": "MapOfStringToMapOfStringToBool"
+      },
+      "Type": {
+        "Kind": "map",
+        "Map": {
+          "IndexType": {
+            "Kind": "scalar",
+            "Scalar": {
+              "ScalarKind": "string"
+            }
+          },
+          "ValueType": {
+            "Kind": "map",
+            "Map": {
+              "IndexType": {
+                "Kind": "scalar",
+                "Scalar": {
+                  "ScalarKind": "string"
+                }
+              },
+              "ValueType": {
+                "Kind": "scalar",
+                "Scalar": {
+                  "ScalarKind": "bool"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}

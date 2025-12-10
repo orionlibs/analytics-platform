@@ -1,0 +1,15 @@
+apiVersion: 1
+
+datasources:
+  - name: 'test-provisioned'
+    type: 'mytestorg-test-datasource'
+    access: proxy
+    isDefault: false
+    orgId: 1
+    version: 1
+    editable: true
+    jsonData:
+      domain: 'http://host.docker.internal:8080'
+      resource: 'egc4-d24i'
+    secureJsonData:
+      appToken: 'good'

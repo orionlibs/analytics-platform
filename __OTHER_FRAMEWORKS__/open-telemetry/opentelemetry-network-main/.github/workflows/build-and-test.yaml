@@ -1,0 +1,1133 @@
+# Copyright The OpenTelemetry Authors
+# SPDX-License-Identifier: Apache-2.0
+
+name: build-and-test
+run-name: ${{ github.actor }} is running  GitHub Actions
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    paths:
+
+permissions:
+  contents: read
+
+env:
+  BENV_IMAGE: ${{ vars.BENV_IMAGE || 'docker.io/otel/opentelemetry-network-build-tools' }}
+
+# concurrency:
+#   group: build-and-test-${{ github.event.pull_request_number || github.ref }}
+#   cancel-in-progress: true
+
+jobs:
+  clang-format-check:
+    runs-on: ubuntu-24.04
+    name: clang-format-check
+
+    steps:
+    - name: Print github workspace
+      run: |
+        echo "github.workspace = ${{ github.workspace }}"
+        echo "pr.ref = ${{github.event.pull_request.head.ref}}"
+        echo "github.ref = ${{ github.ref }}"
+        echo "$GITHUB_CONTEXT"
+
+    - name: Check out the codebase
+      uses: actions/checkout@93cb6efe18208431cddfb8368fd83d5badbf9bfd # v5.0.1
+
+    - name: Get current date
+      id: date
+      run: echo "date=$(date +'%Y-%m-%d')" >> $GITHUB_OUTPUT
+
+    - name: Runs format checker
+      run: |
+        # disable man page updates for faster apt install
+        echo "set man-db/auto-update false" | sudo debconf-communicate || true
+        sudo dpkg-reconfigure man-db
+
+        sudo apt update
+        sudo apt install -y --no-install-recommends clang-format-19
+        cd ${{ github.workspace }}
+        ./.github/workflows/scripts/check-clang-format.sh
+
+    outputs:
+      date: ${{ steps.date.outputs.date }}
+
+  cargo-test:
+    name: cargo-test
+    runs-on: ubuntu-24.04
+    steps:
+    - name: Check out the codebase
+      uses: actions/checkout@93cb6efe18208431cddfb8368fd83d5badbf9bfd # v5.0.1
+      with:
+        fetch-depth: 0
+
+    - name: Run cargo test
+      env:
+        PASS: ${{ secrets.DOCKER_PASSWORD }}
+      run: |
+        echo "github.workspace = ${{ github.workspace }}"
+        docker pull $BENV_IMAGE
+        git submodule update  --init --recursive ext/
+
+        docker run -t \
+        --rm \
+        --mount "type=bind,source=$(git rev-parse --show-toplevel),destination=/home/user/src,readonly" \
+        --env EBPF_NET_SRC_ROOT=/home/user/src \
+        $BENV_IMAGE \
+        ./build.sh cargo-test
+
+  build-reducer:
+    name: build-reducer
+    runs-on: ubuntu-24.04
+    steps:
+    - name: Check out the codebase
+      uses: actions/checkout@93cb6efe18208431cddfb8368fd83d5badbf9bfd # v5.0.1
+      with:
+        fetch-depth: 0
+
+    - name: Cache and install ccache
+      uses: awalsh128/cache-apt-pkgs-action@latest
+      with:
+        packages: ccache
+        version: 1.0
+
+    - name: Setup ccache
+      uses: hendrikmuhs/ccache-action@v1.2
+      with:
+        key: ccache-build-reducer
+        max-size: 1G
+        verbose: 2
+
+    - name: build-reducer
+      env:
+        PASS: ${{ secrets.DOCKER_PASSWORD }}
+      run: |
+        echo "github.workspace = ${{ github.workspace }}"
+        docker pull $BENV_IMAGE
+        git submodule update  --init --recursive ext/
+        
+        # Start local registry for the build process
+        docker run -d -p 5000:5000 --name registry docker.io/library/registry:2
+        
+        # Build reducer with registry access
+        # Ensure ccache directory is writable inside container
+        mkdir -p "${{ github.workspace }}/.ccache"
+        chmod -R 777 "${{ github.workspace }}/.ccache" || true
+        
+        docker run -t \
+        --rm \
+        --mount "type=bind,source=${{ github.workspace }}/.ccache,destination=/ccache" \
+        --mount "type=bind,source=$(git rev-parse --show-toplevel),destination=/home/user/src,readonly" \
+        --env EBPF_NET_SRC_ROOT=/home/user/src \
+        --env CCACHE_DIR=/ccache \
+        --network host \
+        --privileged \
+        $BENV_IMAGE \
+        ./build.sh reducer-docker-registry
+        
+        # Export reducer container
+        mkdir -p container-exports
+        docker pull localhost:5000/reducer
+        docker save localhost:5000/reducer > container-exports/reducer.tar
+        
+        # Clean up registry
+        docker stop registry
+        docker rm registry
+
+    - name: Upload reducer container
+      uses: actions/upload-artifact@330a01c490aca151604b8cf639adc76d48f6c5d4 # v5.0.0
+      with:
+        name: reducer-container
+        path: container-exports/reducer.tar
+        if-no-files-found: error
+        retention-days: 1
+
+  build-kernel-collector:
+    name: build-kernel-collector
+    runs-on: ubuntu-24.04
+    steps:
+    - name: Check out the codebase
+      uses: actions/checkout@93cb6efe18208431cddfb8368fd83d5badbf9bfd # v5.0.1
+      with:
+        fetch-depth: 0
+
+    - name: Cache and install ccache
+      uses: awalsh128/cache-apt-pkgs-action@latest
+      with:
+        packages: ccache
+        version: 1.0
+
+    - name: Setup ccache
+      uses: hendrikmuhs/ccache-action@v1.2
+      with:
+        key: ccache-build-kernel-collector
+        max-size: 1G
+        verbose: 2
+
+    - name: build-kernel-collector
+      env:
+        PASS: ${{ secrets.DOCKER_PASSWORD }}
+      run: |
+        echo "github.workspace = ${{ github.workspace }}"
+        docker pull $BENV_IMAGE
+        git submodule update  --init --recursive ext/
+        
+        # Start local registry for the build process
+        docker run -d -p 5000:5000 --name registry docker.io/library/registry:2
+        
+        # Build kernel-collector with registry access
+        # Ensure ccache directory is writable inside container
+        mkdir -p "${{ github.workspace }}/.ccache"
+        chmod -R 777 "${{ github.workspace }}/.ccache" || true
+        
+        docker run -t \
+        --rm \
+        --mount "type=bind,source=${{ github.workspace }}/.ccache,destination=/ccache" \
+        --mount "type=bind,source=$(git rev-parse --show-toplevel),destination=/home/user/src,readonly" \
+        --env EBPF_NET_SRC_ROOT=/home/user/src \
+        --env CCACHE_DIR=/ccache \
+        --network host \
+        --privileged \
+        $BENV_IMAGE \
+        ./build.sh kernel-collector-docker-registry
+        
+        # Export kernel-collector container
+        mkdir -p container-exports
+        docker pull localhost:5000/kernel-collector
+        docker save localhost:5000/kernel-collector > container-exports/kernel-collector.tar
+        
+        # Clean up registry
+        docker stop registry
+        docker rm registry
+
+    - name: Upload kernel collector container
+      uses: actions/upload-artifact@330a01c490aca151604b8cf639adc76d48f6c5d4 # v5.0.0
+      with:
+        name: kernel-collector-container
+        path: container-exports/kernel-collector.tar
+        if-no-files-found: error
+        retention-days: 1
+
+  build-kernel-collector-test:
+    name: build-kernel-collector-test
+    runs-on: ubuntu-24.04
+    steps:
+    - name: Check out the codebase
+      uses: actions/checkout@93cb6efe18208431cddfb8368fd83d5badbf9bfd # v5.0.1
+      with:
+        fetch-depth: 0
+
+    - name: Cache and install ccache
+      uses: awalsh128/cache-apt-pkgs-action@latest
+      with:
+        packages: ccache
+        version: 1.0
+
+    - name: Setup ccache
+      uses: hendrikmuhs/ccache-action@v1.2
+      with:
+        key: ccache-build-kernel-collector-test
+        max-size: 1G
+        verbose: 2
+
+    - name: build kernel-collector-test container
+      env:
+        PASS: ${{ secrets.DOCKER_PASSWORD }}
+      run: |
+        echo "github.workspace = ${{ github.workspace }}"
+        docker pull $BENV_IMAGE
+        git submodule update  --init --recursive ext/
+        
+        # Start local registry for the build process
+        docker run -d -p 5000:5000 --name registry docker.io/library/registry:2
+        
+        # Build kernel-collector-test with registry access
+        # Ensure ccache directory is writable inside container
+        mkdir -p "${{ github.workspace }}/.ccache"
+        chmod -R 777 "${{ github.workspace }}/.ccache" || true
+        
+        docker run -t \
+        --rm \
+        --mount "type=bind,source=${{ github.workspace }}/.ccache,destination=/ccache" \
+        --mount "type=bind,source=$(git rev-parse --show-toplevel),destination=/home/user/src,readonly" \
+        --env EBPF_NET_SRC_ROOT=/home/user/src \
+        --env CCACHE_DIR=/ccache \
+        --network host \
+        --privileged \
+        $BENV_IMAGE \
+        ./build.sh kernel-collector-test-docker-registry
+        
+        # Export kernel-collector-test container
+        mkdir -p container-exports
+        docker pull localhost:5000/kernel-collector-test
+        docker save localhost:5000/kernel-collector-test > container-exports/kernel-collector-test.tar
+        
+        # Clean up registry
+        docker stop registry
+        docker rm registry
+
+    - name: Upload kernel-collector-test container
+      uses: actions/upload-artifact@330a01c490aca151604b8cf639adc76d48f6c5d4 # v5.0.0
+      with:
+        name: kernel-collector-test-container
+        path: container-exports/kernel-collector-test.tar
+        if-no-files-found: error
+        retention-days: 1
+
+  build-k8s-collector:
+    name: build-k8s-collector
+    runs-on: ubuntu-24.04
+    steps:
+    - name: Check out the codebase
+      uses: actions/checkout@93cb6efe18208431cddfb8368fd83d5badbf9bfd # v5.0.1
+      with:
+        fetch-depth: 0
+
+    - name: Cache and install ccache
+      uses: awalsh128/cache-apt-pkgs-action@latest
+      with:
+        packages: ccache
+        version: 1.0
+
+    - name: Setup ccache
+      uses: hendrikmuhs/ccache-action@v1.2
+      with:
+        key: ccache-build-k8s-collector
+        max-size: 1G
+        verbose: 2
+
+    - name: build k8s-collector
+      run: |
+        echo "github.workspace = ${{ github.workspace }}"
+        docker pull $BENV_IMAGE
+        git submodule update  --init --recursive ext/
+        
+        # Start local registry for the build process
+        docker run -d -p 5000:5000 --name registry docker.io/library/registry:2
+        
+        # Build k8s-collector with registry access
+        # Ensure ccache directory is writable inside container
+        mkdir -p "${{ github.workspace }}/.ccache"
+        chmod -R 777 "${{ github.workspace }}/.ccache" || true
+
+        docker run -t \
+        --rm \
+        --mount "type=bind,source=${{ github.workspace }}/.ccache,destination=/ccache" \
+        --mount "type=bind,source=/var/run/docker.sock,destination=/var/run/docker.sock" \
+        --mount "type=bind,source=$(git rev-parse --show-toplevel),destination=/home/user/src,readonly" \
+        --env EBPF_NET_SRC_ROOT=/home/user/src \
+        --env CCACHE_DIR=/ccache \
+        --network host \
+        --privileged \
+        $BENV_IMAGE \
+        ./build.sh k8s-collector-docker-registry
+        
+        # Export k8s-collector container
+        mkdir -p container-exports
+        docker pull localhost:5000/k8s-collector
+        docker save localhost:5000/k8s-collector > container-exports/k8s-collector.tar
+        
+        # Clean up registry
+        docker stop registry
+        docker rm registry
+
+    - name: Upload k8s-collector container
+      uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+      with:
+        name: k8s-collector-container
+        path: container-exports/k8s-collector.tar
+        if-no-files-found: error
+        retention-days: 1
+
+  build-cloud-collector:
+    name: build-cloud-collector
+    runs-on: ubuntu-24.04
+    steps:
+    - name: Check out the codebase
+      uses: actions/checkout@93cb6efe18208431cddfb8368fd83d5badbf9bfd # v5.0.1
+      with:
+        fetch-depth: 0
+
+    - name: Cache and install ccache
+      uses: awalsh128/cache-apt-pkgs-action@latest
+      with:
+        packages: ccache
+        version: 1.0
+
+    - name: Setup ccache
+      uses: hendrikmuhs/ccache-action@v1.2
+      with:
+        key: ccache-build-cloud-collector
+        max-size: 1G
+        verbose: 2
+
+    - name: build cloud-collector
+      run: |
+        echo "github.workspace = ${{ github.workspace }}"
+        docker pull $BENV_IMAGE
+        git submodule update  --init --recursive ext/
+        # Ensure ccache directory is writable inside container
+        mkdir -p "${{ github.workspace }}/.ccache"
+        chmod -R 777 "${{ github.workspace }}/.ccache" || true
+
+        docker run -t \
+        --rm \
+        --mount "type=bind,source=${{ github.workspace }}/.ccache,destination=/ccache" \
+        --mount "type=bind,source=/var/run/docker.sock,destination=/var/run/docker.sock" \
+        --mount "type=bind,source=$(git rev-parse --show-toplevel),destination=/home/user/src,readonly" \
+        --env EBPF_NET_SRC_ROOT=/home/user/src \
+        --env CCACHE_DIR=/ccache \
+        $BENV_IMAGE \
+        ./build.sh cloud-collector
+
+  build-run-unit-tests:
+    name: build-run-unit-tests
+    runs-on: ubuntu-24.04
+    steps:
+    - name: Check out the codebase
+      uses: actions/checkout@93cb6efe18208431cddfb8368fd83d5badbf9bfd # v5.0.1
+      with:
+        fetch-depth: 0
+    
+    - name: Cache and install ccache
+      uses: awalsh128/cache-apt-pkgs-action@latest
+      with:
+        packages: ccache
+        version: 1.0
+
+    - name: Setup ccache
+      uses: hendrikmuhs/ccache-action@v1.2
+      with:
+        key: ccache-build-run-unit-tests
+        max-size: 1G
+        verbose: 2
+    - name: run unit tests
+      run: |
+        echo "github.workspace = ${{ github.workspace }}"
+        docker pull $BENV_IMAGE
+        git submodule update  --init --recursive ext/
+        # Ensure ccache directory is writable inside container
+        mkdir -p "${{ github.workspace }}/.ccache"
+        chmod -R 777 "${{ github.workspace }}/.ccache" || true
+
+        docker run -t \
+        --rm \
+        --mount "type=bind,source=${{ github.workspace }}/.ccache,destination=/ccache" \
+        --mount "type=bind,source=/var/run/docker.sock,destination=/var/run/docker.sock" \
+        --mount "type=bind,source=$(git rev-parse --show-toplevel),destination=/home/user/src,readonly" \
+        --env EBPF_NET_SRC_ROOT=/home/user/src \
+        --env CCACHE_DIR=/ccache \
+        --env ARGS="--output-on-failure --repeat until-pass:3" \
+        --env SPDLOG_LEVEL="trace" \
+        $BENV_IMAGE \
+        ./build.sh unit_tests test
+
+  build-run-unit-tests-with-asan-and-debug-flags:
+    name: build-run-unit-tests-with-asan-and-debug-flags
+    runs-on: ubuntu-24.04
+    steps:
+    - name: Check out the codebase
+      uses: actions/checkout@93cb6efe18208431cddfb8368fd83d5badbf9bfd # v5.0.1
+      with:
+        fetch-depth: 0
+
+    - name: Cache and install ccache
+      uses: awalsh128/cache-apt-pkgs-action@latest
+      with:
+        packages: ccache
+        version: 1.0
+
+    - name: Setup ccache
+      uses: hendrikmuhs/ccache-action@v1.2
+      with:
+        key: ccache-build-run-unit-tests-asan-debug
+        max-size: 1G
+        verbose: 2
+    - name: build unit tests with asan and debug flags on then run all tests
+      run: |
+        docker pull $BENV_IMAGE
+        git submodule update  --init --recursive ext/
+        # Ensure ccache directory is writable inside container
+        mkdir -p "${{ github.workspace }}/.ccache"
+        chmod -R 777 "${{ github.workspace }}/.ccache" || true
+
+        docker run -t \
+        --rm \
+        --mount "type=bind,source=${{ github.workspace }}/.ccache,destination=/ccache" \
+        --mount "type=bind,source=/var/run/docker.sock,destination=/var/run/docker.sock" \
+        --mount "type=bind,source=$(git rev-parse --show-toplevel),destination=/home/user/src,readonly" \
+        --env EBPF_NET_SRC_ROOT=/home/user/src \
+        --env CCACHE_DIR=/ccache \
+        --env ARGS="--output-on-failure --repeat until-pass:3 -E render_test" \
+        --env SPDLOG_LEVEL="trace" \
+        $BENV_IMAGE \
+        ./build.sh --debug --asan unit_tests test
+
+  build-deb-rpm:
+    name: build-deb-rpm
+    runs-on: ubuntu-24.04
+    steps:
+    - name: Check out the codebase
+      uses: actions/checkout@93cb6efe18208431cddfb8368fd83d5badbf9bfd # v5.0.1
+      with:
+        fetch-depth: 0
+
+    - name: Cache and install ccache
+      uses: awalsh128/cache-apt-pkgs-action@latest
+      with:
+        packages: ccache
+        version: 1.0
+
+    - name: Setup ccache
+      uses: hendrikmuhs/ccache-action@v1.2
+      with:
+        key: ccache-build-packages
+        max-size: 1G
+        verbose: 2
+
+    - name: Build RPM/DEB packages
+      run: |
+        # Prepare output and ccache directories
+        mkdir -p "${{ github.workspace }}/out"
+        mkdir -p "${{ github.workspace }}/.ccache"
+        # Ensure the build container user (uid 1000) can write here
+        sudo chown -R 1000:1000 "${{ github.workspace }}/out" || true
+        chmod -R 777 "${{ github.workspace }}/.ccache" || true
+
+        docker pull $BENV_IMAGE
+        git submodule update --init --recursive ext/
+
+        # Configure and build the project into /home/user/out
+        docker run -t --rm \
+          --mount "type=bind,source=${{ github.workspace }}/.ccache,destination=/ccache" \
+          --mount "type=bind,source=${{ github.workspace }},destination=/home/user/src,readonly" \
+          --mount "type=bind,source=${{ github.workspace }}/out,destination=/home/user/out" \
+          --env EBPF_NET_SRC_ROOT=/home/user/src \
+          --env CCACHE_DIR=/ccache \
+          $BENV_IMAGE \
+          ./build.sh pipeline
+
+        # Run CPack in the configured build directory
+        docker run -t --rm \
+          --mount "type=bind,source=${{ github.workspace }},destination=/home/user/src,readonly" \
+          --mount "type=bind,source=${{ github.workspace }}/out,destination=/home/user/out" \
+          --env EBPF_NET_SRC_ROOT=/home/user/src \
+          --workdir /home/user/out \
+          $BENV_IMAGE \
+          cpack -G 'RPM;DEB'
+
+  e2e-otel-jsonl:
+    name: e2e-otel-jsonl
+    needs: [build-reducer, build-kernel-collector, build-k8s-collector]
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+    - name: Check out the codebase
+      uses: actions/checkout@93cb6efe18208431cddfb8368fd83d5badbf9bfd # v5.0.1
+      with:
+        fetch-depth: 0
+
+    - name: Set up kind cluster
+      uses: helm/kind-action@v1.10.0
+      with:
+        version: v0.30.0
+        cluster_name: e2e-kind
+
+    - name: Download reducer container
+      uses: actions/download-artifact@018cc2cf5baa6db3ef3c5f8a56943fffe632ef53 # v6.0.0
+      with:
+        name: reducer-container
+        path: ./container-exports
+
+    - name: Download kernel-collector container
+      uses: actions/download-artifact@018cc2cf5baa6db3ef3c5f8a56943fffe632ef53 # v6.0.0
+      with:
+        name: kernel-collector-container
+        path: ./container-exports
+
+    - name: Download k8s-collector container
+      uses: actions/download-artifact@634f93cb2916e3fdff6788551b99b062d0335ce0 # v5.0.0
+      with:
+        name: k8s-collector-container
+        path: ./container-exports
+
+    - name: Load images and prepare config/output
+      run: |
+        set -euxo pipefail
+        docker load < container-exports/reducer.tar
+        docker load < container-exports/kernel-collector.tar
+        docker load < container-exports/k8s-collector.tar
+
+        mkdir -p e2e-out
+        # ensure otelcol (which runs non-root) can write here regardless of uid mapping
+        chmod 0777 e2e-out
+        cat > otel-e2e-config.yaml <<'EOF'
+        receivers:
+          otlp:
+            protocols:
+              grpc:
+                endpoint: 0.0.0.0:4317
+
+        processors:
+          batch: {}
+
+        exporters:
+          file:
+            path: /out/otel.jsonl
+            # keep default json lines, rotate small just in case
+            rotation:
+              max_megabytes: 5
+              max_days: 1
+            format: json
+
+        service:
+          pipelines:
+            metrics:
+              receivers: [otlp]
+              processors: [batch]
+              exporters: [file]
+            logs:
+              receivers: [otlp]
+              processors: [batch]
+              exporters: [file]
+        EOF
+
+    - name: Start OpenTelemetry Collector
+      run: |
+        set -euxo pipefail
+        # Use contrib distribution to ensure file exporter availability
+        docker pull otel/opentelemetry-collector-contrib:0.102.0
+        docker run -d --rm \
+          --name otelcol-e2e \
+          --network host \
+          -v "$(pwd)/otel-e2e-config.yaml:/etc/otelcol/config.yaml:ro" \
+          -v "$(pwd)/e2e-out:/out" \
+          otel/opentelemetry-collector-contrib:0.102.0 \
+          --config=/etc/otelcol/config.yaml
+        # Give the collector a moment to start
+        sleep 3
+        docker logs --tail 50 otelcol-e2e || true
+
+    - name: Start reducer
+      run: |
+        set -euxo pipefail
+        REDUCER_ID=$(docker run -d --rm \
+          --name reducer-e2e \
+          --network host \
+          localhost:5000/reducer \
+          --port 8000 \
+          --prom 0.0.0.0:7000 \
+          --partitions-per-shard 1 \
+          --num-ingest-shards=1 \
+          --num-matching-shards=1 \
+          --num-aggregation-shards=1 \
+          --enable-aws-enrichment \
+          --enable-id-id \
+          --enable-flow-logs \
+          --enable-otlp-grpc-metrics \
+          --otlp-grpc-metrics-host 127.0.0.1 \
+          --otlp-grpc-metrics-port 4317 \
+          --log-console \
+          --debug \
+          --log-whitelist-all)
+        echo "Reducer started: ${REDUCER_ID}"
+        # brief wait to ensure listener is up
+        sleep 5
+        docker logs --tail 100 reducer-e2e || true
+
+    - name: Start kernel collector
+      run: |
+        set -euxo pipefail
+        KERNEL_ID=$(docker run -d --rm \
+          --name kernel-collector-e2e \
+          --env EBPF_NET_INTAKE_HOST="127.0.0.1" \
+          --env EBPF_NET_INTAKE_PORT="8000" \
+          --env EBPF_NET_HOST_DIR="/hostfs" \
+          --privileged \
+          --network host \
+          --pid host \
+          --volume /var/run/docker.sock:/var/run/docker.sock \
+          --volume /sys/fs/cgroup:/hostfs/sys/fs/cgroup \
+          --volume /usr/src:/hostfs/usr/src \
+          --volume /lib/modules:/hostfs/lib/modules \
+          --volume /etc:/hostfs/etc \
+          --volume /var/cache:/hostfs/cache \
+          localhost:5000/kernel-collector \
+          --log-console)
+        echo "Kernel collector started: ${KERNEL_ID}"
+        # give it a moment to initialize BPF
+        sleep 15
+        docker logs --tail 50 kernel-collector-e2e || true
+
+    - name: Start k8s collector
+      run: |
+        set -euxo pipefail
+        KUBECONFIG_PATH="${KUBECONFIG:-$HOME/.kube/config}"
+        if [ ! -f "${KUBECONFIG_PATH}" ]; then
+          echo "KUBECONFIG not found at ${KUBECONFIG_PATH}"
+          ls -la "${HOME}" || true
+          ls -la "${HOME}/.kube" || true
+          exit 1
+        fi
+
+        echo "Using kubeconfig at ${KUBECONFIG_PATH}"
+        kubectl config current-context || true
+
+        K8S_COLLECTOR_ID=$(docker run -d \
+          --name k8s-collector-e2e \
+          --network host \
+          --env EBPF_NET_INTAKE_HOST="127.0.0.1" \
+          --env EBPF_NET_INTAKE_PORT="8000" \
+          --env RUST_LOG="info" \
+          --env KUBECONFIG="/kubeconfig" \
+          --volume "${KUBECONFIG_PATH}:/kubeconfig:ro" \
+          localhost:5000/k8s-collector)
+        echo "k8s-collector started: ${K8S_COLLECTOR_ID}"
+        # allow it to connect and start watching
+        sleep 10
+        docker logs --tail 100 k8s-collector-e2e || true
+
+    - name: Generate traffic and wait for collection
+      run: |
+        set -euxo pipefail
+        # Deploy Kubernetes traffic generator in the kind cluster
+        KUBECONFIG_PATH="${KUBECONFIG:-$HOME/.kube/config}"
+        if [ ! -f "${KUBECONFIG_PATH}" ]; then
+          echo "KUBECONFIG not found at ${KUBECONFIG_PATH}"
+          ls -la "${HOME}" || true
+          ls -la "${HOME}/.kube" || true
+          exit 1
+        fi
+
+        kubectl create namespace e2e-kind || true
+
+        cat > e2e-kind-traffic.yaml <<'EOF'
+        apiVersion: apps/v1
+        kind: Deployment
+        metadata:
+          name: e2e-wget
+          namespace: e2e-kind
+          labels:
+            app: e2e-wget
+            e2e-role: traffic
+        spec:
+          replicas: 10
+          selector:
+            matchLabels:
+              app: e2e-wget
+          template:
+            metadata:
+              labels:
+                app: e2e-wget
+                e2e-role: traffic
+            spec:
+              containers:
+              - name: wget
+                image: busybox:1.36
+                command:
+                  - /bin/sh
+                  - -c
+                  - |
+                    echo "e2e-wget: starting in pod $(hostname)"
+                    echo "e2e-wget: uname: $(uname -a || echo 'uname failed')"
+                    echo "e2e-wget: /etc/resolv.conf:"
+                    cat /etc/resolv.conf || echo "e2e-wget: unable to read /etc/resolv.conf"
+                    echo "e2e-wget: testing DNS for example.com"
+                    nslookup example.com || echo "e2e-wget: nslookup example.com failed (command may be missing)"
+                    TARGET_URL="http://example.com"
+                    echo "e2e-wget: running wget to ${TARGET_URL}"
+                    if wget --timeout=15 --tries=3 -O /dev/null "${TARGET_URL}"; then
+                      echo "e2e-wget: wget succeeded"
+                    else
+                      ec=$?
+                      echo "e2e-wget: wget failed with exit code ${ec}"
+                    fi
+                    echo "e2e-wget: finished, sleeping"
+                    # keep the pod running long enough that it does not restart during the test
+                    sleep 600
+        EOF
+
+        kubectl apply -f e2e-kind-traffic.yaml
+        kubectl -n e2e-kind rollout status deploy/e2e-wget --timeout=180s
+        kubectl -n e2e-kind get pods -o wide || true
+
+        # Allow time for metrics to propagate and be exported through collectors
+        sleep 60
+
+    - name: Stop services and collect logs
+      if: always()
+      run: |
+        set -euxo pipefail
+        mkdir -p e2e-logs || true
+        docker ps || true
+        # Capture full container logs to files for later inspection
+        docker logs k8s-collector-e2e > e2e-logs/k8s-collector-e2e.log 2>&1 || true
+        docker logs kernel-collector-e2e > e2e-logs/kernel-collector-e2e.log 2>&1 || true
+        docker logs reducer-e2e > e2e-logs/reducer-e2e.log 2>&1 || true
+        docker logs otelcol-e2e > e2e-logs/otelcol-e2e.log 2>&1 || true
+        # Also emit a short tail to the job logs for quick debugging
+        docker logs --tail 200 k8s-collector-e2e || true
+        docker logs --tail 200 kernel-collector-e2e || true
+        docker logs --tail 200 reducer-e2e || true
+        docker logs --tail 200 otelcol-e2e || true
+        docker stop k8s-collector-e2e || true
+        docker rm k8s-collector-e2e || true
+        docker stop kernel-collector-e2e || true
+        docker stop reducer-e2e || true
+        docker stop otelcol-e2e || true
+        ls -la e2e-out || true
+        sudo chmod -R a+r e2e-out || true
+        # Show a small preview for debugging convenience
+        if [ -f e2e-out/otel.jsonl ]; then head -n 50 e2e-out/otel.jsonl || true; fi
+
+    - name: Upload OpenTelemetry JSONL
+      if: always()
+      uses: actions/upload-artifact@330a01c490aca151604b8cf639adc76d48f6c5d4 # v5.0.0
+      with:
+        name: e2e-otel-jsonl
+        path: |
+          e2e-out/*
+        if-no-files-found: warn
+        retention-days: 7
+
+    - name: Upload e2e container logs
+      if: always()
+      uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+      with:
+        name: e2e-container-logs
+        path: |
+          e2e-logs/*
+        if-no-files-found: warn
+        retention-days: 7
+
+    - name: Show tcp.bytes metrics from JSONL
+      if: always()
+      run: |
+        set +e
+        if [ ! -f e2e-out/otel.jsonl ]; then
+          echo "e2e-out/otel.jsonl not found; skipping tcp.bytes display"
+          exit 0
+        fi
+
+        if ! command -v jq >/dev/null 2>&1; then
+          echo "jq not found; attempting to install"
+          sudo apt-get update && sudo apt-get install -y jq || true
+        fi
+
+        if ! command -v jq >/dev/null 2>&1; then
+          echo "jq still not available; skipping tcp.bytes display"
+          exit 0
+        fi
+
+        echo "=== tcp.bytes metrics (pretty-printed) ==="
+        jq '
+          .resourceMetrics[]?
+          | .scopeMetrics[]?
+          | .metrics[]?
+          | select(.name == "tcp.bytes")
+        ' e2e-out/otel.jsonl || true
+
+    - name: Show wget pod logs
+      if: always()
+      run: |
+        set +e
+        KUBECONFIG_PATH="${KUBECONFIG:-$HOME/.kube/config}"
+        if [ ! -f "${KUBECONFIG_PATH}" ]; then
+          echo "KUBECONFIG not found; skipping wget pod logs"
+          exit 0
+        fi
+
+        echo "=== e2e-kind namespace pods ==="
+        kubectl -n e2e-kind get pods -o wide || true
+
+        echo "=== e2e-wget pod logs (tail) ==="
+        kubectl -n e2e-kind logs -l app=e2e-wget --tail=100 || true
+
+  run-kernel-collector-simple-tests:
+    name: run-kernel-collector-simple-tests
+    needs: [build-kernel-collector]
+    runs-on: ubuntu-24.04
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          # renovate: datasource=docker depName=quay.io/lvh-images/complexity-test
+          - kernel: '5.4-20250721.013324'
+            description: 'Kernel 5.4'
+          # renovate: datasource=docker depName=quay.io/lvh-images/complexity-test
+          - kernel: '5.10-20250507.063028'
+            description: 'Kernel 5.10'
+          # renovate: datasource=docker depName=quay.io/lvh-images/complexity-test
+          - kernel: '5.15-20250507.063028'
+            description: 'Kernel 5.15'
+          # renovate: datasource=docker depName=quay.io/lvh-images/complexity-test
+          - kernel: '6.1-20250507.063028'
+            description: 'Kernel 6.1'
+          # renovate: datasource=docker depName=quay.io/lvh-images/complexity-test
+          - kernel: '6.6-20250507.063028'
+            description: 'Kernel 6.6'
+          # renovate: datasource=docker depName=quay.io/lvh-images/complexity-test
+          - kernel: '6.12-20250507.063028'
+            description: 'Kernel 6.12'
+    timeout-minutes: 10
+    steps:
+    - name: Check out the codebase
+      uses: actions/checkout@93cb6efe18208431cddfb8368fd83d5badbf9bfd # v5.0.1
+      with:
+        fetch-depth: 0
+
+    - name: Download kernel-collector container
+      uses: actions/download-artifact@018cc2cf5baa6db3ef3c5f8a56943fffe632ef53 # v6.0.0
+      with:
+        name: kernel-collector-container
+        path: ./container-exports
+
+    - name: Cache and install LVH host dependencies
+      uses: awalsh128/cache-apt-pkgs-action@latest
+      with:
+        # Match LVH action.yaml dependency_list exactly
+        packages: cpu-checker qemu-system-x86 libvirt-daemon-system libvirt-clients bridge-utils virtinst virt-manager
+        version: lvh-deps-1
+
+    - name: Run kernel collector simple tests on ${{ matrix.description }}
+      uses: yonch/little-vm-helper@main
+      with:
+        test-name: kernel-collector-simple-test-${{ matrix.kernel }}
+        image: 'complexity-test'
+        image-version: ${{ matrix.kernel }}
+        host-mount: ./
+        images-folder-parent: "/tmp"
+        cpu: 2
+        mem: 2G
+        cpu-kind: 'host,pmu=on'
+        lvh-version: "v0.0.23"
+        install-dependencies: 'true'
+        verbose: 'true'
+        cmd: |
+          set -e  # Exit on any error
+          cd /host
+          
+          # Load container images
+          docker load < container-exports/kernel-collector.tar
+          
+          # Start nc listener
+          apt-get update && apt-get install -y netcat-openbsd
+          
+          echo "Starting netcat listener on port 8000..."
+          nc -vl 8000 &
+          nc_pid=$!
+          echo "NC listener started with PID: $nc_pid"
+          
+          # Wait a moment for nc to start
+          sleep 2
+          
+          # Test: Verify kernel collector loads successfully with libbpf
+          echo "=== Kernel Collector Simple Test with libbpf ==="
+          
+          # Run kernel collector and verify it starts successfully
+          container_id=$(docker create \
+            --name "test-kernel-collector-libbpf" \
+            --env EBPF_NET_INTAKE_PORT="8000" \
+            --env EBPF_NET_INTAKE_HOST="127.0.0.1" \
+            --env EBPF_NET_HOST_DIR="/hostfs" \
+            --privileged --pid host --network host \
+            --volume /sys/fs/cgroup:/hostfs/sys/fs/cgroup \
+            --volume /etc:/hostfs/etc \
+            --volume /var/run/docker.sock:/var/run/docker.sock \
+            localhost:5000/kernel-collector --log-console --debug)
+          
+          echo "Starting kernel collector and running for 30 seconds..."
+          docker start $container_id &
+          collector_pid=$!
+          
+          # Wait for 30 seconds
+          sleep 30
+          
+          # Check if container is still running
+          echo Checking if container is still running:
+          if docker ps --filter "id=$container_id" --filter "status=running" --quiet > /dev/null; then
+            echo "✓ Kernel collector loaded successfully and ran for 30 seconds"
+            echo "---Kernel collector logs:"
+            collector_logs=$(docker logs $container_id 2>&1 || true)
+            echo "$collector_logs"
+            
+            # Fail if a crash was detected in the kernel collector logs
+            if echo "$collector_logs" | grep -qi "CRASH DETECTED"; then
+              echo "✗ Crash detected in kernel collector output - test failed"
+              docker stop $container_id || true
+              docker rm $container_id || true
+              # Stop nc listener
+              kill $nc_pid || true
+              exit 1
+            fi
+            
+            # Check for error strings in the logs (exclude GCP metadata fetch errors which are expected)
+            if echo "$collector_logs" | grep -i "error" | grep -v "Unable to fetch GCP metadata: error while fetching Google Cloud Platform instance metadata" > /dev/null 2>&1; then
+              echo "✗ Found 'error' in kernel collector output - test failed"
+              docker stop $container_id || true
+              docker rm $container_id || true
+              # Stop nc listener
+              kill $nc_pid || true
+              exit 1
+            fi
+            
+            docker stop $container_id || true
+            docker rm $container_id || true
+            # Stop nc listener
+            kill $nc_pid || true
+            exit 0
+          else
+            echo "✗ Kernel collector failed to run properly"
+            echo "---Kernel collector logs:"
+            docker logs $container_id || true
+            docker rm $container_id || true
+            # Stop nc listener
+            kill $nc_pid || true
+            exit 1
+          fi
+
+    - name: Stop qemu
+      if: always()
+      run: |
+        sudo pkill -f qemu-system-x86_64 || true
+
+  run-kernel-collector-tests:
+    name: run-kernel-collector-tests
+    needs: [build-reducer, build-kernel-collector-test]
+    runs-on: ubuntu-24.04
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          # renovate: datasource=docker depName=quay.io/lvh-images/complexity-test
+          - kernel: '5.4-20250721.013324'
+            description: 'Kernel 5.4'
+          # renovate: datasource=docker depName=quay.io/lvh-images/complexity-test
+          - kernel: '5.10-20250507.063028'
+            description: 'Kernel 5.10'
+          # renovate: datasource=docker depName=quay.io/lvh-images/complexity-test
+          - kernel: '5.15-20250507.063028'
+            description: 'Kernel 5.15'
+          # renovate: datasource=docker depName=quay.io/lvh-images/complexity-test
+          - kernel: '6.1-20250507.063028'
+            description: 'Kernel 6.1'
+          # renovate: datasource=docker depName=quay.io/lvh-images/complexity-test
+          - kernel: '6.6-20250507.063028'
+            description: 'Kernel 6.6'
+          # renovate: datasource=docker depName=quay.io/lvh-images/complexity-test
+          - kernel: '6.12-20250507.063028'
+            description: 'Kernel 6.12'
+    timeout-minutes: 10
+    steps:
+    - name: Check out the codebase
+      uses: actions/checkout@93cb6efe18208431cddfb8368fd83d5badbf9bfd # v5.0.1
+      with:
+        fetch-depth: 0
+
+    - name: Download reducer container
+      uses: actions/download-artifact@018cc2cf5baa6db3ef3c5f8a56943fffe632ef53 # v6.0.0
+      with:
+        name: reducer-container
+        path: ./container-exports
+
+    - name: Download kernel-collector-test container
+      uses: actions/download-artifact@018cc2cf5baa6db3ef3c5f8a56943fffe632ef53 # v6.0.0
+      with:
+        name: kernel-collector-test-container
+        path: ./container-exports
+
+    - name: Cache and install LVH host dependencies
+      uses: awalsh128/cache-apt-pkgs-action@latest
+      with:
+        # Match LVH action.yaml dependency_list exactly
+        packages: cpu-checker qemu-system-x86 libvirt-daemon-system libvirt-clients bridge-utils virtinst virt-manager
+        version: lvh-deps-1
+
+    - name: Run kernel collector tests on ${{ matrix.description }}
+      uses: yonch/little-vm-helper@main
+      with:
+        test-name: kernel-collector-test-${{ matrix.kernel }}
+        image: 'complexity-test'
+        image-version: ${{ matrix.kernel }}
+        host-mount: ./
+        images-folder-parent: "/tmp"
+        cpu: 2
+        mem: 2G
+        cpu-kind: 'host,pmu=on'
+        lvh-version: "v0.0.23"
+        install-dependencies: 'true'
+        verbose: 'true'
+        cmd: |
+          set -e  # Exit on any error
+          cd /host
+          
+          # Load container images
+          docker load < container-exports/reducer.tar
+          docker load < container-exports/kernel-collector-test.tar
+          
+          # Create data directory
+          mkdir -p data
+          
+          # Start reducer
+          reducer_id=$(docker run --detach --rm \
+            --network=host \
+            localhost:5000/reducer \
+            --port 8000 \
+            --prom 0.0.0.0:7000 \
+            --partitions-per-shard 1 \
+            --num-ingest-shards=1 \
+            --num-matching-shards=1 \
+            --num-aggregation-shards=1 \
+            --enable-aws-enrichment \
+            --enable-otlp-grpc-metrics \
+            --log-console \
+            --debug)
+          
+          echo "Reducer started with ID: $reducer_id"
+          
+          # Wait a moment for reducer to start
+          sleep 5
+          
+          # Run kernel collector test and capture real exit code
+          echo "Starting kernel collector test..."
+          set +e  # disable exit on error to capture exit status
+          docker run --name kernel-collector-test-$$ \
+            --rm \
+            --env EBPF_NET_HOST_DIR="/hostfs" \
+            --privileged \
+            --network host \
+            --volume /sys/fs/cgroup:/hostfs/sys/fs/cgroup \
+            --volume /usr/src:/hostfs/usr/src \
+            --volume /lib/modules:/hostfs/lib/modules \
+            --volume /etc:/hostfs/etc \
+            --volume /var/cache:/hostfs/cache \
+            --volume /var/run/docker.sock:/var/run/docker.sock \
+            --env EBPF_NET_KERNEL_HEADERS_AUTO_FETCH="true" \
+            --env EBPF_NET_EXPORT_BPF_SRC_FILE="/hostfs/data/bpf.src.c" \
+            --volume "$(pwd)/data:/hostfs/data" \
+            localhost:5000/kernel-collector-test \
+            --log-console
+          test_exit_code=$?
+          set -e  # re-enable exit on error
+          
+          # Stop reducer
+          docker stop $reducer_id || true
+          
+          echo "Test completed with exit code: $test_exit_code"
+          exit $test_exit_code
+
+    - name: Stop qemu
+      if: always()
+      run: |
+        sudo pkill -f qemu-system-x86_64 || true
+
+    - name: Upload kernel-collector dumps
+      if: always()
+      uses: actions/upload-artifact@330a01c490aca151604b8cf639adc76d48f6c5d4 # v5.0.0
+      with:
+        name: kernel-collector-dumps-${{ matrix.kernel }}
+        path: |
+          data/*.json
+        if-no-files-found: warn

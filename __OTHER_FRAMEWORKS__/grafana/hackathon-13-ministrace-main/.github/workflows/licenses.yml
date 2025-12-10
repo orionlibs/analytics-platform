@@ -1,0 +1,39 @@
+name: Check licenses
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+
+permissions: {}
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ startsWith(github.ref, 'refs/pull/') }}
+
+jobs:
+  cargo-deny:
+    name: cargo deny
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: EmbarkStudios/cargo-deny-action@30f817c6f72275c6d54dc744fbca09ebc958599f # v2
+
+  bundle-licenses:
+    name: cargo bundle-licenses
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: cargo-bins/cargo-binstall@1057f4833e56df9570acf92bd70ad48d892d5f96 # main
+      - run: cargo binstall cargo-bundle-licenses
+      - name: Diff cargo bundle-licenses output
+        run: cargo bundle-licenses --format yaml --previous THIRDPARTY.yaml | diff - THIRDPARTY.yaml

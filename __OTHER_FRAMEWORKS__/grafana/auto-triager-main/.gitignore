@@ -1,0 +1,6 @@
+.page.txt
+bin
+*.sqlite
+vector.db
+**/*.jsonl
+out

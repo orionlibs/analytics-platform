@@ -1,0 +1,61 @@
+version: "2"
+linters:
+  enable:
+    - depguard
+    - errorlint
+    - misspell
+    - revive
+    - sloglint
+  settings:
+    depguard:
+      rules:
+        main:
+          deny:
+            - pkg: sync/atomic
+              desc: Use go.uber.org/atomic instead of sync/atomic
+            - pkg: github.com/pkg/errors
+              desc: Use errors or fmt instead of github.com/pkg/errors
+            - pkg: github.com/stretchr/testify/assert
+              desc: Use github.com/stretchr/testify/require instead of github.com/stretchr/testify/assert
+            - pkg: io/ioutil
+              desc: Use corresponding 'os' or 'io' functions instead.
+            - pkg: regexp
+              desc: Use github.com/grafana/regexp instead of regexp
+    errcheck:
+      exclude-functions:
+        - io.Copy
+        - io.WriteString
+        - (net/http.ResponseWriter).Write
+        - (*net/http.Server).Shutdown
+        - (github.com/prometheus/prometheus/storage.Appender).Rollback
+  exclusions:
+    generated: lax
+    presets:
+      - comments
+      - common-false-positives
+      - legacy
+      - std-error-handling
+    rules:
+      - linters:
+          - errcheck
+        path: _test.go
+    paths:
+      - third_party$
+      - builtin$
+      - examples$
+issues:
+  max-same-issues: 0
+formatters:
+  enable:
+    - gofumpt
+    - goimports
+  settings:
+    goimports:
+      local-prefixes:
+        - github.com/prometheus/promlens
+  exclusions:
+    generated: lax
+    paths:
+      - third_party$
+      - builtin$
+      - examples$

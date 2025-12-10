@@ -1,0 +1,200 @@
+name: build-benv-single-arch
+
+on:
+  workflow_call:
+    inputs:
+      runner:
+        description: Runner label (ubuntu-24.04 or ubuntu-24.04-arm)
+        required: true
+        type: string
+      arch:
+        description: Target architecture (amd64 or arm64)
+        required: true
+        type: string
+      ref:
+        description: Tag, branch or SHA to checkout
+        required: false
+        type: string
+        default: main
+      cache_registry:
+        description: Cache registry to use (GHCR)
+        required: false
+        type: string
+        default: ghcr.io
+      force_rebuild:
+        description: Force rebuild all containers (ignore cache)
+        required: false
+        type: boolean
+        default: false
+    outputs:
+      final_image:
+        description: Full image tag for the final stage in the cache registry
+        value: ${{ jobs.build-final.outputs['full-image-tag'] }}
+
+permissions:
+  contents: read
+  packages: write
+
+env:
+  CACHE_REGISTRY: ${{ inputs.cache_registry || 'ghcr.io' }}
+  REF: ${{ inputs.ref || github.ref }}
+  FORCE_REBUILD: ${{ inputs.force_rebuild || false }}
+
+jobs:
+  build-base:
+    name: Build base image
+    runs-on: ${{ inputs.runner }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@93cb6efe18208431cddfb8368fd83d5badbf9bfd # v5.0.1
+        with:
+          ref: ${{ env.REF }}
+
+      - name: Build and push base image
+        uses: ./.github/actions/build-tools-single-stage/
+        with:
+          directory: base
+          arch: ${{ inputs.arch }}
+          registry: ${{ env.CACHE_REGISTRY }}
+          registry_username: ${{ github.actor }}
+          registry_password: ${{ secrets.GITHUB_TOKEN }}
+          ref: ${{ env.REF }}
+          force_rebuild: ${{ env.FORCE_REBUILD }}
+
+
+  build-libuv:
+    name: Build libuv image
+    runs-on: ${{ inputs.runner }}
+    needs: build-base
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@93cb6efe18208431cddfb8368fd83d5badbf9bfd # v5.0.1
+        with:
+          ref: ${{ env.REF }}
+
+      - name: Build and push libuv image
+        uses: ./.github/actions/build-tools-single-stage/
+        with:
+          directory: libuv
+          arch: ${{ inputs.arch }}
+          registry: ${{ env.CACHE_REGISTRY }}
+          registry_username: ${{ github.actor }}
+          registry_password: ${{ secrets.GITHUB_TOKEN }}
+          ref: ${{ env.REF }}
+          force_rebuild: ${{ env.FORCE_REBUILD }}
+
+  build-cpp-misc:
+    name: Build cpp_misc image
+    runs-on: ${{ inputs.runner }}
+    needs: build-base
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@93cb6efe18208431cddfb8368fd83d5badbf9bfd # v5.0.1
+        with:
+          ref: ${{ env.REF }}
+
+      - name: Build and push cpp_misc image
+        uses: ./.github/actions/build-tools-single-stage/
+        with:
+          directory: cpp_misc
+          arch: ${{ inputs.arch }}
+          registry: ${{ env.CACHE_REGISTRY }}
+          registry_username: ${{ github.actor }}
+          registry_password: ${{ secrets.GITHUB_TOKEN }}
+          ref: ${{ env.REF }}
+          force_rebuild: ${{ env.FORCE_REBUILD }}
+
+  build-libmaxminddb:
+    name: Build libmaxminddb image
+    runs-on: ${{ inputs.runner }}
+    needs: build-base
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@93cb6efe18208431cddfb8368fd83d5badbf9bfd # v5.0.1
+        with:
+          ref: ${{ env.REF }}
+
+      - name: Build and push libmaxminddb image
+        uses: ./.github/actions/build-tools-single-stage/
+        with:
+          directory: libmaxminddb
+          arch: ${{ inputs.arch }}
+          registry: ${{ env.CACHE_REGISTRY }}
+          registry_username: ${{ github.actor }}
+          registry_password: ${{ secrets.GITHUB_TOKEN }}
+          ref: ${{ env.REF }}
+          force_rebuild: ${{ env.FORCE_REBUILD }}
+
+  build-libbpf:
+    name: Build libbpf image
+    runs-on: ${{ inputs.runner }}
+    needs: build-base
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@93cb6efe18208431cddfb8368fd83d5badbf9bfd # v5.0.1
+        with:
+          ref: ${{ env.REF }}
+
+      - name: Build and push libbpf image
+        uses: ./.github/actions/build-tools-single-stage/
+        with:
+          directory: libbpf
+          arch: ${{ inputs.arch }}
+          registry: ${{ env.CACHE_REGISTRY }}
+          registry_username: ${{ github.actor }}
+          registry_password: ${{ secrets.GITHUB_TOKEN }}
+          ref: ${{ env.REF }}
+          force_rebuild: ${{ env.FORCE_REBUILD }}
+
+  build-aws-sdk:
+    name: Build aws_sdk image
+    runs-on: ${{ inputs.runner }}
+    needs: [build-base]
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@93cb6efe18208431cddfb8368fd83d5badbf9bfd # v5.0.1
+        with:
+          ref: ${{ env.REF }}
+
+      - name: Build and push aws_sdk image
+        uses: ./.github/actions/build-tools-single-stage/
+        with:
+          directory: aws_sdk
+          arch: ${{ inputs.arch }}
+          registry: ${{ env.CACHE_REGISTRY }}
+          registry_username: ${{ github.actor }}
+          registry_password: ${{ secrets.GITHUB_TOKEN }}
+          ref: ${{ env.REF }}
+          force_rebuild: ${{ env.FORCE_REBUILD }}
+
+  build-final:
+    name: Build final image
+    runs-on: ${{ inputs.runner }}
+    needs: [
+      build-base,
+      build-libuv,
+      build-aws-sdk,
+      build-cpp-misc,
+      build-libmaxminddb,
+      build-libbpf
+    ]
+    outputs:
+      image-tag: ${{ steps.build.outputs.image-tag }}
+      full-image-tag: ${{ steps.build.outputs.full-image-tag }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@93cb6efe18208431cddfb8368fd83d5badbf9bfd # v5.0.1
+        with:
+          ref: ${{ env.REF }}
+
+      - name: Build and push final image to cache registry
+        id: build
+        uses: ./.github/actions/build-tools-single-stage/
+        with:
+          directory: final
+          arch: ${{ inputs.arch }}
+          registry: ${{ env.CACHE_REGISTRY }}
+          registry_username: ${{ github.actor }}
+          registry_password: ${{ secrets.GITHUB_TOKEN }}
+          ref: ${{ env.REF }}
+          force_rebuild: ${{ env.FORCE_REBUILD }}

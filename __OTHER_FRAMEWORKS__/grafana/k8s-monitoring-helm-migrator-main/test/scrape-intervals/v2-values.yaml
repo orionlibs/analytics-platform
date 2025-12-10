@@ -1,0 +1,39 @@
+cluster:
+  name: custom-scrape-intervals-test
+global:
+  scrapeInterval: 2m
+destinations:
+  - name: metricsService
+    type: prometheus
+    url: https://prometheus.example.com/api/prom/push
+    auth:
+      type: basic
+      username: '12345'
+      password: It's a secret to everyone
+clusterMetrics:
+  enabled: true
+  kube-state-metrics:
+    scrapeInterval: 30s
+  node-exporter:
+    scrapeInterval: 60s
+alloy-metrics:
+  enabled: true
+annotationAutodiscovery:
+  enabled: true
+prometheusOperatorObjects:
+  enabled: true
+  crds:
+    deploy: true
+integrations:
+  alloy:
+    instances:
+      - name: alloy
+        labelSelectors:
+          app.kubernetes.io/name:
+            - alloy-metrics
+        metrics:
+          tuning:
+            useDefaultAllowList: false
+            includeMetrics:
+              - alloy_build_info
+

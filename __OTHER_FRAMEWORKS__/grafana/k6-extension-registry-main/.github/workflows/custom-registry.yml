@@ -1,0 +1,197 @@
+# Reusable workflow for custom k6 extension catalog maintenance.
+#
+# This workflow generates a custom k6 extension registry and catalog from a k6 extension registry source
+# and deploys them to the GitHub Pages site at `/registry.json` and `/catalog.json`.
+#
+# The name of the registry source file can be specified in the `source` parameter,
+# if it is missing, it defaults to `registry.yaml`.
+#
+# GitHub Pages must be enabled and "Build and Deployment source"
+# must be set to "GitHub Actions".
+#
+# Usage
+# -----
+#
+# If there are no private extensions, you simply have to call this workflow as a job.
+#
+# ```
+# jobs:
+#  custom-registry:
+#    uses: grafana/k6-extension-registry/.github/workflows/custom-registry.yml@main
+# ```
+#
+# When using private extensions, the ssh key (or keys) must be specified,
+# which provide read-only access to the private repositories.
+# The location of the SSH known hosts file should also be specified.
+#
+# ```
+# jobs:
+#  custom-registry:
+#    uses: grafana/k6-extension-registry/.github/workflows/custom-registry.yml@main
+#    with:
+#      ssh-known-hosts: ssh_known_hosts # Optional, only required for private extension repositories
+#    secrets:
+#      ssh-private-key: ${{ secrets.SSH_PRIVATE_KEY }} # Optional, only required for private extension repositories
+# ```
+#
+
+name: custom-registry
+
+on:
+  workflow_call:
+    inputs:
+      source:
+        description: "Registry source file"
+        type: string
+        required: false
+        default: "registry.yaml"
+      ssh-known-hosts:
+        description: "SSH known hosts file"
+        type: string
+        required: false
+      lint:
+        description: "Enable linter and compliance checks"
+        type: boolean
+        required: false
+        default: true
+      origin:
+        description: "External registry URL for default values"
+        type: string
+        required: false
+        default: "https://registry.k6.io/registry.json"
+
+    outputs:
+      changed:
+        description: "True if the catalog has changed"
+        value: ${{ jobs.generate.outputs.changed }}
+    secrets:
+      ssh-private-key:
+        required: false
+
+permissions:
+  actions: write
+  pages: write
+  id-token: write
+  contents: read
+
+jobs:
+  generate:
+    runs-on: ubuntu-latest
+    env:
+      SSH_KNOWN_HOSTS: ${{ inputs.ssh-known-hosts }}
+      GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      SSH_AUTH_SOCK: ${{ github.workspace }}/build/ssh-auth-sock
+      HTDOCS_DIR: ${{ github.workspace }}/build/htdocs
+      XDG_CACHE_HOME: ${{ github.workspace }}/build/cache
+      SSH_PRIVATE_KEY: ${{secrets.ssh-private-key}}
+
+    outputs:
+      changed: ${{ steps.generate.outputs.changed }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+
+      - name: Prepare
+        run: |
+          mkdir -p ${HTDOCS_DIR}
+          mkdir -p ${XDG_CACHE_HOME}
+
+      - name: Cache Restore
+        uses: actions/cache/restore@v4
+        with:
+          path: ${{ env.XDG_CACHE_HOME }}
+          key: xdg-cache
+
+      - name: Setup SSH
+        uses: webfactory/ssh-agent@a6f90b1f127823b31d4d4a8d96047790581349bd # v0.9.1
+        if: ${{ env.SSH_PRIVATE_KEY != '' }}
+        with:
+          ssh-private-key: ${{ secrets.ssh-private-key }}
+          ssh-auth-sock: ${{ env.SSH_AUTH_SOCK }}
+
+      - name: Configure Pages
+        uses: actions/configure-pages@v5
+        id: pages
+
+      - name: Setup eget
+        uses: grafana/k6-extension-actions/setup-eget@v0.1.0
+
+      - name: Setup k6registry
+        uses: grafana/k6-extension-actions/setup-k6registry@v0.1.0
+
+      - name: Check inputs
+        id: params
+        env:
+          LINT: ${{ inputs.lint }}
+        run: |
+          if [ "${LINT}" == "true" ] ; then
+             echo "lint=--lint" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Generate Registry and Catalog
+        id: generate
+        env:
+          GITHUB_TOKEN: ${{github.token}}
+          ORIGIN: ${{ inputs.origin }}
+          LINT: ${{ steps.params.outputs.lint }}
+          BASE_URL: ${{ steps.pages.outputs.base_url }}
+          SOURCE: ${{ inputs.source }}
+        run: >
+          k6registry -v ${LINT}
+          --out "${HTDOCS_DIR}/registry.json"
+          --origin "${ORIGI}"
+          --catalog "${HTDOCS_DIR}/catalog.json"
+          --ref "${BASE_URL}/registry.json"
+          "${SOURCE}"
+
+      - name: Cache Clean
+        if: ${{ github.ref_name == 'main' && steps.generate.outputs.changed == 'true' }}
+        run: |
+          gh extension install actions/gh-actions-cache
+          if gh cache list --key xdg-cache | grep -q  xdg-cache; then
+            gh actions-cache delete xdg-cache --confirm
+          fi
+
+      - name: Cache Save
+        uses: actions/cache/save@v4
+        if: ${{ github.ref_name == 'main' && steps.generate.outputs.changed == 'true' }}
+        with:
+          path: ${{ env.XDG_CACHE_HOME }}
+          key: xdg-cache
+
+      - name: Upload Site
+        uses: actions/upload-artifact@v4
+        if: ${{ github.ref_name == 'main' && steps.generate.outputs.changed == 'true' }}
+        with:
+          path: ${{ env.HTDOCS_DIR }}
+          name: "htdocs"
+          overwrite: true
+
+  publish:
+    runs-on: ubuntu-latest
+    needs:
+      - generate
+    if: ${{ github.ref_name == 'main' && needs.generate.outputs.changed == 'true' }}
+    env:
+      GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      HTDOCS_DIR: ${{ github.workspace }}/htdocs
+    steps:
+      - name: Download Site
+        uses: actions/download-artifact@v4
+        with:
+          path: ${{ env.HTDOCS_DIR }}
+          name: "htdocs"
+
+      - name: Configure Pages
+        uses: actions/configure-pages@v5
+
+      - name: Upload Pages Artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: ${{ env.HTDOCS_DIR }}
+
+      - name: Deploy Pages
+        uses: actions/deploy-pages@v4

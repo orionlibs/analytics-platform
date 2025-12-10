@@ -1,0 +1,410 @@
+# xk6-crawler
+
+**[Web crawler API](https://crawler.x.k6.io) for k6**
+
+> [!IMPORTANT]
+> This is an experimental k6 extension, currently not (yet) officially supported by Grafana!
+
+![readme](docs/readme.svg)
+
+A programmable web crawler, which enables testing of web sites in [Grafana k6](https://grafana.com/docs/k6/latest/) using the visitor pattern. The [JavaScript API](https://crawler.x.k6.io) allows you to create and easily program web crawlers. In the callback functions of the crawler, custom logic can be used for testing.
+
+## Usage
+
+**example**
+
+<!-- Use https://github.com/szkiba/mdcode to update the code block -->
+```javascript file=examples/example.js
+import { Crawler } from "k6/x/crawler";
+
+export default function () {
+  const c = new Crawler({ max_depth: 2 });
+
+  c.onHTML("a[href]", (e) => {
+    if (e.attr("href").startsWith("/")) {
+      e.request.visit(e.attr("href"));
+    }
+  });
+
+  c.onResponse((r) => {
+    console.log(r.status_code, r.request.url);
+  });
+
+  c.visit("https://grafana.com");
+}
+```
+
+The crawler is programmed using so-called callback functions. In the example above, two callback functions are registered.
+
+With [onHTML](https://crawler.x.k6.io/classes/Crawler.html#onhtml), you can register a callback function that will run on HTML elements that match the selector parameter.  The callback function parameter is the matching [HTML element](https://crawler.x.k6.io/interfaces/HTMLElement.html).
+
+Normally, the [onHTML](https://crawler.x.k6.io/classes/Crawler.html#onhtml) callback function is responsible for collecting the URLs to be crawled and placing them in a queue. This is usually done using the [visit](https://crawler.x.k6.io/interfaces/Request.html#visit) function of the [Request](https://crawler.x.k6.io/interfaces/Request.html) object belonging to the [HTML element](https://crawler.x.k6.io/interfaces/HTMLElement.html).
+
+```javascript
+  c.onHTML("a[href]", (e) => {
+    // ...
+    e.request.visit(e.attr("href"));
+  });
+```
+
+With the [onRequest](https://crawler.x.k6.io/classes/Crawler.html#onrequest) callback function, you can customize the HTTP request before it is executed. The parameter of the callback function is the [Request](https://crawler.x.k6.io/interfaces/Request.html) object.
+
+```javascript
+  c.onRequest((r) => {
+    // ...
+  });
+```
+
+The [onResponse](https://crawler.x.k6.io/classes/Crawler.html#onresponse) callback function is called after the response has been received. The callback function parameter is the [Response](https://crawler.x.k6.io/interfaces/Response.html) object.
+
+```javascript
+  c.onResponse((r) => {
+    // ...
+  });
+```
+
+The [visit](https://crawler.x.k6.io/classes/Crawler.html#visit) function can be used to initiate the download of a given URL and the execution of registered callback functions.
+
+```javascript
+  c.visit("https://grafana.com");
+```
+
+<details>
+<summary><b>output</b></summary>
+
+<!-- Use https://github.com/szkiba/mdcode to update the code block -->
+```bash file=examples/example.txt
+time="2025-01-29T15:29:07+01:00" level=info msg="200 https://grafana.com" source=console
+time="2025-01-29T15:29:07+01:00" level=info msg="200 https://grafana.com/" source=console
+time="2025-01-29T15:29:07+01:00" level=info msg="200 https://grafana.com/products/cloud/" source=console
+time="2025-01-29T15:29:07+01:00" level=info msg="200 https://grafana.com/oss/" source=console
+time="2025-01-29T15:29:07+01:00" level=info msg="200 https://grafana.com/solutions/" source=console
+time="2025-01-29T15:29:07+01:00" level=info msg="200 https://grafana.com/blog/" source=console
+time="2025-01-29T15:29:08+01:00" level=info msg="200 https://grafana.com/docs/" source=console
+time="2025-01-29T15:29:08+01:00" level=info msg="200 https://grafana.com/pricing/" source=console
+time="2025-01-29T15:29:08+01:00" level=info msg="200 https://grafana.com/get/" source=console
+time="2025-01-29T15:29:08+01:00" level=info msg="200 https://grafana.com/contact/" source=console
+time="2025-01-29T15:29:08+01:00" level=info msg="200 https://grafana.com/auth/sign-in/" source=console
+time="2025-01-29T15:29:08+01:00" level=info msg="200 https://grafana.com/auth/sign-up/create-user?plcmt=mobile-nav?plcmt=mobile-nav&cta=create-free-account" source=console
+time="2025-01-29T15:29:08+01:00" level=info msg="200 https://grafana.com/contact/?plcmt=mobile-nav&cta=myaccount" source=console
+time="2025-01-29T15:29:08+01:00" level=info msg="200 https://grafana.com/products/cloud/logs/" source=console
+time="2025-01-29T15:29:08+01:00" level=info msg="200 https://grafana.com/grafana/" source=console
+time="2025-01-29T15:29:09+01:00" level=info msg="200 https://grafana.com/products/cloud/traces/" source=console
+time="2025-01-29T15:29:09+01:00" level=info msg="200 https://grafana.com/products/cloud/metrics/" source=console
+time="2025-01-29T15:29:09+01:00" level=info msg="200 https://grafana.com/products/cloud/profiles-for-continuous-profiling/" source=console
+time="2025-01-29T15:29:09+01:00" level=info msg="200 https://grafana.com/products/cloud/ai-tools-for-observability/" source=console
+time="2025-01-29T15:29:09+01:00" level=info msg="200 https://grafana.com/products/cloud/asserts/" source=console
+time="2025-01-29T15:29:09+01:00" level=info msg="200 https://grafana.com/products/cloud/slo/" source=console
+time="2025-01-29T15:29:10+01:00" level=info msg="200 https://grafana.com/products/cloud/alerting/" source=console
+time="2025-01-29T15:29:10+01:00" level=info msg="200 https://grafana.com/grafana/plugins/" source=console
+time="2025-01-29T15:29:10+01:00" level=info msg="200 https://grafana.com/products/cloud/frontend-observability-for-real-user-monitoring/" source=console
+time="2025-01-29T15:29:10+01:00" level=info msg="200 https://grafana.com/products/cloud/application-observability/" source=console
+time="2025-01-29T15:29:10+01:00" level=info msg="200 https://grafana.com/products/cloud/k6/" source=console
+time="2025-01-29T15:29:10+01:00" level=info msg="200 https://grafana.com/products/cloud/synthetic-monitoring/" source=console
+time="2025-01-29T15:29:10+01:00" level=info msg="200 https://grafana.com/products/cloud/oncall/" source=console
+time="2025-01-29T15:29:11+01:00" level=info msg="200 https://grafana.com/products/cloud/incident/" source=console
+time="2025-01-29T15:29:11+01:00" level=info msg="200 https://grafana.com/products/enterprise/" source=console
+time="2025-01-29T15:29:11+01:00" level=info msg="200 https://grafana.com/oss/loki/" source=console
+time="2025-01-29T15:29:11+01:00" level=info msg="200 https://grafana.com/oss/grafana/" source=console
+time="2025-01-29T15:29:11+01:00" level=info msg="200 https://grafana.com/oss/tempo/" source=console
+time="2025-01-29T15:29:11+01:00" level=info msg="200 https://grafana.com/oss/mimir/" source=console
+time="2025-01-29T15:29:12+01:00" level=info msg="200 https://grafana.com/oss/pyroscope/" source=console
+time="2025-01-29T15:29:12+01:00" level=info msg="200 https://grafana.com/oss/beyla-ebpf/" source=console
+time="2025-01-29T15:29:12+01:00" level=info msg="200 https://grafana.com/oss/faro/" source=console
+time="2025-01-29T15:29:12+01:00" level=info msg="200 https://grafana.com/oss/alloy-opentelemetry-collector/" source=console
+time="2025-01-29T15:29:12+01:00" level=info msg="200 https://grafana.com/oss/oncall/" source=console
+time="2025-01-29T15:29:12+01:00" level=info msg="200 https://grafana.com/oss/k6/" source=console
+time="2025-01-29T15:29:12+01:00" level=info msg="200 https://grafana.com/oss/prometheus/" source=console
+time="2025-01-29T15:29:13+01:00" level=info msg="200 https://grafana.com/oss/opentelemetry/" source=console
+time="2025-01-29T15:29:13+01:00" level=info msg="200 https://grafana.com/oss/graphite/" source=console
+time="2025-01-29T15:29:13+01:00" level=info msg="200 https://grafana.com/grafana/dashboards/" source=console
+time="2025-01-29T15:29:13+01:00" level=info msg="200 https://grafana.com/oss/prometheus/exporters/" source=console
+time="2025-01-29T15:29:13+01:00" level=info msg="200 https://grafana.com/solutions/kubernetes/" source=console
+time="2025-01-29T15:29:13+01:00" level=info msg="200 https://grafana.com/products/cloud/irm/" source=console
+time="2025-01-29T15:29:13+01:00" level=info msg="200 https://grafana.com/solutions/?plcmt=nav-solutions-cta1" source=console
+time="2025-01-29T15:29:14+01:00" level=info msg="200 https://grafana.com/solutions/linux-node/monitor/" source=console
+time="2025-01-29T15:29:14+01:00" level=info msg="200 https://grafana.com/solutions/windows/monitor/" source=console
+time="2025-01-29T15:29:14+01:00" level=info msg="200 https://grafana.com/solutions/docker/monitor/" source=console
+time="2025-01-29T15:29:14+01:00" level=info msg="200 https://grafana.com/solutions/postgresql/monitor/" source=console
+time="2025-01-29T15:29:14+01:00" level=info msg="200 https://grafana.com/solutions/mysql/monitor/" source=console
+time="2025-01-29T15:29:14+01:00" level=info msg="200 https://grafana.com/solutions/cloud-monitoring-aws/" source=console
+time="2025-01-29T15:29:15+01:00" level=info msg="200 https://grafana.com/solutions/kafka/monitor/" source=console
+time="2025-01-29T15:29:15+01:00" level=info msg="200 https://grafana.com/solutions/jenkins/monitor/" source=console
+time="2025-01-29T15:29:15+01:00" level=info msg="200 https://grafana.com/solutions/rabbitmq/monitor/" source=console
+time="2025-01-29T15:29:15+01:00" level=info msg="200 https://grafana.com/solutions/mongodb/monitor/" source=console
+time="2025-01-29T15:29:15+01:00" level=info msg="200 https://grafana.com/solutions/monitoring/?plcmt=nav-solutions-cta2" source=console
+time="2025-01-29T15:29:15+01:00" level=info msg="200 https://grafana.com/solutions/mongodb/visualize/" source=console
+time="2025-01-29T15:29:16+01:00" level=info msg="200 https://grafana.com/solutions/appdynamics/visualize/" source=console
+time="2025-01-29T15:29:16+01:00" level=info msg="200 https://grafana.com/solutions/oracle-database/visualize/" source=console
+time="2025-01-29T15:29:16+01:00" level=info msg="200 https://grafana.com/solutions/gitlab/visualize/" source=console
+time="2025-01-29T15:29:16+01:00" level=info msg="200 https://grafana.com/solutions/jira/visualize/" source=console
+time="2025-01-29T15:29:16+01:00" level=info msg="200 https://grafana.com/solutions/salesforce/visualize/" source=console
+time="2025-01-29T15:29:16+01:00" level=info msg="200 https://grafana.com/solutions/splunk/visualize/" source=console
+time="2025-01-29T15:29:16+01:00" level=info msg="200 https://grafana.com/solutions/datadog/visualize/" source=console
+time="2025-01-29T15:29:16+01:00" level=info msg="200 https://grafana.com/solutions/new-relic/visualize/" source=console
+time="2025-01-29T15:29:17+01:00" level=info msg="200 https://grafana.com/solutions/snowflake/visualize/" source=console
+time="2025-01-29T15:29:17+01:00" level=info msg="200 https://grafana.com/solutions/visualization/?plcmt=nav-solutions-cta3" source=console
+time="2025-01-29T15:29:17+01:00" level=info msg="200 https://grafana.com/events/grafanacon/" source=console
+time="2025-01-29T15:29:17+01:00" level=info msg="200 https://grafana.com/events/observabilitycon-on-the-road/2024/" source=console
+time="2025-01-29T15:29:17+01:00" level=info msg="200 https://grafana.com/observability-survey/" source=console
+time="2025-01-29T15:29:17+01:00" level=info msg="200 https://grafana.com/observability-benefits-for-business/" source=console
+time="2025-01-29T15:29:18+01:00" level=info msg="200 https://grafana.com/story-of-grafana/" source=console
+time="2025-01-29T15:29:18+01:00" level=info msg="200 https://grafana.com/events/" source=console
+time="2025-01-29T15:29:18+01:00" level=info msg="200 https://grafana.com/success/" source=console
+time="2025-01-29T15:29:18+01:00" level=info msg="200 https://grafana.com/videos/" source=console
+time="2025-01-29T15:29:18+01:00" level=info msg="200 https://grafana.com/tutorials/" source=console
+time="2025-01-29T15:29:18+01:00" level=info msg="200 https://grafana.com/workshops/" source=console
+time="2025-01-29T15:29:18+01:00" level=info msg="200 https://grafana.com/docs/writers-toolkit/" source=console
+time="2025-01-29T15:29:19+01:00" level=info msg="200 https://grafana.com/developers/" source=console
+time="2025-01-29T15:29:19+01:00" level=info msg="200 https://grafana.com/community/" source=console
+time="2025-01-29T15:29:19+01:00" level=info msg="200 https://grafana.com/community/champions/" source=console
+time="2025-01-29T15:29:19+01:00" level=info msg="200 https://grafana.com/community/meetups/" source=console
+time="2025-01-29T15:29:20+01:00" level=info msg="200 https://grafana.com/docs/grafana/latest/" source=console
+time="2025-01-29T15:29:20+01:00" level=info msg="200 https://grafana.com/docs/mimir/latest/" source=console
+time="2025-01-29T15:29:20+01:00" level=info msg="200 https://grafana.com/docs/tempo/latest/" source=console
+time="2025-01-29T15:29:20+01:00" level=info msg="200 https://grafana.com/docs/loki/latest/" source=console
+time="2025-01-29T15:29:20+01:00" level=info msg="200 https://grafana.com/docs/pyroscope/latest/" source=console
+time="2025-01-29T15:29:20+01:00" level=info msg="200 https://grafana.com/docs/alloy/latest/" source=console
+time="2025-01-29T15:29:20+01:00" level=info msg="200 https://grafana.com/docs/beyla/latest/" source=console
+time="2025-01-29T15:29:20+01:00" level=info msg="200 https://grafana.com/docs/grafana-cloud/monitor-applications/frontend-observability/" source=console
+time="2025-01-29T15:29:21+01:00" level=info msg="200 https://grafana.com/docs/k6/latest/" source=console
+time="2025-01-29T15:29:21+01:00" level=info msg="200 https://grafana.com/docs/grafana/latest/datasources/prometheus/" source=console
+time="2025-01-29T15:29:21+01:00" level=info msg="200 https://grafana.com/docs/grafana-cloud/" source=console
+time="2025-01-29T15:29:21+01:00" level=info msg="200 https://grafana.com/docs/grafana-cloud/testing/k6/" source=console
+time="2025-01-29T15:29:21+01:00" level=info msg="200 https://grafana.com/docs/grafana-cloud/testing/synthetic-monitoring/" source=console
+time="2025-01-29T15:29:21+01:00" level=info msg="200 https://grafana.com/docs/grafana-cloud/monitor-infrastructure/kubernetes-monitoring/" source=console
+time="2025-01-29T15:29:22+01:00" level=info msg="200 https://grafana.com/docs/oncall/latest/" source=console
+time="2025-01-29T15:29:22+01:00" level=info msg="200 https://grafana.com/docs/grafana-cloud/alerting-and-irm/incident/" source=console
+time="2025-01-29T15:29:22+01:00" level=info msg="200 https://grafana.com/docs/grafana-cloud/alerting-and-irm/slo/" source=console
+time="2025-01-29T15:29:22+01:00" level=info msg="200 https://grafana.com/docs/grafana-cloud/alerting-and-irm/alerting/" source=console
+time="2025-01-29T15:29:22+01:00" level=info msg="200 https://grafana.com/docs/grafana-cloud/alerting-and-irm/machine-learning/" source=console
+time="2025-01-29T15:29:23+01:00" level=info msg="200 https://grafana.com/docs/grafana-cloud/monitor-applications/application-observability/" source=console
+time="2025-01-29T15:29:23+01:00" level=info msg="200 https://grafana.com/docs/grafana/latest/introduction/grafana-enterprise/" source=console
+time="2025-01-29T15:29:23+01:00" level=info msg="200 https://grafana.com/docs/enterprise-logs/latest/" source=console
+time="2025-01-29T15:29:23+01:00" level=info msg="200 https://grafana.com/docs/enterprise-metrics/latest/" source=console
+time="2025-01-29T15:29:23+01:00" level=info msg="200 https://grafana.com/docs/enterprise-traces/latest/" source=console
+time="2025-01-29T15:29:24+01:00" level=info msg="200 https://grafana.com/docs/learning-journeys/" source=console
+time="2025-01-29T15:29:24+01:00" level=info msg="200 https://grafana.com/docs/grafana/latest/getting-started/" source=console
+time="2025-01-29T15:29:24+01:00" level=info msg="200 https://grafana.com/docs/grafana/latest/getting-started/build-first-dashboard/" source=console
+time="2025-01-29T15:29:24+01:00" level=info msg="200 https://grafana.com/docs/grafana-cloud/get-started/" source=console
+time="2025-01-29T15:29:24+01:00" level=info msg="200 https://grafana.com/docs/grafana/latest/whatsnew/whats-new-in-v11-5/" source=console
+time="2025-01-29T15:29:24+01:00" level=info msg="200 https://grafana.com/docs/k6/latest/release-notes/v0.54.0/" source=console
+time="2025-01-29T15:29:24+01:00" level=info msg="200 https://grafana.com/docs/loki/latest/release-notes/v3-3/" source=console
+time="2025-01-29T15:29:25+01:00" level=info msg="200 https://grafana.com/docs/mimir/latest/release-notes/v2.15/" source=console
+time="2025-01-29T15:29:25+01:00" level=info msg="200 https://grafana.com/docs/pyroscope/latest/release-notes/v1-12/" source=console
+time="2025-01-29T15:29:25+01:00" level=info msg="200 https://grafana.com/docs/tempo/latest/release-notes/v2-7/" source=console
+time="2025-01-29T15:29:25+01:00" level=info msg="200 https://grafana.com/about/careers/?plcmt=mobile-nav&cta=career" source=console
+time="2025-01-29T15:29:25+01:00" level=info msg="200 https://grafana.com/get/?plcmt=mobile-nav&cta=downloads" source=console
+time="2025-01-29T15:29:25+01:00" level=info msg="200 https://grafana.com/auth/sign-in?plcmt=mobile-nav&cta=myaccount" source=console
+time="2025-01-29T15:29:25+01:00" level=info msg="200 https://grafana.com/auth/sign-up/create-user" source=console
+time="2025-01-29T15:29:26+01:00" level=info msg="200 https://grafana.com/go/webinar/getting-started-with-grafana-lgtm-stack/" source=console
+time="2025-01-29T15:29:26+01:00" level=info msg="200 https://grafana.com/ja/" source=console
+time="2025-01-29T15:29:26+01:00" level=info msg="200 https://grafana.com/products/cloud/metrics/prometheus-cardinality-optimization/?pg=hp&plcmt=hero-slide-2" source=console
+time="2025-01-29T15:29:26+01:00" level=info msg="200 https://grafana.com/products/cloud/asserts/?pg=hp&plcmt=hero-slide-2" source=console
+time="2025-01-29T15:29:26+01:00" level=info msg="200 https://grafana.com/docs/grafana-cloud/alerting-and-irm/machine-learning/sift/?pg=hp&plcmt=hero-slide-2" source=console
+time="2025-01-29T15:29:26+01:00" level=info msg="200 https://grafana.com/blog/2023/08/28/generative-ai-at-grafana-labs-whats-new-whats-next-and-our-vision-for-the-open-source-community/?pg=hp&plcmt=hero-slide-2" source=console
+time="2025-01-29T15:29:27+01:00" level=info msg="200 https://grafana.com/products/cloud/ai-tools-for-observability/?pg=hp&plcmt=hero-slide-2" source=console
+time="2025-01-29T15:29:27+01:00" level=info msg="200 https://grafana.com/solutions/?pg=hp&plcmt=hero-slide-3" source=console
+time="2025-01-29T15:29:27+01:00" level=info msg="200 https://grafana.com/solutions/kubernetes/?pg=hp&plcmt=hero-slide-4" source=console
+time="2025-01-29T15:29:27+01:00" level=info msg="200 https://grafana.com/products/cloud/application-observability/?pg=hp&plcmt=hero-slide-4" source=console
+time="2025-01-29T15:29:27+01:00" level=info msg="200 https://grafana.com/products/cloud/irm/?pg=hp&plcmt=hero-slide-4" source=console
+time="2025-01-29T15:29:27+01:00" level=info msg="200 https://grafana.com/blog/2024/02/16/opentelemetry-3-questions-to-ask-before-choosing-an-observability-solution/?pg=hp&plcmt=hero-slide-4" source=console
+time="2025-01-29T15:29:27+01:00" level=info msg="200 https://grafana.com/auth/sign-up/create-user?pg=hp&plcmt=hero-slide-5" source=console
+time="2025-01-29T15:29:27+01:00" level=info msg="200 https://grafana.com/products/cloud/metrics/prometheus-cardinality-optimization/?pg=hp&plcmt=hero-slide-5" source=console
+time="2025-01-29T15:29:28+01:00" level=info msg="200 https://grafana.com/products/cloud/asserts/?pg=hp&plcmt=hero-slide-5" source=console
+time="2025-01-29T15:29:28+01:00" level=info msg="200 https://grafana.com/docs/grafana-cloud/alerting-and-irm/machine-learning/sift/?pg=hp&plcmt=hero-slide-5" source=console
+time="2025-01-29T15:29:28+01:00" level=info msg="200 https://grafana.com/blog/2023/08/28/generative-ai-at-grafana-labs-whats-new-whats-next-and-our-vision-for-the-open-source-community/?pg=hp&plcmt=hero-slide-5" source=console
+time="2025-01-29T15:29:28+01:00" level=info msg="200 https://grafana.com/products/cloud/ai-tools-for-observability/?pg=hp&plcmt=hero-slide-6" source=console
+time="2025-01-29T15:29:28+01:00" level=info msg="200 https://grafana.com/solutions/?pg=hp&plcmt=hero-slide-7" source=console
+time="2025-01-29T15:29:28+01:00" level=info msg="200 https://grafana.com/auth/sign-up/create-user?pg=hp&plcmt=cloud-promo&cta=create-free-account" source=console
+time="2025-01-29T15:29:28+01:00" level=info msg="200 https://grafana.com/go/observabilitycon/2022/wells-fargo-observability-transformation-powered-by-grafana-enterprise-and-grafana-cloud/?pg=hp&plcmt=logos" source=console
+time="2025-01-29T15:29:29+01:00" level=info msg="200 https://grafana.com/about/events/observabilitycon/2024/on-the-road/how-dell-consolidated-observability-with-grafana-cloud/?pg=hp&plcmt=logos" source=console
+time="2025-01-29T15:29:29+01:00" level=info msg="200 https://grafana.com/success/asos?pg=hp&plcmt=logos" source=console
+time="2025-01-29T15:29:29+01:00" level=info msg="200 https://grafana.com/go/webinar/a-short-history-of-nearly-everything-related-to-observability-within-atlassian/?pg=hp&plcmt=logos" source=console
+time="2025-01-29T15:29:29+01:00" level=info msg="200 https://grafana.com/blog/2022/10/26/reduce-mttr-and-improve-ux-with-grafana-enterprise-inside-optums-observability-stack/?pg=hp&plcmt=logos" source=console
+time="2025-01-29T15:29:29+01:00" level=info msg="200 https://grafana.com/about/events/observabilitycon/2023/building-massive-scale-observability-panel/?pg=hp&plcmt=logos" source=console
+time="2025-01-29T15:29:29+01:00" level=info msg="200 https://grafana.com/events/grafanacon/2021/prometheus-grafana-roblox/?pg=hp&plcmt=logos" source=console
+time="2025-01-29T15:29:30+01:00" level=info msg="200 https://grafana.com/blog/2023/08/16/reduce-mttr-with-grafana-grafana-k6-and-prometheus-inside-dhls-observability-stack/?pg=hp&plcmt=logos" source=console
+time="2025-01-29T15:29:30+01:00" level=info msg="200 https://grafana.com/success/kushki?pg=hp&plcmt=logos" source=console
+time="2025-01-29T15:29:30+01:00" level=info msg="200 https://grafana.com/grafana/plugins/?pg=hp&plcmt=lt-box-plugins" source=console
+time="2025-01-29T15:29:30+01:00" level=info msg="200 https://grafana.com/go/webinar/unify-your-data-with-grafana-plugins-datadog-splunk-mongodb/?pg=hp&plcmt=lt-box-plugins" source=console
+time="2025-01-29T15:29:30+01:00" level=info msg="200 https://grafana.com/docs/grafana/latest/administration/plugin-management/?pg=hp&plcmt=lt-box-plugins" source=console
+time="2025-01-29T15:29:30+01:00" level=info msg="200 https://grafana.com/blog/2021/01/13/how-to-get-started-quickly-with-metrics-logs-and-traces-using-grafana-cloud-integrations/" source=console
+time="2025-01-29T15:29:30+01:00" level=info msg="200 https://grafana.com/go/webinar/how-to-connect-and-monitor-your-raspberry-pi-with-grafana/" source=console
+time="2025-01-29T15:29:31+01:00" level=info msg="200 https://grafana.com/docs/grafana-cloud/monitor-infrastructure/integrations/" source=console
+time="2025-01-29T15:29:31+01:00" level=info msg="200 https://grafana.com/grafana/?pg=hp&plcmt=lt-box-data-visualization" source=console
+time="2025-01-29T15:29:31+01:00" level=info msg="200 https://grafana.com/go/webinar/getting-started-with-grafana-lgtm-stack/?pg=hp&plcmt=lt-box-data-visualization" source=console
+time="2025-01-29T15:29:31+01:00" level=info msg="200 https://grafana.com/docs/grafana/latest/getting-started/?pg=hp&plcmt=lt-box-data-visualization" source=console
+time="2025-01-29T15:29:31+01:00" level=info msg="200 https://grafana.com/products/cloud/k6/?pg=hp&plcmt=lt-box-performance-testing" source=console
+time="2025-01-29T15:29:31+01:00" level=info msg="200 https://grafana.com/go/webinar/performance-testing-and-observability-in-grafana-cloud/?pg=hp&plcmt=lt-box-performance-testing" source=console
+time="2025-01-29T15:29:31+01:00" level=info msg="200 https://grafana.com/docs/grafana-cloud/testing/k6/?pg=hp&plcmt=lt-box-performance-testing" source=console
+time="2025-01-29T15:29:32+01:00" level=info msg="200 https://grafana.com/products/cloud/synthetic-monitoring/?pg=hp&plcmt=lt-box-synthetic-monitoring" source=console
+time="2025-01-29T15:29:32+01:00" level=info msg="200 https://grafana.com/docs/grafana-cloud/testing/synthetic-monitoring/?pg=hp&plcmt=lt-box-synthetic-monitoring" source=console
+time="2025-01-29T15:29:32+01:00" level=info msg="200 https://grafana.com/products/cloud/asserts/?pg=hp&plcmt=lt-box-root-cause-analysis" source=console
+time="2025-01-29T15:29:32+01:00" level=info msg="200 https://grafana.com/docs/grafana-cloud/monitor-applications/asserts/?pg=hp&plcmt=lt-box-root-cause-analysis" source=console
+time="2025-01-29T15:29:32+01:00" level=info msg="200 https://grafana.com/products/cloud/frontend-observability-for-real-user-monitoring/?pg=hp&plcmt=lt-box-frontend-observability" source=console
+time="2025-01-29T15:29:32+01:00" level=info msg="200 https://grafana.com/go/webinar/intro-to-application-and-frontend-observability-with-grafana-cloud/?pg=hp&plcmt=lt-box-frontend-observability" source=console
+time="2025-01-29T15:29:32+01:00" level=info msg="200 https://grafana.com/docs/grafana-cloud/monitor-applications/frontend-observability/?pg=hp&plcmt=lt-box-frontend-observability" source=console
+time="2025-01-29T15:29:33+01:00" level=info msg="200 https://grafana.com/products/cloud/application-observability/?pg=hp&plcmt=lt-box-application-observability" source=console
+time="2025-01-29T15:29:33+01:00" level=info msg="200 https://grafana.com/go/webinar/intro-to-application-and-frontend-observability-with-grafana-cloud/?pg=hp&plcmt=lt-box-application-observability" source=console
+time="2025-01-29T15:29:33+01:00" level=info msg="200 https://grafana.com/docs/grafana-cloud/monitor-applications/application-observability/?pg=hp&plcmt=lt-box-application-observability" source=console
+time="2025-01-29T15:29:33+01:00" level=info msg="200 https://grafana.com/solutions/monitoring/?pg=hp&plcmt=lt-box-infrastructure-observability" source=console
+time="2025-01-29T15:29:33+01:00" level=info msg="200 https://grafana.com/go/webinar/cloud-infrastructure-monitoring-with-grafana-cloud/?pg=hp&plcmt=lt-box-infrastructure-observability" source=console
+time="2025-01-29T15:29:33+01:00" level=info msg="200 https://grafana.com/docs/grafana-cloud/monitor-infrastructure/integrations/?pg=hp&plcmt=lt-box-infrastructure-observability" source=console
+time="2025-01-29T15:29:33+01:00" level=info msg="200 https://grafana.com/products/cloud/slo/?pg=hp&plcmt=lt-box-slo" source=console
+time="2025-01-29T15:29:34+01:00" level=info msg="200 https://grafana.com/docs/grafana-cloud/alerting-and-irm/slo/?pg=hp&plcmt=lt-box-slo" source=console
+time="2025-01-29T15:29:34+01:00" level=info msg="200 https://grafana.com/products/cloud/alerting/?pg=hp&plcmt=lt-box-alerting" source=console
+time="2025-01-29T15:29:34+01:00" level=info msg="200 https://grafana.com/go/webinar/intro-to-alerting-with-grafana/?pg=hp&plcmt=lt-box-alerting" source=console
+time="2025-01-29T15:29:34+01:00" level=info msg="200 https://grafana.com/docs/grafana/latest/alerting/?pg=hp&plcmt=lt-box-alerting" source=console
+time="2025-01-29T15:29:34+01:00" level=info msg="200 https://grafana.com/products/cloud/oncall/?pg=hp&plcmt=lt-box-oncall" source=console
+time="2025-01-29T15:29:34+01:00" level=info msg="200 https://grafana.com/docs/grafana-cloud/alerting-and-irm/oncall/?pg=hp&plcmt=lt-box-oncall" source=console
+time="2025-01-29T15:29:34+01:00" level=info msg="200 https://grafana.com/products/cloud/incident/?pg=hp&plcmt=lt-box-incident" source=console
+time="2025-01-29T15:29:35+01:00" level=info msg="200 https://grafana.com/docs/grafana-cloud/alerting-and-irm/incident/?pg=hp&plcmt=lt-box-incident" source=console
+time="2025-01-29T15:29:35+01:00" level=info msg="200 https://grafana.com/products/cloud/ai-tools-for-observability/?pg=hp&plcmt=lt-box-ai-ml-insights" source=console
+time="2025-01-29T15:29:35+01:00" level=info msg="200 https://grafana.com/products/cloud/metrics/prometheus-cardinality-optimization/?pg=hp&plcmt=lt-box-cost-management" source=console
+time="2025-01-29T15:29:35+01:00" level=info msg="200 https://grafana.com/events/observabilitycon-on-the-road/2024/dallas/observability-cost-management-with-grafana-cloud/?pg=hp&plcmt=lt-box-cost-management" source=console
+time="2025-01-29T15:29:35+01:00" level=info msg="200 https://grafana.com/docs/grafana-cloud/cost-management-and-billing/?pg=hp&plcmt=lt-box-cost-management" source=console
+time="2025-01-29T15:29:35+01:00" level=info msg="200 https://grafana.com/blog/2024/04/10/grafana-cloud-security-three-common-cloud-security-myths-debunked/?pg=hp&plcmt=lt-box-security-and-governance" source=console
+time="2025-01-29T15:29:36+01:00" level=info msg="200 https://grafana.com/go/webinar/grafana-security-features/?pg=hp&plcmt=lt-box-security-and-governance" source=console
+time="2025-01-29T15:29:36+01:00" level=info msg="200 https://grafana.com/search/?term=security&type=docs?pg=hp&plcmt=lt-box-security-and-governance" source=console
+time="2025-01-29T15:29:36+01:00" level=info msg="200 https://grafana.com/events/observabilitycon-on-the-road/2024/san-francisco-bay-area/observability-as-code-at-liveramp/?pg=hp&plcmt=lt-box-configuration-as-code" source=console
+time="2025-01-29T15:29:36+01:00" level=info msg="200 https://grafana.com/go/webinar/managing-grafana-as-code-using-hashicorp-terraform/?pg=hp&plcmt=lt-box-configuration-as-code" source=console
+time="2025-01-29T15:29:36+01:00" level=info msg="200 https://grafana.com/docs/grafana-cloud/developer-resources/infrastructure-as-code/?pg=hp&plcmt=lt-box-configuration-as-code" source=console
+time="2025-01-29T15:29:36+01:00" level=info msg="200 https://grafana.com/products/cloud/logs/?pg=hp&plcmt=lt-box-loki" source=console
+time="2025-01-29T15:29:36+01:00" level=info msg="200 https://grafana.com/go/webinar/getting-started-with-logging-and-grafana-loki/?pg=hp&plcmt=lt-box-loki" source=console
+time="2025-01-29T15:29:37+01:00" level=info msg="200 https://grafana.com/docs/grafana-cloud/send-data/logs/?pg=hp&plcmt=lt-box-loki" source=console
+time="2025-01-29T15:29:37+01:00" level=info msg="200 https://grafana.com/grafana/?pg=hp&plcmt=lt-box-grafana" source=console
+time="2025-01-29T15:29:37+01:00" level=info msg="200 https://grafana.com/go/webinar/getting-started-with-grafana-lgtm-stack/?pg=hp&plcmt=lt-box-grafana" source=console
+time="2025-01-29T15:29:37+01:00" level=info msg="200 https://grafana.com/docs/grafana/latest/getting-started/?pg=hp&plcmt=lt-box-grafana" source=console
+time="2025-01-29T15:29:37+01:00" level=info msg="200 https://grafana.com/products/cloud/traces/?pg=hp&plcmt=lt-box-tempo" source=console
+time="2025-01-29T15:29:37+01:00" level=info msg="200 https://grafana.com/go/webinar/getting-started-with-tracing-and-grafana-tempo/?pg=hp&plcmt=lt-box-tempo" source=console
+time="2025-01-29T15:29:38+01:00" level=info msg="200 https://grafana.com/docs/grafana-cloud/send-data/traces/?pg=hp&plcmt=lt-box-tempo" source=console
+time="2025-01-29T15:29:38+01:00" level=info msg="200 https://grafana.com/products/cloud/metrics/?pg=hp&plcmt=lt-box-mimir" source=console
+time="2025-01-29T15:29:38+01:00" level=info msg="200 https://grafana.com/go/webinar/intro-to-metrics-with-grafana-prometheus-mimir-and-beyond/?pg=hp&plcmt=lt-box-mimir" source=console
+time="2025-01-29T15:29:38+01:00" level=info msg="200 https://grafana.com/docs/grafana-cloud/send-data/metrics/?pg=hp&plcmt=lt-box-mimir" source=console
+time="2025-01-29T15:29:38+01:00" level=info msg="200 https://grafana.com/products/cloud/profiles-for-continuous-profiling/?pg=hp&plcmt=lt-box-pyroscope" source=console
+time="2025-01-29T15:29:38+01:00" level=info msg="200 https://grafana.com/go/webinar/getting-started-with-continuous-profiling-with-grafana-cloud-profiles/?pg=hp&plcmt=lt-box-pyroscope" source=console
+time="2025-01-29T15:29:38+01:00" level=info msg="200 https://grafana.com/docs/grafana-cloud/monitor-applications/profiles/?pg=hp&plcmt=lt-box-pyroscope" source=console
+time="2025-01-29T15:29:39+01:00" level=info msg="200 https://grafana.com/go/webinar/building-advanced-grafana-dashboards/?pg=hp&plcmt=upcoming-events-1" source=console
+time="2025-01-29T15:29:39+01:00" level=info msg="200 https://grafana.com/author/jake_swiss/" source=console
+time="2025-01-29T15:29:39+01:00" level=info msg="200 https://grafana.com/blog/2025/01/28/how-to-migrate-to-grafana-irm-find-the-right-path-for-your-organization/" source=console
+time="2025-01-29T15:29:39+01:00" level=info msg="200 https://grafana.com/author/kristin-knapp/" source=console
+time="2025-01-29T15:29:39+01:00" level=info msg="200 https://grafana.com/blog/2025/01/27/industrial-iot-visualization-how-grafana-powers-industrial-automation-and-iiot/" source=console
+time="2025-01-29T15:29:39+01:00" level=info msg="200 https://grafana.com/author/wilfried-roset/" source=console
+time="2025-01-29T15:29:39+01:00" level=info msg="200 https://grafana.com/blog/2025/01/24/databases-and-slos-how-to-apply-service-level-objectives-to-your-databases-with-synthetic-monitoring/" source=console
+time="2025-01-29T15:29:40+01:00" level=info msg="200 https://grafana.com/oss/tanka/" source=console
+time="2025-01-29T15:29:40+01:00" level=info msg="200 https://grafana.com/oss-vs-cloud/" source=console
+time="2025-01-29T15:29:40+01:00" level=info msg="200 https://grafana.com/load-testing/" source=console
+time="2025-01-29T15:29:40+01:00" level=info msg="200 https://grafana.com/opentelemetry-report/" source=console
+time="2025-01-29T15:29:40+01:00" level=info msg="200 https://grafana.com/resources/log-monitoring/" source=console
+time="2025-01-29T15:29:40+01:00" level=info msg="200 https://grafana.com/partnerships/" source=console
+time="2025-01-29T15:29:40+01:00" level=info msg="200 https://grafana.com/about/team/" source=console
+time="2025-01-29T15:29:41+01:00" level=info msg="200 https://grafana.com/about/careers/" source=console
+time="2025-01-29T15:29:41+01:00" level=info msg="200 https://grafana.com/about/press/" source=console
+time="2025-01-29T15:29:41+01:00" level=info msg="200 https://grafana.com/help/" source=console
+time="2025-01-29T15:29:41+01:00" level=info msg="200 https://grafana.com/community/merch/" source=console
+time="2025-01-29T15:29:41+01:00" level=info msg="200 https://grafana.com/about/careers/open-positions/" source=console
+time="2025-01-29T15:29:41+01:00" level=info msg="200 https://grafana.com/ja/content/" source=console
+time="2025-01-29T15:29:41+01:00" level=info msg="200 https://grafana.com/de/content/" source=console
+time="2025-01-29T15:29:42+01:00" level=info msg="200 https://grafana.com/fr/content/" source=console
+time="2025-01-29T15:29:42+01:00" level=info msg="200 https://grafana.com/es/content/" source=console
+time="2025-01-29T15:29:42+01:00" level=info msg="200 https://grafana.com/pt-br/content/" source=console
+time="2025-01-29T15:29:42+01:00" level=info msg="200 https://grafana.com/legal/" source=console
+time="2025-01-29T15:29:42+01:00" level=info msg="200 https://grafana.com/legal/terms/" source=console
+time="2025-01-29T15:29:42+01:00" level=info msg="200 https://grafana.com/legal/privacy-policy/" source=console
+time="2025-01-29T15:29:42+01:00" level=info msg="200 https://grafana.com/trademark-policy/" source=console
+time="2025-01-29T15:29:43+01:00" level=info msg="200 https://grafana.com/terms" source=console
+
+     data_received..............: 98 MB  2.7 MB/s
+     data_sent..................: 347 kB 9.7 kB/s
+     http_req_blocked...........: avg=104.96µs min=214ns   med=361ns    max=26.56ms  p(90)=554ns    p(95)=665ns   
+     http_req_connecting........: avg=13.83µs  min=0s      med=0s       max=3.51ms   p(90)=0s       p(95)=0s      
+     http_req_duration..........: avg=131.74ms min=26.17ms med=134.72ms max=620.8ms  p(90)=170.27ms p(95)=188.44ms
+     http_req_receiving.........: avg=71.83ms  min=33.31µs med=76.2ms   max=148.57ms p(90)=101ms    p(95)=114.73ms
+     http_req_sending...........: avg=67.26µs  min=32.47µs med=65.39µs  max=183.83µs p(90)=85.02µs  p(95)=97.19µs 
+     http_req_tls_handshaking...: avg=34.75µs  min=0s      med=0s       max=8.82ms   p(90)=0s       p(95)=0s      
+     http_req_waiting...........: avg=59.83ms  min=26.04ms med=58.62ms  max=620.6ms  p(90)=70.81ms  p(95)=74.25ms 
+     http_reqs..................: 254    7.087868/s
+     iteration_duration.........: avg=35.83s   min=35.83s  med=35.83s   max=35.83s   p(90)=35.83s   p(95)=35.83s  
+     iterations.................: 1      0.027905/s
+     vus........................: 1      min=1      max=1
+     vus_max....................: 1      min=1      max=1
+
+```
+
+</details>
+
+The [examples](https://github.com/grafana/xk6-crawler/blob/main/examples) directory contains examples of how to use the xk6-crawler extension. A k6 binary containing the xk6-crawler extension is required to run the examples.
+
+### Cookbook
+
+#### Specify Options
+
+When creating the crawler, various [options](https://crawler.x.k6.io/interfaces/Options.html) can be specified as constructor parameters. For example, the depth of the crawl, or whether to parse the error page instead of throwing an exception:
+
+<!-- Use https://github.com/szkiba/mdcode to update the code block -->
+```javascript file=examples/collect-links.js region=options
+  const c = new Crawler({ parse_http_error_response: true, max_depth: 10 });
+```
+
+#### Use Context
+
+[Context](https://crawler.x.k6.io/interfaces/Context.html) can be used to share data between callback functions. For example, the [onHTML](https://crawler.x.k6.io/classes/Crawler.html#onhtml) callback function puts data into the context.
+
+<!-- Use https://github.com/szkiba/mdcode to update the code block -->
+```javascript file=examples/collect-links.js region=context-put
+  c.onHTML("a[href]", (e) => {
+    if (!e.attr("href").startsWith("/blog")) return;
+
+    e.request.ctx.put("page_href", e.request.url);
+    e.request.ctx.put("link_text", e.text);
+```
+
+The [onResponse](https://crawler.x.k6.io/classes/Crawler.html#onresponse) callback function reads the data previously put by the [onHTML](https://crawler.x.k6.io/classes/Crawler.html#onhtml) callback from the context.
+
+<!-- Use https://github.com/szkiba/mdcode to update the code block -->
+```javascript file=examples/collect-links.js region=context-get
+  c.onResponse((r) => {
+    const page_href = r.request.ctx.get("page_href");
+```
+
+#### Multiple onHTML callbacks
+
+Processing different HTML elements can be conveniently done using multiple [onHTML](https://crawler.x.k6.io/classes/Crawler.html#onhtml) callbacks.
+
+<!-- Use https://github.com/szkiba/mdcode to update the code block -->
+```javascript file=examples/broken-links.js region=onhtml
+  c.onHTML("title", (e) => {
+    titles[e.request.url] = e.text;
+  });
+
+  c.onHTML("a[href]", (e) => {
+    if (!e.attr("href").startsWith("/docs/k6/latest")) return;
+
+    e.request.ctx.put("page_href", e.request.url);
+    e.request.ctx.put("link_text", e.text);
+    e.request.visit(e.attr("href"));
+  });
+```
+
+## Download
+
+You can download pre-built k6 binaries from the [Releases](https://github.com/grafana/xk6-crawler/releases/) page.
+
+
+<details>
+<summary><b>Build</b></summary>
+
+The [xk6](https://github.com/grafana/xk6) build tool can be used to build a k6 that will include xk6-crawler extension:
+
+```bash
+$ xk6 build --with github.com/grafana/xk6-crawler@latest
+```
+
+For more build options and how to use xk6, check out the [xk6 documentation](https://github.com/grafana/xk6).
+
+</details>
+
+## Contribure
+
+Please check [Contributing Guidelines](https://github.com/grafana/xk6-crawler/blob/main/CONTRIBUTING.md) before you start contributing.

@@ -1,0 +1,32 @@
+name: Bundle Stats
+
+on:
+  pull_request:
+    branches:
+      - main
+
+permissions:
+  contents: write
+  pull-requests: write
+  actions: write
+
+jobs:
+  compare:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@08eba0b27e820071cde6df949e0beb9ba4906955 # v4.3.0
+        with:
+          persist-credentials: false
+
+      - name: Get Node.js version from package.json
+        id: node-version
+        run: |
+          NODE_VERSION=$(node -p "require('./package.json').engines.node.replace('>=', '')")
+          echo "version=$NODE_VERSION" >> $GITHUB_OUTPUT
+
+      - name: Compare bundle stats
+        uses: grafana/plugin-actions/bundle-size@main
+        with:
+          node-version: ${{ steps.node-version.outputs.version }}

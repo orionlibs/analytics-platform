@@ -1,0 +1,19 @@
+plugins {
+    id 'org.jetbrains.kotlin.jvm' version '2.2.20'
+}
+import org.jetbrains.kotlin.gradle.dsl.JvmTarget
+
+sourceCompatibility = JavaVersion.VERSION_1_8
+targetCompatibility = JavaVersion.VERSION_1_8
+
+repositories {
+    mavenCentral()
+}
+dependencies {
+    implementation(project(":agent"))
+}
+kotlin{
+    compilerOptions{
+        jvmTarget.set(JvmTarget.JVM_1_8)
+    }
+}

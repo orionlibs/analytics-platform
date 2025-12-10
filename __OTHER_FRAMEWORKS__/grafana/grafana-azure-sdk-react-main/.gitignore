@@ -1,0 +1,13 @@
+.vscode/
+.idea/
+
+node_modules/
+coverage/
+ci/
+cypress/report.json
+cypress/screenshots/actual
+cypress/videos/
+dist/
+compiled/
+.eslintcache
+yarn-error.log

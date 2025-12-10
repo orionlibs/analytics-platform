@@ -1,0 +1,16 @@
+* @grafana/grafana-irm-backend
+/grafana-plugin @grafana/grafana-irm-frontend
+/grafana-plugin/pkg @grafana/grafana-irm-backend
+/grafana-plugin/go.mod @grafana/grafana-irm-backend
+/grafana-plugin/go.sum @grafana/grafana-irm-backend
+/grafana-plugin/Magefile.go @grafana/grafana-irm-backend
+/docs @grafana/docs-gops @grafana/grafana-irm
+
+# `make docs` procedure is owned by @jdbaldry of @grafana/docs-squad.
+/.github/workflows/update-make-docs.yml @jdbaldry
+/.github/workflows/publish-technical-documentation-next.yml @jdbaldry
+/.github/workflows/publish-technical-documentation-release.yml @jdbaldry
+/docs/Makefile @jdbaldry
+/docs/docs.mk @jdbaldry
+/docs/make-docs @jdbaldry
+/docs/variables.mk @jdbaldry

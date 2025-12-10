@@ -1,0 +1,7 @@
+.idea
+/carbonapi
+/mockbackend
+/cmd/mockbackend/mockbackend
+/cmd/carbonapi/carbonapi
+/cmd/functiondiff/functiondiff
+/cmd/carbonapi/*.log

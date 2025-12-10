@@ -1,0 +1,46 @@
+name: Release OpenTracing library
+
+on:
+  push:
+    tags:
+      - v*-opentracing
+
+permissions:
+  contents: write
+  id-token: write
+
+jobs:
+  release-opentracing-lib:
+    runs-on: ubuntu-x64-small
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          submodules: 'true'
+          persist-credentials: false
+      - uses: actions/setup-dotnet@d4c94342e560b34958eacfc5d055d21461ed1c5d
+        with:
+          dotnet-version: '8.0.412'
+      - run: dotnet build -c Release
+        working-directory: Pyroscope/Pyroscope.OpenTracing
+      - name: Publish NuGet packages
+        uses: actions/upload-artifact@v4
+        with:
+          name: packages
+          path: ./Pyroscope/artifacts/package/release
+          if-no-files-found: error
+      - uses: grafana/shared-workflows/actions/get-vault-secrets@28361cdb22223e5f1e34358c86c20908e7248760
+        with:
+          repo_secrets: |
+            NUGET_API_KEY=nuget:api_key
+      - name: Publish the package to nuget.org
+        run: dotnet nuget push ./Pyroscope/artifacts/package/release/*.nupkg -k "${NUGET_API_KEY}" -s https://api.nuget.org/v3/index.json
+        env:
+          NUGET_API_KEY: ${{ env.NUGET_API_KEY }}
+      - name: Release
+        uses: softprops/action-gh-release@da05d552573ad5aba039eaac05058a918a7bf631 # v2.2.2
+        if: startsWith(github.ref, 'refs/tags/')
+        with:
+          files: |
+            ./Pyroscope/artifacts/bin/Pyroscope.OpenTracing/release/Pyroscope.OpenTracing.dll
+            ./Pyroscope/artifacts/package/release/Pyroscope.OpenTracing*.nupkg

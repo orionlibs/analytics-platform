@@ -1,0 +1,17 @@
+policy:
+  approval:
+    - documentation validation passes or no documentation changes
+
+approval_rules:
+  - name: documentation validation passes or no documentation changes
+    if:
+      file_not_deleted:
+        paths:
+          - .github/workflows/validate-documentation.yml
+    requires:
+      conditions:
+        has_workflow_result:
+          conclusions:
+            - success
+          workflows:
+            - .github/workflows/validate-documentation.yml

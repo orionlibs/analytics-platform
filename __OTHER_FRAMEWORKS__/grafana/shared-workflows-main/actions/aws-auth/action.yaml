@@ -1,0 +1,74 @@
+name: Authenticate to AWS
+description: Authenticate to AWS from GitHub Actions via OpenID Connect
+
+inputs:
+  aws-region:
+    default: "us-east-2"
+    required: true
+    description: "AWS region"
+  role-arn:
+    default: ""
+    required: true
+    description: "ARN of workload role"
+  pass-claims:
+    default: "event_name, repository_owner, repository_name, job_workflow_ref, ref"
+    required: true
+    description: "`, `-separated claims from GitHub ID token to make available to `role-arn`"
+  set-creds-in-environment:
+    default: "true"
+    required: false
+    description: "Set environment variables for AWS CLI and SDKs"
+  role-duration-seconds:
+    default: "3600"
+    required: false
+    description: "Role duration in seconds"
+  checkout-actions-repository-path:
+    description: "The path in the filesystem where this repository has been checked out. This is mandatory for setups where executing this action inside a local clone of the repository."
+
+outputs:
+  aws_access_key_id:
+    description: "AWS Access Key Id"
+    value: ${{ steps.auth.outputs.aws_access_key_id }}
+  aws_secret_access_key:
+    description: "AWS Secret Access Key"
+    value: ${{ steps.auth.outputs.aws_secret_access_key }}
+  aws_session_token:
+    description: "AWS Session Name"
+    value: ${{ steps.auth.outputs.aws_session_token }}
+  aws_region:
+    description: "AWS Region"
+    value: ${{ steps.aws_region.outputs.value }}
+  cognito_identity_oidc_access_token:
+    description: "Cognito Identity OIDC Access Token"
+    value: ${{ steps.auth.outputs.cognito_identity_oidc_access_token }}
+
+runs:
+  using: composite
+  steps:
+    - id: auth
+      uses: catnekaise/cognito-idpool-auth@41fcec30f55c069bc59f5773077c37477c743bf6 # v1.0.2
+      with:
+        cognito-identity-pool-id: "us-east-2:3a4bca79-07af-4921-a9fb-e21475708406"
+        auth-flow: "enhanced"
+        aws-region: "us-east-2"
+        audience: "github-actions-cognito-identity-pool"
+        aws-account-id: "590183704419"
+        chain-role-session-name: "GitHubActions"
+        chain-role-arn: "${{ inputs.role-arn }}"
+        chain-role-duration-seconds: "${{ inputs.role-duration-seconds }}"
+        chain-pass-claims: "${{ inputs.pass-claims }}"
+        chain-set-in-environment: "${{ inputs.set-creds-in-environment }}"
+
+    - id: aws_region
+      shell: bash
+      env:
+        AWS_REGION: "${{ inputs.aws-region }}"
+        AWS_DEFAULT_REGION: "${{ inputs.aws-region }}"
+        REPOSITORY_PATH: "${{ inputs.checkout-actions-repository-path }}"
+      run: |
+        if [[ ! -z "${REPOSITORY_PATH}" ]]; then
+          cd ${REPOSITORY_PATH}/actions/aws-auth
+        else
+          cd "${GITHUB_ACTION_PATH}"
+        fi
+        ./resolve-aws-region.sh

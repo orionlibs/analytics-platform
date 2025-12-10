@@ -1,0 +1,16 @@
+name: Modules Workflow
+on: [push]
+
+jobs:
+  k6_local_test:
+    name: k6 local test run - using js modules example
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v1
+
+      - name: Local k6 test with js modules
+        uses: grafana/k6-action@v0.2.0
+        with:
+          filename: modules/script.js

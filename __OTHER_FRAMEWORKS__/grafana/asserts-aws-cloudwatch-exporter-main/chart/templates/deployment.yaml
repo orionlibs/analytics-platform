@@ -1,0 +1,50 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "aws-exporter.fullname" . }}
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "aws-exporter.labels" . | nindent 4 }}
+spec:
+  selector:
+    matchLabels:
+      {{- include "aws-exporter.selectorLabels" . | nindent 6 }}
+  replicas: {{ .Values.replicas }}
+  template:
+    metadata:
+      labels:
+        {{- include "aws-exporter.labels" . | nindent 8 }}
+    spec:
+      {{- with .Values.serviceAccount.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      serviceAccountName: {{ include "aws-exporter.serviceAccountName" . }}
+      containers:
+      - image: "{{ .Values.image.repository }}:{{ .Values.image.tag | default .Chart.AppVersion }}"
+        name: {{ include "aws-exporter.fullname" . }}
+        imagePullPolicy: {{ .Values.image.pullPolicy }}
+        resources:
+          limits:
+            memory: 500Mi
+          requests:
+            memory: 500Mi
+        ports:
+          - name: aws
+            containerPort: {{ .Values.service.aws.port }}
+            protocol: TCP
+        livenessProbe:
+          httpGet:
+            path: /aws-exporter/actuator/health/liveness
+            port: aws
+        readinessProbe:
+          httpGet:
+            path: /aws-exporter/actuator/health/readiness
+            port: aws
+        {{- if .Values.env }}
+        env:
+        {{- range $key, $val := .Values.env }}
+        - name: {{ $key }}
+          value: {{ $val | quote }}
+        {{- end }}
+        {{- end }}

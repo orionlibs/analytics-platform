@@ -1,0 +1,16 @@
+apiVersion: 1
+
+datasources:
+  - name: 'docbooks'
+    type: 'grafana-docbooks-datasource'
+    access: proxy
+    isDefault: false
+    orgId: 1
+    version: 1
+    editable: true
+    jsonData:
+      source: 'github'
+      owner: '<owner>'
+      repo: '<repo>'
+    secureJsonData:
+      authToken: '<authToken>'

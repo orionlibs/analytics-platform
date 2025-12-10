@@ -1,0 +1,10 @@
+node_modules
+*.vsix
+.DS_Store
+.taskkey
+task
+yarn-error.log
+go.mod
+go.sum
+k6
+k6-v*

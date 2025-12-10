@@ -1,0 +1,144 @@
+{
+  $schema: 'https://docs.renovatebot.com/renovate-schema.json',
+  extends: [
+    'github>grafana/grafana-renovate-config//presets/base',
+  ],
+  customDatasources: {
+    kubectl: {
+      defaultRegistryUrlTemplate: 'https://cdn.dl.k8s.io/release/stable.txt',
+      format: 'plain',
+      transformTemplates: [
+        '{"releases": [releases . {"version": $substring(version, 1)}]}',
+      ],
+    },
+    helm: {
+      defaultRegistryUrlTemplate: 'https://api.github.com/repos/helm/helm/releases',
+      format: 'json',
+      transformTemplates: [
+        '{"releases": [$.tag_name . {"version": $substring($, 1)}]}',
+      ],
+    },
+    kustomize: {
+      defaultRegistryUrlTemplate: 'https://api.github.com/repos/kubernetes-sigs/kustomize/releases',
+      format: 'json',
+      transformTemplates: [
+        '{"releases": [$$ [$match(tag_name, /kustomize.*/) and $not(draft) and $not(prerelease) ] . {"version": $substringAfter(tag_name, "/v")}]}',
+      ],
+    },
+  },
+  customManagers: [
+    {
+      customType: 'regex',
+      managerFilePatterns: [
+        '/Dockerfile/',
+      ],
+      matchStrings: [
+        'ARG KUBECTL_VERSION=(?<currentValue>\\S+)',
+      ],
+      datasourceTemplate: 'custom.kubectl',
+      depNameTemplate: 'kubectl',
+    },
+    {
+      customType: 'regex',
+      managerFilePatterns: [
+        '/Dockerfile/',
+      ],
+      matchStrings: [
+        'ARG HELM_VERSION=(?<currentValue>\\S+)',
+      ],
+      datasourceTemplate: 'custom.helm',
+      depNameTemplate: 'helm',
+      versioningTemplate: 'semver',
+    },
+    {
+      customType: 'regex',
+      managerFilePatterns: [
+        '/Dockerfile/',
+      ],
+      matchStrings: [
+        'ARG KUSTOMIZE_VERSION=(?<currentValue>\\S+)',
+      ],
+      datasourceTemplate: 'custom.kustomize',
+      depNameTemplate: 'kustomize',
+      versioningTemplate: 'semver',
+    },
+  ],
+  dependencyDashboard: true,
+  enabledManagers: [
+    'custom.regex',
+    'dockerfile',
+    'github-actions',
+    'gomod',
+    'npm',
+  ],
+  packageRules: [
+    {
+      labels: [
+        'update-major',
+      ],
+      matchUpdateTypes: [
+        'major',
+      ],
+    },
+    {
+      labels: [
+        'update-minor',
+      ],
+      matchUpdateTypes: [
+        'minor',
+      ],
+    },
+    {
+      automerge: true,
+      labels: [
+        'automerge-patch',
+      ],
+      matchUpdateTypes: [
+        'patch',
+      ],
+    },
+    {
+      labels: [
+        'update-digest',
+      ],
+      matchUpdateTypes: [
+        'digest',
+      ],
+    },
+    {
+      schedule: '* 0-4 * * 1',
+      matchPackageNames: [
+        'ghcr.io/renovatebot/renovate',
+      ],
+    },
+    {
+      matchFileNames: [
+        'dagger/go.mod',
+        'dagger/go.sum',
+      ],
+      matchPackageNames: [
+        'go.opentelemetry.io/**',
+      ],
+    },
+    {
+      matchFileNames: [
+        'docs/package.json',
+        'docs/pnpm-lock.yaml',
+      ],
+      groupName: 'Docs',
+      groupSlug: 'docs',
+    },
+    {
+      matchPackageNames: [
+        'helm',
+      ],
+      allowedVersions: '<4.0.0',
+    },
+    {
+      matchPackageNames: [
+        'gopkg.in/yaml.v2',
+      ],
+      allowedVersions: '<3.0.0',
+    },
+  ],
+}

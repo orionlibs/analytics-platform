@@ -1,0 +1,30 @@
+components:
+  schemas:
+    Geo:
+      type: object
+      description: holds metadata about a client's geo.
+      properties:
+        continent_iso:
+          type: string
+          x-go-type-skip-optional-pointer: true
+          x-go-name: ContinentISOCode
+        country_iso:
+          type: string
+          x-go-type-skip-optional-pointer: true
+          x-go-name: CountryISOCode
+        subdivision_iso:
+          type: string
+          x-go-type-skip-optional-pointer: true
+          x-go-name: SubdivisionISO
+        city:
+          type: string
+          x-go-type-skip-optional-pointer: true
+        asn_org:
+          type: string
+          x-go-type-skip-optional-pointer: true
+          x-go-name: ASNOrg
+        asn_id:
+          type: string
+          x-go-type-skip-optional-pointer: true
+          x-go-name: ASNID
+      x-go-type-skip-optional-pointer: true

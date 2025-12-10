@@ -1,0 +1,38 @@
+name: deploy-production
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - 'lib/**'
+
+permissions: {}
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    env:
+      S3_BUCKET_ID: prod-us-east-0-jslib-k6-io-website
+      CLOUDFRONT_DISTRIBUTION_ID: E2GTCZBXCV8MU0
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - uses: actions/checkout@v4
+        
+      - uses: grafana/shared-workflows/actions/get-vault-secrets@get-vault-secrets-v1.2.0
+        with:
+          # arn:.../k6-jslib-uploader-role
+          repo_secrets: |
+            IAM_ROLE_ARN=deploy:uploader-iam-role 
+
+      - name: aws-auth
+        uses: grafana/shared-workflows/actions/aws-auth@aws-auth-v1.0.1
+        with:
+          aws-region: 'us-west-1'
+          role-arn: '${{ env.IAM_ROLE_ARN }}'
+          set-creds-in-environment: true
+
+      - name: Deploy lib to s3
+        run: ./deploy.sh

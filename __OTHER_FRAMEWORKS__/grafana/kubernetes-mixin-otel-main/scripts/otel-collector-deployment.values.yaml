@@ -1,0 +1,81 @@
+mode: deployment
+replicaCount: 1
+
+image:
+  repository: otel/opentelemetry-collector-contrib
+
+presets:
+  kubernetesAttributes:
+    enabled: true
+
+  clusterMetrics:
+    enabled: true
+
+config:
+  receivers:
+    otlp:
+      protocols:
+        grpc:
+          endpoint: 0.0.0.0:4317
+        http:
+          endpoint: 0.0.0.0:4318
+  
+  processors:
+    transform/copy_node_name:
+    # workaround waiting for the Prometheus OTLP endpoint to promote k8s.node.name and host.name
+      metric_statements:
+        - context: datapoint
+          statements:
+            - set(attributes["k8s.node.name"], resource.attributes["k8s.node.name"]) where resource.attributes["k8s.node.name"] != nil
+            - set(attributes["host.name"], resource.attributes["host.name"]) where resource.attributes["host.name"] != nil
+
+    k8sattributes:
+      extract:
+        otel_annotations: true
+
+    attributes/k8sclustername:
+      actions:
+        - key: k8s.cluster.name
+          action: upsert
+          value: kubernetes-mixin-otel
+
+    resource/hostname:
+      attributes:
+      - key: host.name
+        action: upsert
+        from_attribute: k8s.node.name
+
+    batch: {}
+
+  exporters:
+    otlphttp/metrics:
+      endpoint: http://lgtm:9090/api/v1/otlp
+      tls:
+        insecure: true
+
+    prometheus:
+      endpoint: "0.0.0.0:8889"
+      resource_to_telemetry_conversion:
+        enabled: true
+
+  service:
+    extensions: [health_check]
+    
+    pipelines:
+      metrics:
+        receivers: [otlp]
+        processors: [
+          k8sattributes,
+          attributes/k8sclustername,
+          resource/hostname,
+          transform/copy_node_name,
+          batch,
+        ]
+        exporters: [otlphttp/metrics, prometheus]
+
+ports:
+  prometheus:
+    enabled: true
+    containerPort: 8889
+    servicePort: 8889
+    protocol: TCP

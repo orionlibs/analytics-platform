@@ -1,0 +1,26 @@
+go:
+    # Whenever the Go version is updated here, .travis.yml and
+    # .circle/config.yml should also be updated if in use.
+    version: 1.24
+repository:
+    path: github.com/prometheus/test-infra
+build:
+    binaries:
+        - name: infra
+          path: ./infra
+        - name: tools/amGithubNotifier
+          path: ./tools/amGithubNotifier
+        - name: tools/comment-monitor
+          path: ./tools/comment-monitor
+        - name: tools/fake-webserver
+          path: ./tools/fake-webserver
+        - name: tools/scaler
+          path: ./tools/scaler
+        - name: tools/load-generator
+          path: ./tools/load-generator
+        - name: tools/block-sync
+          path: ./tools/block-sync
+    flags: -a -tags netgo
+crossbuild:
+    platforms:
+        - linux/amd64

@@ -1,0 +1,80 @@
+name: Test find-pr-for-commit action
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - actions/find-pr-for-commit/**
+      - .github/workflows/test-find-pr-for-commit.yml
+
+  pull_request:
+    paths:
+      - actions/find-pr-for-commit/**
+      - .github/workflows/test-find-pr-for-commit.yml
+    types:
+      - edited
+      - opened
+      - ready_for_review
+      - synchronize
+
+permissions:
+  contents: read
+  pull-requests: read
+
+jobs:
+  test:
+    # TODO: fix the tests to work with forks
+    if: github.event.pull_request.head.repo.full_name == github.repository
+
+    strategy:
+      max-parallel: 1
+      matrix:
+        include:
+          - test_name: "Test current commit by name (${{ github.event_name}})"
+            commitrev: ${{ github.event_name == 'pull_request' && format('refs/pull/{0}/head', github.event.number) || github.ref }}
+            # Anything, just checking it has a PR
+            pr_number_regex: "^[0-9]+$"
+
+          - test_name: "Test current commit by sha (${{ github.event_name}})"
+            commitrev: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.sha || github.sha }}
+            pr_number_regex: "^${{ github.event_name == 'pull_request' && github.event.number || '[0-9]+' }}$"
+
+          - test_name: "Test commit with no PR"
+            commitrev: ""
+            pr_number_regex: "^$"
+
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: read
+
+    steps:
+      - name: Harden the runner (Audit all outbound calls)
+        uses: step-security/harden-runner@95d9a5deda9de15063e7595e9719c11c38c90ae2 # v2.13.2
+        with:
+          egress-policy: audit
+
+      - name: Checkout code
+        uses: actions/checkout@1af3b93b6815bc44a9784bd300feb67ff0d1eeb3 # v6.0.0
+        with:
+          persist-credentials: false
+
+      - name: ${{ matrix.test_name }}
+        id: test-find-pr-for-commit
+        uses: ./actions/find-pr-for-commit
+        with:
+          commitrev: ${{ matrix.commitrev }}
+
+      - name: Check PR number
+        env:
+          PR_NUMBER: "${{ steps.test-find-pr-for-commit.outputs.pr_number }}"
+          PR_NUMBER_REGEX: "${{ matrix.pr_number_regex }}"
+        run: |
+          set -x
+
+          if ! [[ "${PR_NUMBER}" =~ ${PR_NUMBER_REGEX} ]]; then
+            echo "Test failed: PR number does not match expected value"
+            exit 1
+          fi
+
+          echo "Test passed: PR number matches expected value 🚀"

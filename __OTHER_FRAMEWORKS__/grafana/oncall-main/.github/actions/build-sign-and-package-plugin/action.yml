@@ -1,0 +1,56 @@
+name: Build, sign, and package plugin
+description: Build, sign, and package plugin
+inputs:
+  plugin_version_number:
+    description: |
+      The version number of the plugin. NOTE: this action will chop off the leading "v" to use
+      it as the official plugin version.
+    required: true
+outputs:
+  authoritative_version_number:
+    description: "The version number of the plugin used for publishing artifacts"
+    value: ${{ steps.plugin-version.outputs.version }}
+  artifact_filename:
+    description: "The filename of the plugin artifact"
+    value: ${{ steps.artifact-filename.outputs.filename }}
+runs:
+  using: "composite"
+  steps:
+    - name: Determine official plugin version
+      id: plugin-version
+      shell: bash
+      env:
+        PLUGIN_VERSION_NUMBER: ${{ inputs.plugin_version_number }}
+      run: |
+        # VERY IMPORTANT: chop off the "v".. this tells the oncall plugin that this is an OSS build
+        PLUGIN_VERSION="$(echo ${{ env.PLUGIN_VERSION_NUMBER }} | sed 's/^v//')"
+        echo version="$PLUGIN_VERSION" >> $GITHUB_OUTPUT
+    - name: Determine artifact filename
+      shell: bash
+      id: artifact-filename
+      run: |
+        echo filename="grafana-oncall-app-${{ steps.plugin-version.outputs.version }}.zip" >> $GITHUB_OUTPUT
+    - name: Install Go
+      uses: actions/setup-go@v4
+      with:
+        go-version: "1.21.5"
+    - name: Install Mage
+      shell: bash
+      run: go install github.com/magefile/mage@v1.15.0
+    - name: Build, sign, and package plugin
+      shell: bash
+      working-directory: grafana-plugin
+      run: |
+        jq --arg v "${{ steps.plugin-version.outputs.version }}" '.version=$v' package.json > package.new && \
+          mv package.new package.json && \
+          jq '.version' package.json;
+
+        pnpm build
+        mage buildAll || true
+
+        pnpm sign
+
+        if [ ! -f dist/MANIFEST.txt ]; then echo "Sign failed, MANIFEST.txt not created, aborting." && exit 1; fi
+        mv dist grafana-oncall-app
+        zip -r grafana-oncall-app.zip ./grafana-oncall-app
+        cp grafana-oncall-app.zip ${{ steps.artifact-filename.outputs.filename }}

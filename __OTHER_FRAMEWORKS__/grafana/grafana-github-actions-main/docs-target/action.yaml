@@ -1,0 +1,12 @@
+name: DocsTarget
+description: Extract the version from the given branch
+inputs:
+  ref_name:
+    description: Branch or tag name to extract from
+    default: ${{ github.ref_name }}
+outputs:
+  target:
+    description: Technical documentation version for the given reference
+runs:
+  using: 'node16'
+  main: 'index.js'

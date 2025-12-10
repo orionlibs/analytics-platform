@@ -1,0 +1,47 @@
+livedebugging {
+  enabled = true
+}
+
+logging {
+  level  = "warn"
+  format = "logfmt"
+}
+
+loki.source.file "local_files" {
+    targets    = [
+        {"__path__" = "/tmp/app-logs/app.log"},
+    ]
+    forward_to = [loki.process.labels.receiver]
+}
+
+loki.process "labels" {
+    forward_to = [loki.write.local_loki.receiver]
+
+    stage.logfmt {
+        mapping = {
+            service = "service",
+            level = "level",
+            source = "source",
+        }
+    }
+
+    stage.labels {
+        values = {
+            service = "service",
+            level = "level",
+            source = "source",
+        }
+    }
+
+    stage.static_labels {
+        values = {
+            job  = "app_logs",
+        }
+    }
+}
+
+loki.write "local_loki" {
+    endpoint {
+        url = "http://loki:3100/loki/api/v1/push"
+    }
+}

@@ -1,0 +1,23 @@
+{
+  // This file enables updating references to the grafana-build-tools image.
+  "$schema": "https://docs.renovatebot.com/renovate-schema.json",
+  "customManagers": [
+    {
+      // Update grafana-build-tools tags across the repository.
+      "customType": "regex",
+      "depNameTemplate": "ghcr.io/grafana/grafana-build-tools",
+      "datasourceTemplate": "docker",
+      "versioningTemplate": "semver",
+      "registryUrlTemplate": "https://ghcr.io",
+      "managerFilePatterns": [
+        "/(^|/)Makefile$/",
+        "/.*\\.jsonnet$/",
+        "/.*\\.mk$/",
+        "/^\\.github/workflows/.*\\.ya?ml$/"
+      ],
+      "matchStrings": [
+        "ghcr.io/grafana/grafana-build-tools:(?<currentValue>[\\w.-]+)(?:@(?<currentDigest>[\\w:]+))?"
+      ]
+    }
+  ]
+}

@@ -1,0 +1,159 @@
+name: "Sigma Rule Converter"
+description: "Convert Sigma rules to target query languages using sigma-cli."
+author: "Mostafa Moradian"
+
+inputs:
+  config_path:
+    description: "Path to the Sigma conversion config file."
+    required: true
+    default: "./config.yaml"
+  plugin_packages:
+    description: "Comma-separated list of Sigma CLI plugin packages to install."
+    required: false
+    default: ""
+  render_traceback:
+    description: "Whether to render the traceback in the output."
+    required: false
+    default: "false"
+  pretty_print:
+    description: "Pretty print the JSON output"
+    required: false
+    default: "false"
+  all_rules:
+    description: "Convert all rules specified in the config file."
+    required: false
+    default: "false"
+  actions_username:
+    description: "Username of the automation that commits conversions"
+    required: false
+    default: "github-actions[bot]"
+  changed_files_from_base:
+    description: "Whether to use the changed files from the base branch"
+    required: false
+    default: "false"
+
+runs:
+  using: "composite"
+  steps:
+    - name: Retrieve conversion and deployment paths from config
+      id: config-paths
+      shell: bash
+      env:
+        CONFIG_PATH: ${{ inputs.config_path }}
+      run: |
+        CONVERSION_PATH=$(yq -r '.folders.conversion_path' "${CONFIG_PATH}")
+        echo "conversion_path=${CONVERSION_PATH}" >> $GITHUB_OUTPUT
+    - name: Login to GitHub Container Registry
+      uses: docker/login-action@5e57cd118135c172c3672efd75eb46360885c0ef # v3.6.0
+      with:
+        registry: ghcr.io
+        username: ${{ github.actor }}
+        password: ${{ github.token }}
+    - name: Identify relevant commits
+      if: ${{ inputs.changed_files_from_base == 'false' }}
+      id: commits
+      shell: bash
+      env:
+        PULL_REQUEST_NUMBER: ${{ github.event.number || github.event.issue.number }}
+        ACTIONS_USERNAME: ${{ inputs.actions_username }}
+        GITHUB_TOKEN: ${{ github.token }}
+        GITHUB_REPOSITORY: ${{ github.repository }}
+        GITHUB_ACTIONS: 'true'
+      run: |
+        REPO_ROOT="$(cd "$GITHUB_ACTION_PATH/../.." && pwd)"
+        cd "$REPO_ROOT/scripts/identify-commits"
+        if [ ! -d "node_modules" ]; then
+          npm ci
+        fi
+        node identify-commits.js
+
+    - name: Get Changed Files
+      id: changed-files
+      shell: bash
+      env:
+        PREVIOUS_REF: ${{ steps.commits.outputs.previous-ref }}
+        CONVERSION_PATH: ${{ steps.config-paths.outputs.conversion_path }}
+        CONFIG_PATH: ${{ inputs.config_path }}
+      run: |
+        # Diff Commands are constructed in conversion to discover the change for the **inputs** into the conversion process. This means that changes to the configuration or rules will
+        # be registered as changed files, **but** changes to the output file will not register a change and will cause the conversion to pass but not run.
+
+        ACMR_DIFF_COMMAND="git diff ${PREVIOUS_REF} --name-only --diff-filter=ACMR -- '${CONFIG_PATH}' $(yq -r "[.conversions.[].input] | flatten | unique | [\"':(glob)\" + .[] + \"'\"] | join(\" \")" ${CONFIG_PATH}) $(yq -r "[.conversions.[].pipelines] | flatten | unique | [\"':(glob)\" + .[] + \"'\"] | join(\" \")" ${CONFIG_PATH})"
+        D_DIFF_COMMAND="git diff ${PREVIOUS_REF} --name-only --diff-filter=D -- '${CONFIG_PATH}' $(yq -r "[.conversions.[].input] | flatten | unique | [\"':(glob)\" + .[] + \"'\"] | join(\" \")" ${CONFIG_PATH}) $(yq -r "[.conversions.[].pipelines] | flatten | unique | [\"':(glob)\" + .[] + \"'\"] | join(\" \")" ${CONFIG_PATH})"
+
+        # We want to only include the input files in the lists of changed and deleted files
+        CHANGED_FILES=$(eval $ACMR_DIFF_COMMAND)
+        DELETED_FILES=$(eval $D_DIFF_COMMAND)
+
+        echo all_changed_files=${CHANGED_FILES//\\n/} >> "$GITHUB_OUTPUT"
+        echo deleted_files=${DELETED_FILES//\\n/} >> "$GITHUB_OUTPUT"
+
+    - name: Determine Image Reference
+      id: image-ref
+      shell: bash
+      env:
+        ACTION_REF: ${{ github.action_ref }}
+      run: |
+        REPO_ROOT="$(cd "$GITHUB_ACTION_PATH/../.." && pwd)"
+        "$REPO_ROOT/scripts/determine-image-ref/determine-image-ref.sh" "$ACTION_REF"
+
+    - name: Run Sigma Rule Converter
+      id: convert
+      shell: bash
+      env:
+        CONFIG_PATH: ${{ inputs.config_path }}
+        PLUGIN_PACKAGES: ${{ inputs.plugin_packages }}
+        RENDER_TRACEBACK: ${{ inputs.render_traceback }}
+        PRETTY_PRINT: ${{ inputs.pretty_print }}
+        ALL_RULES: ${{ inputs.all_rules }}
+        CHANGED_FILES: ${{ steps.changed-files.outputs.all_changed_files }}
+        DELETED_FILES: ${{ steps.changed-files.outputs.deleted_files }}
+        IMAGE_REF: ${{ steps.image-ref.outputs.image_ref }}
+      run: |
+        docker run --rm \
+            -v "$(pwd):/sigma-rules" \
+            -w /sigma-rules \
+            -e GITHUB_WORKSPACE=/sigma-rules \
+            -e CONFIG_PATH="$CONFIG_PATH" \
+            -e PLUGIN_PACKAGES="$PLUGIN_PACKAGES" \
+            -e RENDER_TRACEBACK="$RENDER_TRACEBACK" \
+            -e PRETTY_PRINT="$PRETTY_PRINT" \
+            -e ALL_RULES="$ALL_RULES" \
+            -e CHANGED_FILES="$CHANGED_FILES" \
+            -e DELETED_FILES="$DELETED_FILES" \
+            "ghcr.io/grafana/sigma-rule-deployment/sigma-rule-deployer:$IMAGE_REF" \
+            convert
+
+    - name: Comment Conversions
+      id: comment-conversions
+      shell: bash
+      env:
+        PULL_REQUEST_NUMBER: ${{ github.event.number || github.event.issue.number }}
+        BASE_REF: ${{ steps.commits.outputs.base-commit }}
+        CONVERSION_PATH: ${{ steps.config-paths.outputs.conversion_path }}
+        COMMENT_TITLE: 'Sigma Rule Conversions'
+        COMMENT_IDENTIFIER: 'Sigma Rule Conversions'
+        GITHUB_TOKEN: ${{ github.token }}
+        GITHUB_REPOSITORY: ${{ github.repository }}
+        GITHUB_ACTIONS: 'true'
+      run: |
+        # Generate comment data (git operations)
+        git add "$CONVERSION_PATH"
+        CHANGED_FILES=$(git diff "$BASE_REF" --name-only --diff-filter=ACMR -- "$CONVERSION_PATH")
+        DELETED_FILES=$(git diff "$BASE_REF" --name-only --diff-filter=D -- "$CONVERSION_PATH")
+        
+        # Normalize: replace newlines with spaces
+        CHANGED_FILES=${CHANGED_FILES//$'\n'/ }
+        DELETED_FILES=${DELETED_FILES//$'\n'/ }
+        
+        # Export for comment.js
+        export CHANGED_FILES
+        export DELETED_FILES
+        
+        # Run comment script
+        REPO_ROOT="$(cd "$GITHUB_ACTION_PATH/../.." && pwd)"
+        cd "$REPO_ROOT/scripts/comment-sigma-results"
+        if [ ! -d "node_modules" ]; then
+          npm ci
+        fi
+        node comment.js

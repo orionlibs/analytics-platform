@@ -1,0 +1,16 @@
+/.cache
+/.work
+/_output
+cover.out
+/vendor
+/.vendor-new
+.DS_Store
+/kubeconfig
+
+# ignore IDE folders
+.vscode/
+.idea/
+
+# ignore build artifacts
+dist/crds.yaml
+*.xpkg

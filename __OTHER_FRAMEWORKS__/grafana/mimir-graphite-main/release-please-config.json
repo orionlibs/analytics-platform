@@ -1,0 +1,16 @@
+{
+  "bootstrap-sha": "14db7122f337f1a9248d9cafcdb38b7bb4932b41",
+  "packages": {
+    ".": {
+      "release-type": "go",
+      "package-name": "mimir-graphite",
+      "bump-minor-pre-major": true,
+      "bump-patch-for-minor-pre-major": true,
+      "include-component-in-tag": false,
+      "versioning": "default",
+      "draft": true,
+      "extra-files": []
+    }
+  },
+  "$schema": "https://raw.githubusercontent.com/googleapis/release-please/main/schemas/config.json"
+}

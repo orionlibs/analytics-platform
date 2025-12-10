@@ -1,0 +1,37 @@
+{
+    "smithy": "1.0",
+    "shapes": {
+        "ns.foo#Operation": {
+            "type": "operation", 
+            "traits": {
+                "smithy.api#sensitive": {}
+            }
+        }, 
+        "ns.foo#Structure": {
+            "type": "structure", 
+            "members": {
+                "a": {
+                    "target": "smithy.api#String"
+                }
+            }, 
+            "traits": {
+                "smithy.api#sensitive": {}
+            }
+        }, 
+        "ns.foo#Blob": {
+            "type": "blob", 
+            "traits": {
+                "smithy.api#sensitive": {}
+            }
+        }, 
+        "ns.foo#String": {
+            "type": "string"
+        }, 
+        "ns.foo#SensitiveString": {
+            "type": "string", 
+            "traits": {
+                "smithy.api#sensitive": {}
+            }
+        }
+    }
+}

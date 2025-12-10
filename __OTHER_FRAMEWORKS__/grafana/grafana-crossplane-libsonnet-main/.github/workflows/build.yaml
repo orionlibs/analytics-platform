@@ -1,0 +1,43 @@
+name: Build
+
+on:
+  pull_request: {}
+
+jobs:
+  build:
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout
+        uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
+        with:
+          persist-credentials: false
+
+      - name: setup Crossplane cli
+        uses: crossplane-contrib/setup-crossplane-action@cb8aac3f1246b19f101e7f85fd0a38623b4d5ad3 # v0.1.1
+
+      - name: setup go-jsonnet
+        uses: zendesk/setup-jsonnet@4d0300a734b78ea60d18a936442ad5a3a392b101 # v14
+        with:
+          version: v0.20.0
+
+      - name: setup jrsonnet
+        uses: grafana/shared-workflows/actions/setup-jrsonnet@eec7f669cb9d905f576be86380f3c93958ab86e5
+
+      - name: Build xpkg
+        run: "make -B build"
+        shell: bash
+
+      - name: Check if file changed
+        id: changed
+        uses: tj-actions/verify-changed-files@a1c6acee9df209257a246f2cc6ae8cb6581c1edf # v20.0.4
+        with:
+          files: |
+            !bin
+
+      - name: No files changed
+        if: "${{ steps.changed.outputs.files_changed == 'true' }}"
+        run: "echo 'Please run `make build`' && exit 1"
+        env:
+          CHANGED_FILES: "${{ steps.changed.outputs.changed_files }}"

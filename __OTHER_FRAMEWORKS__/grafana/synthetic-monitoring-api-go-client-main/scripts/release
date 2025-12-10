@@ -1,0 +1,82 @@
+#!/bin/sh
+
+for req in git git-chglog ; do
+	if ! command -v "${req}" > /dev/null 2>&1 ; then
+		echo "E: '${req}' is needed to run this script. Abort."
+		exit 1
+	fi
+done
+
+next_version=$1
+
+cd "$(git rev-parse --show-toplevel)" || exit 2
+
+if test ! -e CHANGELOG.md ; then
+	echo "E: Expecting a CHANGELOG.md file in $PWD, none found. Abort."
+	exit 3
+fi
+
+current_version() {
+	git describe --tags HEAD | cut -d- -f1 | tr -d v
+}
+
+next_version_patch() {
+	parts=$(current_version)
+	major=$(echo "${parts}" | cut -d. -f1)
+	minor=$(echo "${parts}" | cut -d. -f2)
+	patch=$(echo "${parts}" | cut -d. -f3)
+	echo "${major}.${minor}.$((${patch}+1))"
+}
+
+next_version_minor() {
+	parts=$(current_version)
+	major=$(echo "${parts}" | cut -d. -f1)
+	minor=$(echo "${parts}" | cut -d. -f2)
+	echo "${major}.$((${minor}+1)).0"
+}
+
+next_version_major() {
+	parts=$(current_version)
+	major=$(echo "${parts}" | cut -d. -f1)
+	echo "$((${major}+1)).0.0"
+}
+
+if test -z "${next_version}" ; then
+	cv=$(current_version)
+	next_patch=$(next_version_patch)
+	next_minor=$(next_version_minor)
+	next_major=$(next_version_major)
+	cat <<-EOT
+	I: Current version: v${cv}
+	I: Next fix: v${next_patch}
+	I: Next feature: v${next_minor}
+	I: Next breaking change: v${next_major}
+
+	E: Next version argument required. Abort.
+	EOT
+	exit 4
+fi
+
+commit_msg=$(mktemp)
+
+cleanup() {
+	rm -f "${commit_msg}"
+}
+
+trap cleanup EXIT
+
+cur_version=$(git describe --tags | cut -d- -f1)
+
+git chglog --next-tag "${next_version}" > CHANGELOG.md
+
+git add CHANGELOG.md
+
+cat > "${commit_msg}" <<EOT
+Release ${next_version}
+
+$(git log --oneline "${cur_version}".. | cut -d' ' -f2- | sed -e 's,^,* ,')
+EOT
+
+git commit --signoff --file="${commit_msg}"
+
+git tag --annotate --file="${commit_msg}" "${next_version}"

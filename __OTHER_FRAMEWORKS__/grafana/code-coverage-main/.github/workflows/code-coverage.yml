@@ -1,0 +1,333 @@
+name: Code Coverage
+on:
+  workflow_call:
+    inputs:
+      frontend-path-regexp:
+        description: Regexp to match valid frontend paths
+        required: true
+        type: string
+      backend-path-regexp:
+        description: Regexp to match valid backend paths
+        required: true
+        type: string
+
+jobs:
+  comment-coverage-difference:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+      - name: Changed files
+        id: changed
+        run: |
+          git fetch --all
+          echo "::set-output name=all::$(git diff --name-only origin/${{ github.event.pull_request.base.ref }}...origin/${{ github.event.pull_request.head.ref }} | xargs)"
+      - name: Get paths
+        id: relevant-paths
+        run: |
+          echo "::set-output name=frontend-paths::$(echo ${{ steps.changed.outputs.all }} | grep -Eo '${{ inputs.frontend-path-regexp }}' | sort -u | xargs )"
+          echo "::set-output name=backend-paths::$(echo ${{ steps.changed.outputs.all }} | grep -Eo '${{ inputs.backend-path-regexp }}' | sort -u | xargs )"
+
+      - uses: actions/setup-node@v2
+        with:
+          node-version: 16.x
+          cache: yarn
+      - name: yarn install for caller's PR
+        run: |
+          PATHS=(${{ steps.relevant-paths.outputs.frontend-paths }})
+          if [ -z "$PATHS" ]; then
+              echo "No frontend paths to check"
+              exit 0
+          else
+            yarn install
+          fi
+
+      - uses: actions/setup-go@v2
+        with:
+          go-version: "1.20.x"
+      - name: generate go for github.com/grafana/grafana
+        if: github.repository == 'grafana/grafana'
+        run: |
+          PATHS=(${{ steps.relevant-paths.outputs.backend-paths }})
+          if [ -z "$PATHS" ]; then
+              echo "No backend paths to check"
+              exit 0
+          else
+            make gen-go
+          fi
+
+      - name: Get go coverage for caller's PR
+        id: pr-backend
+        run: |
+          PATHS=(${{ steps.relevant-paths.outputs.backend-paths }})
+          if [ -z "$PATHS" ]; then
+              echo "No backend paths to check"
+              exit 0
+          else
+              ## Create directory for backend coverage output
+              mkdir backend_coverage_pr
+              CMD=('go' 'test' '-coverprofile')
+              PLUGIN_COVERAGE=""
+              for i in "${!PATHS[@]}"; do
+                  ## Identify plugin
+                  PLUGIN=$(echo ${PATHS[i]} | awk -F '/' '{ print $NF }')
+                  echo "Running backend coverage check for: $PLUGIN"
+                  FULL_CMD="${CMD[*]} backend_coverage_pr/$PLUGIN.cov ./${PATHS[i]}"
+                  ## This command generates the HTML report
+                  HTML_CMD=('go' 'tool' 'cover' "-html=backend_coverage_pr/$PLUGIN.cov" "-o backend_coverage_pr/$PLUGIN.html")
+                  RESULT=$($FULL_CMD)
+                  $(${HTML_CMD[*]})
+                  ## Retrieve coverage from result
+                  if [ $i -lt $((${#PATHS[@]} - 1)) ]; then
+                      PLUGIN_COVERAGE="$PLUGIN_COVERAGE$PLUGIN | $(echo $RESULT | cut -d ':' -f 2 | grep -Eo '[0-9]+\.[0-9]+') + "
+                  else
+                      PLUGIN_COVERAGE="$PLUGIN_COVERAGE$PLUGIN | $(echo $RESULT | cut -d ':' -f 2 | grep -Eo '[0-9]+\.[0-9]+') "                  
+                  fi
+              done
+              echo "::set-output name=coverage::$(echo -e $PLUGIN_COVERAGE)"
+          fi
+
+      - name: Get TypeScript coverage for caller's PR
+        id: pr-frontend
+        run: |
+          PATHS=(${{ steps.relevant-paths.outputs.frontend-paths }})
+          if [ -z "$PATHS" ]; then
+              echo "No frontend paths to check"
+              exit 0
+          else
+              ## Coverage paths are slightly differently formatted compared to test paths
+              COVERAGE_RESULTS=''
+              CMD=('jest' '--coverage' '--coverageDirectory="frontend_coverage_pr"' '--collectCoverageFrom=')
+              BACKUP_IFS=$IFS
+              for i in "${!PATHS[@]}"; do
+                  IFS=$BACKUP_IFS
+                  ## Identify which plugin path has been passed in
+                  PLUGIN=$(echo ${PATHS[i]} | awk -F '/' '{ print $NF }')
+                  echo "Running frontend coverage check for: $PLUGIN"
+                  COVERAGE_PATH="$COVERAGE_PATHS\"${PATHS[i]}/**/*.(ts|tsx)\""
+                  TEST_PATH=("--testPathPattern=\"${PATHS[i]}/*\"")
+                  FULL_CMD="${CMD[*]}'[$COVERAGE_PATH]' ${TEST_PATH[*]}"
+                  if [[ ${PATHS[i]} == 'src' ]]; then
+                      RESULT=$(yarn test:coverage --coverageDirectory="frontend_coverage_pr" --collectCoverageFrom='["src/**/*.{ts,tsx}"]')
+                  else
+                      RESULT=$(yarn exec $FULL_CMD)
+                  fi
+                  IFS='/'
+                  if [ $i -lt $((${#PATHS[@]} - 1)) ]; then
+                      COVERAGE_RESULT="$(echo $RESULT | grep 'All files' | head -1 | cut -d '|' -f 5)"
+                      COVERAGE_RESULTS="$COVERAGE_RESULTS $PLUGIN | $COVERAGE_RESULT + "
+                  else
+                      COVERAGE_RESULT="$(echo $RESULT | grep 'All files' | head -1 | cut -d '|' -f 5)"
+                      COVERAGE_RESULTS="$COVERAGE_RESULTS $PLUGIN | $COVERAGE_RESULT "
+                  fi
+              done
+
+              echo "::set-output name=coverage::$(echo -e $COVERAGE_RESULTS)"
+          fi
+
+      - uses: actions/checkout@v3
+        with:
+          ref: main
+
+      - name: yarn install for caller's main
+        run: |
+          PATHS=(${{ steps.relevant-paths.outputs.frontend-paths }})
+          if [ -z "$PATHS" ]; then
+              echo "No frontend paths to check"
+              exit 0
+          else
+            yarn install
+          fi
+
+      - name: generate go for github.com/grafana/grafana
+        if: github.repository == 'grafana/grafana'
+        run: |
+          PATHS=(${{ steps.relevant-paths.outputs.backend-paths }})
+          if [ -z "$PATHS" ]; then
+              echo "No backend paths to check"
+              exit 0
+          else
+            make gen-go
+          fi
+
+      - name: Get go coverage on caller's main
+        id: main-backend
+        run: |
+          PATHS=(${{ steps.relevant-paths.outputs.backend-paths }})
+          if [ -z "$PATHS" ]; then
+              echo "No backend paths to check"
+              exit 0
+          else
+              ## Create directory for backend coverage output
+              mkdir backend_coverage_main
+              CMD=('go' 'test' '-coverprofile')
+              PLUGIN_COVERAGE=""
+              for i in "${!PATHS[@]}"; do
+                  ## Identify plugin
+                  PLUGIN=$(echo ${PATHS[i]} | awk -F '/' '{ print $NF }')
+                  echo "Running backend coverage check for: $PLUGIN"
+                  FULL_CMD="${CMD[*]} backend_coverage_main/$PLUGIN.cov ./${PATHS[i]}"
+                  ## This command generates the HTML report
+                  HTML_CMD=('go' 'tool' 'cover' "-html=backend_coverage_main/$PLUGIN.cov" "-o backend_coverage_main/$PLUGIN.html")
+                  RESULT=$($FULL_CMD)
+                  $(${HTML_CMD[*]})
+                  ## Retrieve coverage from result
+                  if [ $i -lt $((${#PATHS[@]} - 1)) ]; then
+                      PLUGIN_COVERAGE="$PLUGIN_COVERAGE$PLUGIN | $(echo $RESULT | cut -d ':' -f 2 | grep -Eo '[0-9]+\.[0-9]+') + "
+                  else
+                      PLUGIN_COVERAGE="$PLUGIN_COVERAGE$PLUGIN | $(echo $RESULT | cut -d ':' -f 2 | grep -Eo '[0-9]+\.[0-9]+') "                  
+                  fi              
+              done
+              echo "::set-output name=coverage::$(echo -e $PLUGIN_COVERAGE)"
+          fi
+
+      - name: Get TypeScript coverage on caller's main
+        id: main-frontend
+        run: |
+          PATHS=(${{ steps.relevant-paths.outputs.frontend-paths }})
+          if [ -z "$PATHS" ]; then
+              echo "No frontend paths to check"
+              exit 0
+          else
+              ## Coverage paths are slightly differently formatted compared to test paths
+              COVERAGE_RESULTS=''
+              CMD=('jest' '--coverage' '--coverageDirectory="frontend_coverage_pr"' '--collectCoverageFrom=')
+              BACKUP_IFS=$IFS
+              for i in "${!PATHS[@]}"; do
+                  IFS=$BACKUP_IFS
+                  ## Identify which plugin path has been passed in
+                  PLUGIN=$(echo ${PATHS[i]} | awk -F '/' '{ print $NF }')
+                  echo "Running frontend coverage check for: $PLUGIN"
+                  COVERAGE_PATH="$COVERAGE_PATHS\"${PATHS[i]}/**/*.(ts|tsx)\""
+                  TEST_PATH=("--testPathPattern=\"${PATHS[i]}/*\"")
+                  FULL_CMD="${CMD[*]}'[$COVERAGE_PATH]' ${TEST_PATH[*]}"
+                  if [[ ${PATHS[i]} == 'src' ]]; then
+                      RESULT=$(yarn test:coverage --coverageDirectory="frontend_coverage_pr" --collectCoverageFrom='["src/**/*.{ts,tsx}"]')
+                  else
+                      RESULT=$(yarn exec $FULL_CMD)
+                  fi
+                  IFS='/'
+                  if [ $i -lt $((${#PATHS[@]} - 1)) ]; then
+                      COVERAGE_RESULT="$(echo $RESULT | grep 'All files' | head -1 | cut -d '|' -f 5)"
+                      COVERAGE_RESULTS="$COVERAGE_RESULTS $PLUGIN | $COVERAGE_RESULT + "
+                  else
+                      COVERAGE_RESULT="$(echo $RESULT | grep 'All files' | head -1 | cut -d '|' -f 5)"
+                      COVERAGE_RESULTS="$COVERAGE_RESULTS $PLUGIN | $COVERAGE_RESULT "
+                  fi
+              done
+
+              echo "::set-output name=coverage::$(echo -e $COVERAGE_RESULTS)"
+          fi
+
+      - name: Archive backend code coverage results
+        uses: actions/upload-artifact@v3
+        with:
+          name: backend-code-coverage-report
+          path: |
+            backend_coverage_main
+            backend_coverage_pr
+
+      - name: Archive frontend code coverage results
+        uses: actions/upload-artifact@v3
+        with:
+          name: frontend-code-coverage-report
+          path: |
+            frontend_coverage_main/lcov-report
+            frontend_coverage_pr/lcov-report
+
+      - name: Create comments
+        id: comments
+        run: |
+          IFS="+"
+          PR_NUMBER=${{ github.event.pull_request.number }}
+          PR_FRONTEND_COVERAGE=("${{ steps.pr-frontend.outputs.coverage }}")
+          PR_BACKEND_COVERAGE=("${{ steps.pr-backend.outputs.coverage }}")
+          MAIN_FRONTEND_COVERAGE=("${{ steps.main-frontend.outputs.coverage }}")
+          MAIN_BACKEND_COVERAGE=("${{ steps.main-backend.outputs.coverage }}")
+
+          BASE_COMMENT="code coverage report for PR #$PR_NUMBER
+          "
+          TABLE="| Plugin |          Main                       |   PR   | Difference |
+          | ------ | ----------------------------------- | ------ | ---------- |
+          "
+          COMMENT=""
+
+          generate_comment() {
+            if [ "$1" == "frontend" ]; then
+                PR_ARRAY=(${PR_FRONTEND_COVERAGE[@]})
+                MAIN_ARRAY=(${MAIN_FRONTEND_COVERAGE[@]})
+            else
+                PR_ARRAY=(${PR_BACKEND_COVERAGE[@]})
+                MAIN_ARRAY=(${MAIN_BACKEND_COVERAGE[@]})
+            fi
+
+
+            if [ ${#PR_ARRAY[@]} -eq 0 ]; then
+              COMMENT="$BASE_COMMENT No changes"
+            else
+              COMMENT="$BASE_COMMENT$TABLE"
+              for i in "${!PR_ARRAY[@]}"; do
+                  CURR_PR_LINE=${PR_ARRAY[i]}
+                  CURR_MAIN_LINE=${MAIN_ARRAY[i]}
+                  PLUGIN=$(echo $CURR_PR_LINE | cut -d '|' -f 1 | xargs)
+                  PR_COV=$(echo $CURR_PR_LINE | cut -d '|' -f 2 | xargs)
+                  MAIN_COV=$(echo $CURR_MAIN_LINE | cut -d '|' -f 2 | xargs)
+                  COMMENT="$COMMENT|  $PLUGIN |   $MAIN_COV%  |   $PR_COV%    |   $(bc <<<"$PR_COV - $MAIN_COV")% |
+            "
+              done
+            fi
+
+            COMMENT="${COMMENT//'%'/'%25'}"
+            COMMENT="${COMMENT//$'\n'/'%0A'}"
+            COMMENT="${COMMENT//$'\r'/'%0D'}"
+          }
+
+          echo "Creating frontend comment"
+          generate_comment frontend
+          COMMENT="Frontend $COMMENT"
+          echo $COMMENT
+          echo "::set-output name=frontend-comment::$COMMENT"
+
+          echo "Creating backend comment"
+          generate_comment backend
+          COMMENT="Backend $COMMENT"
+          echo $COMMENT
+          echo "::set-output name=backend-comment::$COMMENT"
+
+      - name: Find previous backend comment, if any
+        uses: peter-evans/find-comment@v2
+        id: find-backend-comment
+        with:
+          issue-number: ${{ github.event.pull_request.number }}
+          comment-author: "github-actions[bot]"
+          body-includes: |
+            Backend code coverage report for PR #${{ github.event.pull_request.number }}
+
+      - name: Find previous frontend comment, if any
+        uses: peter-evans/find-comment@v2
+        id: find-frontend-comment
+        with:
+          issue-number: ${{ github.event.pull_request.number }}
+          comment-author: "github-actions[bot]"
+          body-includes: |
+            Frontend code coverage report for PR #${{ github.event.pull_request.number }}
+
+      - name: Create or update backend comment
+        uses: peter-evans/create-or-update-comment@v2
+        # Check if the event is not triggered by a fork
+        if: github.event.pull_request.head.repo.full_name == github.repository
+        with:
+          comment-id: ${{ steps.find-backend-comment.outputs.comment-id }}
+          issue-number: ${{ github.event.pull_request.number }}
+          body: ${{ steps.comments.outputs.backend-comment }}
+          edit-mode: replace
+
+      - name: Create or update frontend comment
+        uses: peter-evans/create-or-update-comment@v2
+        # Check if the event is not triggered by a fork
+        if: github.event.pull_request.head.repo.full_name == github.repository
+        with:
+          comment-id: ${{ steps.find-frontend-comment.outputs.comment-id }}
+          issue-number: ${{ github.event.pull_request.number }}
+          body: ${{ steps.comments.outputs.frontend-comment }}
+          edit-mode: replace

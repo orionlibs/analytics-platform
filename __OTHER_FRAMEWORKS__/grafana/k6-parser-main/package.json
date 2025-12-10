@@ -1,0 +1,32 @@
+{
+  "name": "k6-parser",
+  "version": "1.0.0",
+  "description": "",
+  "type": "module",
+  "main": "ast.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/dgzlopes/k6-parser.git"
+  },
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/dgzlopes/k6-parser/issues"
+  },
+  "homepage": "https://github.com/dgzlopes/k6-parser#readme",
+  "dependencies": {
+    "acorn": "^8.10.0",
+    "acorn-walk": "^8.2.0",
+    "express": "^4.18.2",
+    "express-fileupload": "^1.4.1",
+    "rollup": "^3.27.2",
+    "tar": "^6.1.15",
+    "tar-fs": "^3.0.4"
+  },
+  "devDependencies": {
+    "@flydotio/dockerfile": "^0.4.10"
+  }
+}

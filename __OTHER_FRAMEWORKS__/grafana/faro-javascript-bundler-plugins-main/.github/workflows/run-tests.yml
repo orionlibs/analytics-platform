@@ -1,0 +1,53 @@
+name: run-tests
+on:
+  pull_request:
+
+jobs:
+  renovate-reviewer:
+    name: Renovate reviewer
+    permissions:
+      pull-requests: write
+      contents: write
+      # This permission is needed to assume roles from Github's OIDC.
+      id-token: write
+    uses: ./.github/workflows/renovate-reviewer.yml
+
+  run-tests:
+    name: Testing with Node version (${{ matrix.node }})
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    strategy:
+      fail-fast: false
+      matrix:
+        node: [18.x, 20.x, 22.x, 23.x]
+    steps:
+      - name: Checkout
+        uses: actions/checkout@71cf2267d89c5cb81562390fa70a37fa40b1305e
+        with:
+          persist-credentials: false
+          ref: ${{ github.event.pull_request.head.ref }}
+          repository: ${{ github.event.pull_request.head.repo.full_name }}
+          fetch-depth: 0
+
+      - name: Setup NPM
+        uses: actions/setup-node@dda4788290998366da86b6a4f497909644397bb2
+        with:
+          node-version: ${{ matrix.node }}
+          registry-url: "https://registry.npmjs.org"
+
+      - name: Install dependencies
+        uses: borales/actions-yarn@a00d5858f03a62641356460b652826cfd03c9ddb
+        with:
+          cmd: install --frozen-lockfile
+
+      - name: Run tests
+        run: |
+          yarn build
+          # Retry tests 3 times
+          yarn test || yarn test || yarn test
+
+      - name: Build production bundle
+        uses: borales/actions-yarn@a00d5858f03a62641356460b652826cfd03c9ddb
+        with:
+          cmd: build

@@ -1,0 +1,38 @@
+# Intellij
+.idea/
+*.iml
+*.iws
+
+# BlueJ files
+*.ctxt
+
+# Eclipse
+.classpath
+.project
+.settings/
+
+# Mac
+.DS_Store
+
+# Compiled class file
+*.class
+bin/
+build/
+
+# Log file
+*.log
+
+# Package Files
+*.jar
+*.zip
+*.tar.gz
+
+# Gradle
+.gradle/
+!gradle-wrapper.jar
+
+# Project Generated
+version.properties
+
+.env*
+opentelemetry-javaagent*.jar

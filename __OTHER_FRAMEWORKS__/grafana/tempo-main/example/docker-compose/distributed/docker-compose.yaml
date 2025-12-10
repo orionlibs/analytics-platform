@@ -1,0 +1,156 @@
+services:
+  distributor:
+    image: &tempoImage grafana/tempo:latest
+    command: "-target=distributor -config.file=/etc/tempo.yaml"
+    restart: always
+    volumes:
+      - ./tempo-distributed.yaml:/etc/tempo.yaml
+    ports:
+      - "3200" # tempo
+      - "4317:4317"
+  # Uncomment the following lines to enable tracing
+  #    environment:
+  #      - OTEL_EXPORTER_OTLP_ENDPOINT=http://alloy:4318
+
+  ingester-0:
+    image: *tempoImage
+    command: "-target=ingester -config.file=/etc/tempo.yaml"
+    restart: always
+    volumes:
+      - ./tempo-distributed.yaml:/etc/tempo.yaml
+    ports:
+      - "3200" # tempo
+  # Uncomment the following lines to enable tracing
+  #    environment:
+  #      - OTEL_EXPORTER_OTLP_ENDPOINT=http://alloy:4318
+
+  ingester-1:
+    image: *tempoImage
+    command: "-target=ingester -config.file=/etc/tempo.yaml"
+    restart: always
+    volumes:
+      - ./tempo-distributed.yaml:/etc/tempo.yaml
+    ports:
+      - "3200" # tempo
+  # Uncomment the following lines to enable tracing
+  #    environment:
+  #      - OTEL_EXPORTER_OTLP_ENDPOINT=http://alloy:4318
+
+  ingester-2:
+    image: *tempoImage
+    command: "-target=ingester -config.file=/etc/tempo.yaml"
+    restart: always
+    volumes:
+      - ./tempo-distributed.yaml:/etc/tempo.yaml
+    ports:
+      - "3200" # tempo
+  # Uncomment the following lines to enable tracing
+  #    environment:
+  #      - OTEL_EXPORTER_OTLP_ENDPOINT=http://alloy:4318
+
+  query-frontend:
+    image: *tempoImage
+    command: "-target=query-frontend -config.file=/etc/tempo.yaml -log.level=debug"
+    restart: always
+    volumes:
+      - ./tempo-distributed.yaml:/etc/tempo.yaml
+    ports:
+      - "3200:3200" # tempo
+  # Uncomment the following lines to enable tracing
+  #    environment:
+  #      - OTEL_EXPORTER_OTLP_ENDPOINT=http://alloy:4318
+
+  querier:
+    image: *tempoImage
+    command: "-target=querier -config.file=/etc/tempo.yaml -log.level=debug"
+    restart: always
+    volumes:
+      - ./tempo-distributed.yaml:/etc/tempo.yaml
+    ports:
+      - "3200" # tempo
+  # Uncomment the following lines to enable tracing
+  #    environment:
+  #      - OTEL_EXPORTER_OTLP_ENDPOINT=http://alloy:4318
+
+  compactor:
+    image: *tempoImage
+    command: "-target=compactor -config.file=/etc/tempo.yaml"
+    restart: always
+    volumes:
+      - ./tempo-distributed.yaml:/etc/tempo.yaml
+    ports:
+      - "3200" # tempo
+  # Uncomment the following lines to enable tracing
+  #    environment:
+  #      - OTEL_EXPORTER_OTLP_ENDPOINT=http://alloy:4318
+
+  metrics-generator:
+    image: *tempoImage
+    command: "-target=metrics-generator -config.file=/etc/tempo.yaml"
+    restart: always
+    volumes:
+      - ./tempo-distributed.yaml:/etc/tempo.yaml
+    ports:
+      - "3200" # tempo
+  # Uncomment the following lines to enable tracing
+  #    environment:
+  #      - OTEL_EXPORTER_OTLP_ENDPOINT=http://alloy:4318
+
+  minio:
+    image: minio/minio:latest
+    environment:
+      - MINIO_ACCESS_KEY=tempo
+      - MINIO_SECRET_KEY=supersecret
+    ports:
+      - "9001:9001"
+    entrypoint:
+      - sh
+      - -euc
+      - mkdir -p /data/tempo && minio server /data --console-address ':9001'
+
+  k6-tracing:
+    image: ghcr.io/grafana/xk6-client-tracing:v0.0.9
+    environment:
+      - ENDPOINT=distributor:4317
+    restart: always
+    depends_on:
+      - distributor
+    logging:
+      driver: "none"
+
+  prometheus:
+    image: prom/prometheus:latest
+    command:
+      - --config.file=/etc/prometheus.yaml
+      - --web.enable-remote-write-receiver
+      - --enable-feature=exemplar-storage
+      - --enable-feature=native-histograms
+    volumes:
+      - ./prometheus.yaml:/etc/prometheus.yaml
+    ports:
+      - "9090:9090"
+
+  grafana:
+    image: grafana/grafana:11.6.7@sha256:41c78d437d7c8e81812aca8b03559e4fca39b43e670a5d9bae44915875faae41
+    volumes:
+      - ./grafana-datasources.yaml:/etc/grafana/provisioning/datasources/datasources.yaml
+    environment:
+      - GF_AUTH_ANONYMOUS_ENABLED=true
+      - GF_AUTH_ANONYMOUS_ORG_ROLE=Admin
+      - GF_AUTH_DISABLE_LOGIN_FORM=true
+      - GF_FEATURE_TOGGLES_ENABLE=traceqlEditor
+    ports:
+      - "3000:3000"
+# Uncomment the following lines to enable tracing
+# alloy:
+#   image: grafana/alloy:v1.3.1
+#   volumes:
+#     - ../shared/config.alloy:/etc/alloy/config.alloy
+#   command:
+#     - run
+#     - /etc/alloy/config.alloy
+#     - --storage.path=/var/lib/alloy/data
+#     - --server.http.listen-addr=0.0.0.0:12345
+#   ports:
+#     - "12345:12345"
+#     - "4319:4319"

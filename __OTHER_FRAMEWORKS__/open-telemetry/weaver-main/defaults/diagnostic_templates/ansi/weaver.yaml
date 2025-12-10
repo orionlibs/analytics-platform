@@ -1,0 +1,4 @@
+templates:
+  - template: errors.txt.j2
+    filter: .
+    application_mode: single

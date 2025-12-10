@@ -1,0 +1,58 @@
+name: workshop
+
+services:
+  grafana:
+    image: ${REGISTRY:-docker.io}/grafana/grafana:main@sha256:175238e39794186a34e5f9b67aa7f27a1834c5a0d6676139af67874fef598c0b
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    volumes:
+      - grafana_storage:/var/lib/grafana
+      - ./config/grafana:/etc/grafana
+    environment:
+      - GF_LOG_LEVEL=warn
+      - GF_AUTH_ANONYMOUS_ENABLED=true
+      - GF_AUTH_ANONYMOUS_ORG_ROLE=Admin
+
+  prometheus:
+    image: ${REGISTRY:-docker.io}/prom/prometheus:v3.1.0
+    volumes:
+      - ./config/prometheus.yaml:/etc/prometheus/prometheus.yml
+    command: "--log.level=warn --config.file=/etc/prometheus/prometheus.yml --storage.tsdb.path=/prometheus"
+
+  loki:
+    image: ${REGISTRY:-docker.io}/grafana/loki:3.4
+    ports:
+      - "3100:3100"
+    volumes:
+      - ./config/loki.yaml:/etc/loki/loki.yml
+    command: -config.file=/etc/loki/loki.yml
+
+  alloy:
+    image: ${REGISTRY:-docker.io}/grafana/alloy:v1.7.1
+    ports:
+      - "12345:12345"
+    volumes:
+      - ./config/alloy.alloy:/etc/alloy/alloy.alloy
+      - tmp-logs:/tmp/app-logs
+    command: run --server.http.listen-addr=0.0.0.0:12345 --storage.path=/var/lib/alloy/data /etc/alloy/alloy.alloy
+    depends_on:
+      - loki
+      - dummy_service
+      - service_catalog
+
+  dummy_service:
+    build: ./dummy/
+    ports:
+      - "8081:8080"
+    volumes:
+      - tmp-logs:/tmp/app-logs
+
+  service_catalog:
+    build: ./service-catalog/
+    ports:
+      - "8082:8080"
+
+volumes:
+  grafana_storage: {}
+  tmp-logs:

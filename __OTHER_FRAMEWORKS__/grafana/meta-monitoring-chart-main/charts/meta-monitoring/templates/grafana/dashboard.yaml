@@ -1,0 +1,39 @@
+{{- if and .Values.local.grafana.enabled .Values.dashboards.logs.enabled }}
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: dashboards-provisioning
+  namespace: {{ $.Release.Namespace }}
+data:
+  dashboards.yaml: |
+    ---
+    apiVersion: 1
+    providers:
+{{- if .Values.dashboards.logs.enabled }}
+      - disableDeletion: true
+        editable: false
+        folder: Loki
+        name: loki-1
+        options:
+          path: /var/lib/grafana/dashboards/loki-1
+        orgId: 1
+        type: file
+      - disableDeletion: true
+        editable: false
+        folder: Loki
+        name: loki-2
+        options:
+          path: /var/lib/grafana/dashboards/loki-2
+        orgId: 1
+        type: file
+{{- end }}
+      - disableDeletion: true
+        editable: false
+        folder: Alloy
+        name: alloy-1
+        options:
+          path: /var/lib/grafana/dashboards/alloy-1
+        orgId: 1
+        type: file
+{{- end }}

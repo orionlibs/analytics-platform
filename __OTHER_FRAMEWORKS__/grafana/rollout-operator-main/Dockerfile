@@ -1,0 +1,18 @@
+FROM --platform=$BUILDPLATFORM golang:1.25-bookworm AS build
+
+ARG TARGETOS
+ARG TARGETARCH
+
+COPY . /src/rollout-operator
+WORKDIR /src/rollout-operator
+RUN GOOS=${TARGETOS} GOARCH=${TARGETARCH} make rollout-operator
+
+FROM gcr.io/distroless/static-debian12:nonroot
+
+COPY --from=build /src/rollout-operator/rollout-operator /bin/rollout-operator
+ENTRYPOINT [ "/bin/rollout-operator" ]
+
+ARG revision
+LABEL org.opencontainers.image.title="rollout-operator" \
+      org.opencontainers.image.source="https://github.com/grafana/rollout-operator" \
+      org.opencontainers.image.revision="${revision}"

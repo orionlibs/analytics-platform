@@ -1,0 +1,85 @@
+---
+name: Integration Test
+# yamllint disable-line rule:truthy
+on:
+  push:
+    branches: ["main"]
+    paths:
+      - .github/workflows/integration-test.yml
+      - charts/**
+      - tests/**
+  pull_request:
+    paths:
+      - .github/workflows/integration-test.yml
+      - charts/**
+      - tests/**
+
+  # Allows you to run this workflow manually from the Actions tab
+  workflow_dispatch:
+
+permissions: {}
+
+jobs:
+  list-tests:
+    name: List tests
+    runs-on: ubuntu-latest
+    outputs:
+      tests: ${{ steps.list_tests.outputs.tests }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@1af3b93b6815bc44a9784bd300feb67ff0d1eeb3  # v6.0.0
+        with:
+            persist-credentials: 'false'
+
+      - name: List tests
+        id: list_tests
+        working-directory: tests/integration
+        run: |
+          tests=$(find . -name test-plan.yaml -exec dirname {} \; | sed -e "s/^\.\///g")
+          echo "Tests: ${tests}"
+          echo "tests=$(echo "${tests}" | jq --raw-input --slurp --compact-output 'split("\n") | map(select(. != ""))')" >> "${GITHUB_OUTPUT}"
+
+  run-tests:
+    name: Integration Test
+    needs: list-tests
+    runs-on: ubuntu-latest
+    if: needs.list-tests.outputs.tests != '[]'
+    strategy:
+      matrix:
+        test: ${{ fromJson(needs.list-tests.outputs.tests) }}
+      fail-fast: false
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@1af3b93b6815bc44a9784bd300feb67ff0d1eeb3  # v6.0.0
+        with:
+          persist-credentials: 'false'
+          path: source
+
+      - name: Checkout code
+        uses: actions/checkout@1af3b93b6815bc44a9784bd300feb67ff0d1eeb3  # v6.0.0
+        with:
+          persist-credentials: 'false'
+          repository: grafana/helm-chart-toolbox
+          path: helm-chart-toolbox
+
+      - name: Install Flux CLI
+        uses: fluxcd/flux2/action@b6e76ca2534f76dcb8dd94fb057cdfa923c3b641  # v2.7.3
+
+      - name: Install Kind CLI
+        uses: helm/kind-action@92086f6be054225fa813e0a4b13787fc9088faab  # v1.13.0
+        with:
+          install_only: true
+
+      - name: Install Minikube CLI
+        uses: medyagh/setup-minikube@e3c7f79eb1e997eabccc536a6cf318a2b0fe19d9  # v0.0.20
+        with:
+          start: false
+
+      - name: Setup Flux CLI
+        uses: fluxcd/flux2/action@b6e76ca2534f76dcb8dd94fb057cdfa923c3b641  # v2.7.3
+
+      - name: Run test
+        run: helm-chart-toolbox/tools/helm-test/helm-test "${TEST_DIRECTORY}"
+        env:
+          TEST_DIRECTORY: "source/tests/integration/${{ matrix.test }}"
+          DELETE_CLUSTER: true

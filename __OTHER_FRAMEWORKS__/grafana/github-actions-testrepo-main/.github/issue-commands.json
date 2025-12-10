@@ -1,0 +1,34 @@
+[
+  {
+    "type": "label",
+    "name": "area/plugins-catalog",
+    "action": "addToProject",
+    "addToProject": {
+      "url": "https://github.com/orgs/grafana/projects/76"
+    }
+  },
+  {
+    "type": "label",
+    "name": "area/academo",
+    "action": "addToProject",
+    "addToProject": {
+      "url": "https://github.com/orgs/grafana/projects/744"
+    }
+  },
+  {
+    "type": "label",
+    "name": "area/testing",
+    "action": "addToProject",
+    "addToProject": {
+      "url": "https://github.com/orgs/grafana/projects/169"
+    }
+  },
+  {
+    "type": "label",
+    "name": "area/moretesting",
+    "action": "addToProject",
+    "addToProject": {
+      "url": "https://github.com/orgs/grafana/projects/313"
+    }
+  }
+]

@@ -1,0 +1,150 @@
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: operator
+  namespace: default
+---
+{{ range $.CRDs }}apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: operator:{{.MachineName}}-user-rolebinding
+  namespace: default
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: {{.MachineName}}-user
+subjects:
+  - kind: ServiceAccount
+    name: operator
+    namespace: default
+---
+{{end}}{{ if .WebhookProperties.Enabled }}
+apiVersion: v1
+kind: Secret
+metadata:
+  name: webhook-tls-certs
+  namespace: default
+type: kubernetes.io/tls
+data:
+  tls.crt: {{.WebhookProperties.Base64Cert}}
+  tls.key: {{.WebhookProperties.Base64Key}}
+---
+{{end}}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ if .DisableGrafanaPluginMount }}operator{{ else }}{{.PluginID}}-operator{{ end }}
+  namespace: default
+spec:
+  minReadySeconds: 10
+  replicas: 1
+  revisionHistoryLimit: 10
+  selector:
+    matchLabels:
+      name: {{ if .DisableGrafanaPluginMount }}operator{{ else }}{{.PluginID}}-operator{{ end }}
+  template:
+    metadata:
+      labels:
+        name: {{ if .DisableGrafanaPluginMount }}operator{{ else }}{{.PluginID}}-operator{{ end }}
+    spec:
+      serviceAccount: operator
+      containers:
+        - image: {{.OperatorImage}}
+          imagePullPolicy: IfNotPresent
+          name: {{ if .DisableGrafanaPluginMount }}operator{{ else }}{{.PluginID}}-operator{{ end }}
+          env:
+            - name: OTEL_HOST
+              value: tempo.default.svc
+            - name: OTEL_PORT
+              value: "4317"
+            - name: OTEL_CONN_TYPE
+              value: grpc
+            - name: OTEL_SERVICE_NAME
+              value: "{{ if .DisableGrafanaPluginMount }}operator{{ else }}{{.PluginID}}-operator{{ end }}"
+{{ if .WebhookProperties.Enabled }}
+            - name: WEBHOOK_PORT
+              value: "{{ .WebhookProperties.Port }}"
+            - name: WEBHOOK_CERT_PATH
+              value: /run/secrets/tls/tls.crt
+            - name: WEBHOOK_KEY_PATH
+              value: /run/secrets/tls/tls.key
+{{ end }}
+          ports:
+            - containerPort: 9090
+              name: metrics
+{{ if .WebhookProperties.Enabled }}
+            - containerPort: {{ .WebhookProperties.Port }}
+              name: webhook-api
+          volumeMounts:
+            - name: webhook-certs
+              mountPath: /run/secrets/tls
+              readOnly: true
+      volumes:
+        - name: webhook-certs
+          secret:
+            secretName: webhook-tls-certs
+{{ end }}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ if .DisableGrafanaPluginMount }}operator{{ else }}{{.PluginID}}-operator{{ end }}
+  namespace: default
+spec:
+  selector:
+    name: {{ if .DisableGrafanaPluginMount }}operator{{ else }}{{.PluginID}}-operator{{ end }}
+  ports:
+    - name: metrics
+      port: 9090
+      targetPort: metrics
+{{ if .WebhookProperties.Enabled }}
+    - name: webhook-api
+      port: 443
+      targetPort: webhook-api
+{{ if ne .WebhookProperties.Mutating "" }}
+---
+apiVersion: admissionregistration.k8s.io/v1
+kind: MutatingWebhookConfiguration
+metadata:
+  name: {{ if .DisableGrafanaPluginMount }}operator-mut-webhook{{ else }}{{.PluginID}}-operator-mut-webhook{{ end }}
+webhooks:
+  - name: {{ if .DisableGrafanaPluginMount }}operator.default.svc{{ else }}{{.PluginID}}-operator.default.svc{{ end }}
+    sideEffects: None
+    admissionReviewVersions: ["v1","v1beta1"]
+    clientConfig:
+      service:
+        name: {{ if .DisableGrafanaPluginMount }}operator{{ else }}{{.PluginID}}-operator{{ end }}
+        namespace: default
+        path: "/mutate"
+      caBundle: {{.WebhookProperties.Base64CA}}
+    rules:{{range .CRDs}}
+      - operations: ["CREATE","UPDATE"]
+        apiGroups: ["{{.Group}}"]
+        apiVersions: {{range .Versions}}
+          - {{.}}{{end}}
+        resources: ["{{.PluralMachineName}}"]{{end}}
+{{ end }}
+{{ if ne .WebhookProperties.Validating "" }}
+---
+apiVersion: admissionregistration.k8s.io/v1
+kind: ValidatingWebhookConfiguration
+metadata:
+  name: {{ if .DisableGrafanaPluginMount }}operator-val-webhook{{ else }}{{.PluginID}}-operator-val-webhook{{ end }}
+webhooks:
+  - name: {{ if .DisableGrafanaPluginMount }}operator.default.svc{{ else }}{{.PluginID}}-operator.default.svc{{ end }}
+    sideEffects: None
+    admissionReviewVersions: ["v1","v1beta1"]
+    clientConfig:
+      service:
+        name: {{ if .DisableGrafanaPluginMount }}operator{{ else }}{{.PluginID}}-operator{{ end }}
+        namespace: default
+        path: "/validate"
+      caBundle: {{.WebhookProperties.Base64CA}}
+    rules:{{range .CRDs}}
+    - operations: ["CREATE","UPDATE"]
+      apiGroups: ["{{.Group}}"]
+      apiVersions: {{range .Versions}}
+        - {{.}}{{end}}
+      resources: ["{{.PluralMachineName}}"]{{end}}
+  {{ end }}
+{{ end }}

@@ -1,0 +1,129 @@
+logVerbose: true
+delay: 60
+# The default scrape interval for scraping metrics from CloudWatch
+scrapeInterval: 300
+
+# Whether to discover ECS Tasks for scraping metrics
+discoverECSTasks: true
+
+ecsTargetSDFile: /opt/asserts/ecs-scrape-targets.yml
+
+# Whether to pull CloudWatch alarms and convert them to prometheus alerts in Asserts
+pullCWAlarms: true
+
+# API endpoint to ingest CloudWatch alarms are prometheus alerts in Asserts
+alertForwardUrl: https://assertion-detector.dev.asserts.ai/assertion-detector/v4/prometheus-alerts
+
+# The tenant name in Asserts
+tenant: chief
+
+ecsTaskScrapeConfigs:
+  - containerDefinitionName: cloudwatch-exporter
+    metricPath: /aws-exporter/actuator/prometheus
+regions:
+  - us-west-2
+namespaces:
+  - name: AWS/Lambda
+    scrapeInterval: 60
+    dimensionFilters:
+      FunctionName: .+
+    metrics:
+      - name: Invocations
+        stats:
+          - Sum
+      - name: Errors
+        stats:
+          - Sum
+      - name: Duration
+        stats:
+          - Average
+          - p99
+      - name: Throttles
+        stats:
+          - Sum
+      - name: ConcurrentExecutions
+        stats:
+          - Average
+          - Maximum
+tagExportConfig:
+  includeTags:
+    - "kubernetes.io/service-name"
+dimensionToLabels:
+  - namespace: AWS/EC2
+    dimensionName: InstanceId
+    mapToLabel: instance_id
+  - namespace: AWS/AutoScaling
+    dimensionName: AutoScalingGroupName
+    mapToLabel: label_ec2_amazonaws_com_aws_autoscaling_group_name
+    entityType: AutoScalingGroup
+  - namespace: AWS/RDS
+    dimensionName: DBInstanceIdentifier
+  - namespace: AWS/S3
+    dimensionName: BucketName
+  - namespace: AWS/DynamoDB
+    dimensionName: TableName
+  - namespace: AWS/SQS
+    dimensionName: QueueName
+    mapToLabel: topic
+    entityType: Topic
+  - namespace: AWS/SNS
+    dimensionName: TopicName
+  - namespace: AWS/Lambda
+    dimensionName: FunctionName
+  - namespace: LambdaInsights
+    dimensionName: function_name
+  - namespace: LambdaInsights
+    dimensionName: FunctionName
+  - namespace: AWS/ELB
+    dimensionName: LoadBalancerName
+  - namespace: AWS/ApplicationELB
+    dimensionName: LoadBalancer
+  - namespace: AWS/NetworkELB
+    dimensionName: LoadBalancer
+  - namespace: AWS/ECS
+    dimensionName: ServiceName
+    mapToLabel: workload
+  - namespace: ECS/ContainerInsights
+    dimensionName: ServiceName
+    mapToLabel: workload
+  - namespace: AWS/ApiGateway
+    dimensionName: ApiName
+  - namespace: AWS/Firehose
+    dimensionName: DeliveryStreamName
+  - namespace: AWS/Kinesis
+    dimensionName: StreamName
+  - namespace: AWS/KinesisAnalytics
+    dimensionName: Application
+  - namespace: AWS/ElastiCache
+    dimensionName: ReplicationGroupId
+    mapToLabel: job
+    entityType: Service
+  - namespace: AWS/ElastiCache
+    dimensionName: CacheClusterId
+    mapToLabel: job
+    regex: (.+?)-[0-9]+
+    valueExp: $1
+    entityType: Service
+  - namespace: AWS/ElastiCache
+    dimensionName: CacheClusterId
+    mapToLabel: job
+    regex: (.+?)-[0-9]+-[0-9]+
+    valueExp: $1
+    entityType: Service
+relabelConfigs:
+  - source_labels: [account_id]
+    regex: (.+)
+    target_label: asserts_env
+    replacement: $1
+  - source_labels: [region]
+    regex: (.+)
+    target_label: asserts_site
+    replacement: $1
+  - source_labels: [from_account]
+    regex: (.+)
+    target_label: asserts_env
+    replacement: $1
+  - source_labels: [from_region]
+    regex: (.+)
+    target_label: asserts_site
+    replacement: $1

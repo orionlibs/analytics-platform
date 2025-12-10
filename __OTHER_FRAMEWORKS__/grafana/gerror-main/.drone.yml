@@ -1,0 +1,27 @@
+---
+kind: pipeline
+type: docker
+name: gerror
+
+platform:
+  os: linux
+  arch: amd64
+
+steps:
+  - name: "lint"
+    image: golang:1.19
+    # commands:
+    #   - golangci-lint run ./...
+    commands:
+      - curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s v1.51.1
+      - ./bin/golangci-lint run ./...
+    failure: ignore
+  - name: "test"
+    image: golang:1.19
+    commands:
+      - go test ./...
+---
+kind: signature
+hmac: 6960a50e1fc87844e8206afff227ae8f304cf7b05c47b5ffc202e1f43f9059a8
+
+...

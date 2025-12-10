@@ -1,0 +1,113 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+usage() {
+    echo "USAGE: helm-with-version [run|which|export] <helm-version> [helm-args...]"
+    echo ""
+    echo "Download (if necessary) and execute (run), print the binary path (which),"
+    echo "or emit a PATH export statement (export) for the requested Helm client."
+    echo "Versions may be provided with or without a leading \"v\" and are cached"
+    echo "in \$HOME/.helm_cli_cache."
+    echo ""
+    echo "Examples:"
+    echo "  helm-with-version run 3.14.4 version"
+    echo "  helm-with-version 3.12.0 template k8smon charts/k8s-monitoring -f values.yaml"
+    echo "  helm-with-version which v3.14.4"
+    echo "  eval \"\$(helm-with-version export 3.14.4)\""
+}
+
+if [[ "${1:-}" == "-h" || "${1:-}" == "--help" ]]; then
+  usage
+  exit 0
+fi
+
+subcommand="run"
+if [[ $# -ge 1 ]]; then
+  case "$1" in
+    run|which|export)
+      subcommand="$1"
+      shift
+      ;;
+  esac
+fi
+
+if [[ $# -lt 1 ]]; then
+  usage
+  exit 1
+fi
+
+helmVersion=$1
+helmVersion=${helmVersion#v}  # Remove leading 'v' if present
+shift
+
+if ! command -v curl >/dev/null 2>&1; then
+  echo "Error: curl command not found in PATH" >&2
+  exit 1
+fi
+
+case "$(uname -s)" in
+  Linux) os="linux" ;;
+  Darwin) os="darwin" ;;
+  *)
+    echo "Unsupported operating system: $(uname -s)" >&2
+    exit 1
+    ;;
+esac
+
+case "$(uname -m)" in
+  x86_64 | amd64) arch="amd64" ;;
+  arm64 | aarch64) arch="arm64" ;;
+  *)
+    echo "Unsupported architecture: $(uname -m)" >&2
+    exit 1
+    ;;
+esac
+
+cliCacheDir="${HOME}/.helm_cli_cache"
+helm="${cliCacheDir}/${helmVersion}/${os}-${arch}/helm"
+
+if [[ ! -x "${helm}" ]]; then
+  tarballURL="https://get.helm.sh/helm-v${helmVersion}-${os}-${arch}.tar.gz"
+  tempDir=$(mktemp -d)
+  cleanup() { rm -rf "${tempDir}"; }
+  trap cleanup EXIT
+
+  echo "Downloading ${helmVersion}..." >&2
+  curl -fSL "${tarballURL}" -o "${tempDir}/helm.tgz" || {
+    echo "Failed to download ${tarballURL}" >&2
+    exit 1
+  }
+
+  tar -C "${tempDir}" -xzf "${tempDir}/helm.tgz" || {
+    echo "Failed to extract Helm archive" >&2
+    exit 1
+  }
+
+  extractedHelm="${tempDir}/${os}-${arch}/helm"
+  if [[ ! -f "${extractedHelm}" ]]; then
+    echo "Helm binary not found in extracted archive" >&2
+    exit 1
+  fi
+
+  mkdir -p "$(dirname "${helm}")"
+  mv "${extractedHelm}" "${helm}"
+  chmod +x "${helm}"
+
+  trap - EXIT
+  cleanup
+fi
+
+case "${subcommand}" in
+  which)
+    echo "${helm}"
+    exit 0
+    ;;
+  export)
+    helmDir=$(dirname "${helm}")
+    echo "export PATH=${helmDir}:\$PATH"
+    exit 0
+    ;;
+  run)
+    exec "${helm}" "$@"
+    ;;
+esac

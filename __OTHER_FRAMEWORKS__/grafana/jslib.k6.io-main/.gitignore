@@ -1,0 +1,6 @@
+/dist
+/node_modules
+*-error.log
+.idea
+*.Identifier
+.DS_Store

@@ -1,0 +1,95 @@
+---
+kind: pipeline
+name: Lint
+platform:
+  os: linux
+  arch: amd64
+trigger:
+  event:
+    - push
+    - pull_request
+    - tag
+  ref:
+    - refs/heads/main
+    - refs/pull/*/head
+    - refs/tags/**
+
+steps:
+  - name: lint
+    image: golangci/golangci-lint:v1.62.0
+    commands:
+      - apt-get update -y && apt-get install -y libsystemd-dev
+      - make DOCKER_OPTS="" lint
+---
+kind: pipeline
+type: docker
+name: Test
+platform:
+  os: linux
+  arch: amd64
+trigger:
+  event:
+    - push
+    - pull_request
+    - tag
+  ref:
+    - refs/heads/main
+    - refs/pull/*/head
+    - refs/tags/**
+
+steps:
+  - name: test
+    image: golang:1.23-bullseye
+    commands:
+      - make test
+depends_on:
+  - Lint
+---
+kind: pipeline
+type: docker
+name: Release
+platform:
+  os: linux
+  arch: amd64
+trigger:
+  ref:
+    - refs/tags/v*
+    - refs/tags/v*-*
+
+steps:
+  - name: create-release
+    image: golang:1.23-bullseye
+    environment:
+      GITHUB_TOKEN:
+        from_secret: GITHUB_TOKEN
+    commands:
+      - make release
+
+---
+kind: pipeline
+type: docker
+name: Build
+platform:
+  os: linux
+  arch: amd64
+trigger:
+  event:
+    - push
+    - pull_request
+    - tag
+  ref:
+    - refs/heads/main
+    - refs/pull/*/head
+    - refs/tags/**
+
+steps:
+  - name: build
+    image: golang:1.23-bullseye
+    commands:
+      - make build
+
+---
+kind: signature
+hmac: 7a8c0b2d29d84188d192a2687945f653587e0ea322ea5d8008f022058b49c9ed
+
+...

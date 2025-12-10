@@ -1,0 +1,33 @@
+name: Login to DockerHub
+description: Using the shared Grafana Labs DockerHub credentials, log in to DockerHub
+
+runs:
+  using: composite
+  steps:
+    - name: Checkout shared workflows
+      env:
+        # In a composite action, these two need to be indirected via the
+        # environment, as per the GitHub actions documentation:
+        # https://docs.github.com/en/actions/learn-github-actions/contexts
+        action_repo: ${{ github.action_repository }}
+        action_ref: ${{ github.action_ref }}
+      uses: actions/checkout@1af3b93b6815bc44a9784bd300feb67ff0d1eeb3 # v6.0.0
+      with:
+        repository: ${{ env.action_repo }}
+        ref: ${{ env.action_ref }}
+        path: _shared-workflows-dockerhub-login
+        persist-credentials: false
+
+    - name: Get secrets for DockerHub login
+      id: get-secrets
+      uses: ./_shared-workflows-dockerhub-login/actions/get-vault-secrets
+      with:
+        common_secrets: |
+          DOCKERHUB_USERNAME=dockerhub:username
+          DOCKERHUB_PASSWORD=dockerhub:password
+
+    - name: Log in to Docker Hub
+      uses: docker/login-action@5e57cd118135c172c3672efd75eb46360885c0ef # v3.6.0
+      with:
+        username: ${{ env.DOCKERHUB_USERNAME }}
+        password: ${{ env.DOCKERHUB_PASSWORD }}

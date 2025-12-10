@@ -1,0 +1,52 @@
+name: CI
+
+on:
+  pull_request: {}
+
+permissions:
+  contents: read
+
+jobs:
+  lint:
+    name: Lint
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af6838  # v4
+        with:
+          persist-credentials: false
+
+      - name: Setup Node.js
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version-file: .nvmrc
+          cache: yarn
+
+      - name: Install Dependencies
+        run: yarn install
+
+      - name: Lint
+        run: yarn run lint
+
+  test-action:
+    name: GitHub Actions Test
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        id: checkout
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af6838  # v4
+        with:
+          persist-credentials: false
+
+      - name: Test Local Action
+        uses: ./
+        with:
+          version: 'latest'
+          grafana_url: 'https://my-grafana-instance:3000'
+          grafana_user: admin
+          grafana_token: 'this really should come from a secret'
+
+      - name: Print config
+        run: grr config get

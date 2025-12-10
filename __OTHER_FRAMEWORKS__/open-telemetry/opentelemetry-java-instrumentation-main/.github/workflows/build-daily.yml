@@ -1,0 +1,52 @@
+name: Build (daily)
+
+on:
+  schedule:
+    # daily at 3:24 UTC
+    - cron: "24 3 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  common:
+    uses: ./.github/workflows/build-common.yml
+    secrets:
+      DEVELOCITY_ACCESS_KEY: ${{ secrets.DEVELOCITY_ACCESS_KEY }}
+      FLAKY_TEST_REPORTER_ACCESS_KEY: ${{ secrets.FLAKY_TEST_REPORTER_ACCESS_KEY }}
+
+  test-latest-deps:
+    uses: ./.github/workflows/reusable-test-latest-deps.yml
+    secrets:
+      DEVELOCITY_ACCESS_KEY: ${{ secrets.DEVELOCITY_ACCESS_KEY }}
+      FLAKY_TEST_REPORTER_ACCESS_KEY: ${{ secrets.FLAKY_TEST_REPORTER_ACCESS_KEY }}
+
+  muzzle:
+    uses: ./.github/workflows/reusable-muzzle.yml
+
+  link-check:
+    uses: ./.github/workflows/reusable-link-check.yml
+
+  markdown-lint-check:
+    uses: ./.github/workflows/reusable-markdown-lint-check.yml
+
+  workflow-notification:
+    permissions:
+      contents: read
+      issues: write
+    needs:
+      - common
+      - test-latest-deps
+      - muzzle
+      - link-check
+    if: always()
+    uses: ./.github/workflows/reusable-workflow-notification.yml
+    with:
+      success: >-
+        ${{
+          needs.common.result == 'success' &&
+          needs.test-latest-deps.result == 'success' &&
+          needs.muzzle.result == 'success' &&
+          needs.link-check.result == 'success'
+        }}

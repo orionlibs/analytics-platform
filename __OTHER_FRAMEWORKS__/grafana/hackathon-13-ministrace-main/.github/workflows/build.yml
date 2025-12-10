@@ -1,0 +1,82 @@
+name: Build
+
+on:
+  push:
+    branches:
+      - main
+    tags:
+      - 'v*'
+  pull_request: # zizmor: ignore[cache-poisoning]
+
+permissions: {}
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ startsWith(github.ref, 'refs/pull/') }}
+
+jobs:
+  build:
+    strategy:
+      matrix:
+        include:
+          - target: x86_64-unknown-linux-musl
+            runs-on: ubuntu-latest
+          - target: aarch64-unknown-linux-musl
+            runs-on: ubuntu-latest
+
+    name: Build and upload artifacts (${{ matrix.target }})
+    runs-on: ${{ matrix.runs-on }}
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: dtolnay/rust-toolchain@4305c38b25d97ef35a8ad1f985ccf2d2242004f2 # stable
+      - uses: Swatinem/rust-cache@98c8021b550208e191a6a3145459bfc9fb29c4c0 # v2
+      - name: Build binary
+        uses: houseabsolute/actions-rust-cross@1db091d29dbc56b9ae809cdee70bd948737918f7 # v1
+        with:
+          command: build
+          target: ${{ matrix.target }}
+          args: "--locked --release"
+      - name: Upload binary
+        uses: actions/upload-artifact@v4
+        with:
+          name: ministrace-${{ matrix.target }}
+          path: target/${{ matrix.target }}/release/ministrace
+          retention-days: 3
+
+  release:
+    name: Create release
+    runs-on: ubuntu-latest
+    needs: build
+    if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v')
+    permissions:
+      contents: write # to create the release
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+          path: ministrace-git
+      # Download the artifacts from the build job
+      - uses: actions/download-artifact@v4
+        with:
+          name: ministrace-x86_64-unknown-linux-musl
+          path: x86_64-unknown-linux-musl/
+      - uses: actions/download-artifact@v4
+        with:
+          name: ministrace-aarch64-unknown-linux-musl
+          path: aarch64-unknown-linux-musl/
+      - name: Rename binaries
+        run: |
+          set -euo pipefail
+          mv x86_64-unknown-linux-musl/ministrace ministrace-x86_64-unknown-linux-musl
+          mv aarch64-unknown-linux-musl/ministrace ministrace-aarch64-unknown-linux-musl
+      - uses: softprops/action-gh-release@72f2c25fcb47643c292f7107632f7a47c1df5cd8 # v2
+        with:
+          files: |
+            ministrace-x86_64-unknown-linux-musl
+            ministrace-aarch64-unknown-linux-musl
+            ministrace-git/LICENSE
+            ministrace-git/THIRDPARTY.yaml

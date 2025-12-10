@@ -1,0 +1,107 @@
+---
+# -- The version of the test plan document. Do not change.
+# @section -- General
+apiVersion: helm-chart-toolbox.grafana.com/v1
+# -- The kind of the test plan document. Do not change.
+# @section -- General
+kind: TestPlan
+# -- The name of the test plan.
+# @section -- General
+name: ""
+
+# Define the test subject, how to configure it, how to deploy it, and optionally how to upgrade it.
+subject:
+  # -- The type of the test subject. The supported types are "helm", "manifest", and "terraform".
+  # @section -- Subject
+  type: "helm"
+
+  # -- The path to the Helm chart or manifest file to test.
+  # @section -- Subject
+  path: ""
+
+  # -- The Helm chart repository to use.
+  # @section -- Subject
+  repository: ""
+  # -- The name of the Helm chart to use from the chart repository.
+  # @section -- Subject
+  name: ""
+
+  # -- (optional) The version of the Helm chart to use from the chart repository. Special values are "latest",
+  # "previous-major", "previous-minor", and "previous-patch" to use the latest, previous major, previous minor, or
+  # previous patch version of the chart, respectively.
+  # @section -- Subject
+  version: ""
+
+  # -- The release name to use when deploying the Helm chart. If not set, will use the test plan name.
+  # @section -- Subject
+  releaseName: ""
+
+  # -- The namespace to use when deploying the Helm chart.
+  # @section -- Subject
+  namespace: ""
+
+  # -- The values to use when deploying the Helm chart.
+  # @section -- Subject
+  values: {}
+
+  # -- The path to a values file to use when deploying the Helm chart.
+  # @section -- Subject
+  valuesFile: ""
+
+  postInstall:
+    # -- The files to apply after the Helm chart is installed.
+    # @section -- Subject
+    files: []
+
+  # If present, the Helm chart will be upgraded after the post-install files are applied.
+  upgrade:
+    # -- (optional) The version of the Helm chart to upgrade to from the chart repository. Special values are "latest"
+    # to use the lastest version of the chart.
+    # @section -- Subject
+    version: ""
+
+    # -- The values to use when upgrading the Helm chart.
+    # @section -- Subject
+    values: {}
+
+    # -- The path to a values file to use when upgrading the Helm chart.
+    # @section -- Subject
+    valuesFile: ""
+
+# Define the cluster to use for the test, including how to create it and any configuration needed.
+cluster:
+  # -- The type of cluster to use for the test. Valid options are "kind" or "minikube"
+  # @section -- Cluster
+  type: ""
+
+  # -- Configuration to use when creating the cluster as inline YAML. Supported for "kind" clusters only.
+  # @section -- Cluster
+  config:
+
+  # -- Path to a configuration file to use when creating the cluster. Supported for "kind" clusters only.
+  # @section -- Cluster
+  configFile:
+
+# -- The list of dependencies to be deployed before deploying the Helm chart test subject.
+# There are a number of presets available, such as "prometheus", "loki", "tempo", "pyroscope", and "grafana". Each
+# preset can have their default values overridden by specifying an `overrides` section with changes to its values.
+# You can also specify a directory containing YAML files to apply, or a path to an individual manifest file.
+# Finally, you can specify a manifest as inline YAML.
+# @section -- Dependencies
+dependencies: []
+# - preset: prometheus
+# - preset: loki
+# - preset: tempo
+# - preset: pyroscope
+# - preset: grafana
+# - directory: path/to/a/directory/with/manifests
+# - file: path/to/a/single/manifest.yaml
+# - manifest:
+#     apiVersion: v1
+#     kind: ConfigMap
+#     ...
+
+# -- The list of test to be run after deploying the Helm chart test subject.
+# Supported test types are: [query-test](https://github.com/grafana/helm-chart-toolbox/blob/main/charts/query-test)
+# @section -- Tests
+tests: []

@@ -1,0 +1,280 @@
+# This plugin is for running a parent Grafana instance with plugins, where each plugin
+# is in it's own repo, which will be managed by a parent Tilt project.
+#
+# The strategy is to generate the Dockerfile for the parent Grafana instance, and
+# then use the Helm Chart to deploy it.
+load('ext://configmap', 'configmap_create')
+load('ext://helm_resource', 'helm_repo', 'helm_resource')
+load('ext://secret', 'secret_from_dict')
+load('ext://local_output', 'local_output')
+
+
+def create_cert_configmap_and_mount(name, mounted_filename, namespace, from_file):
+    """Creates a configmap for a certificate file and returns the corresponding mount dictionary.
+
+    Args:
+        name: The name for the configmap (typically the cert filename)
+        namespace: The Kubernetes namespace
+        from_file: The path to the certificate file
+
+    Returns:
+        A dictionary representing the mount configuration for the certificate
+    """
+    configmap_create(
+        name = name,
+        namespace = namespace,
+        from_file = from_file
+    )
+
+    return {
+        'name'     : name,
+        'mountPath': '/etc/grafana/certs/' + mounted_filename,
+        'subPath'  : mounted_filename,
+        'configMap': name,
+        'readOnly' : 'true'
+    }
+
+def load_apiserver_certs_as_configmap(namespace):
+    """
+    Clients certs are required for the apiserver to do the aggregation, so the must be mounted as configmaps
+    in the container. This function, and the one above, will create the configmaps and return the config needed
+    for the helm chart to mount the configmaps.
+    """
+    extra_mounts = []
+    # Load the apiserver certs as configmaps
+    cert_configs = [
+        ('apiserver-client-key-pem', 'apiserver-client-key.pem', os.path.dirname(__file__) + '/certs/api-server-aggregation/apiserver-client-key.pem'),
+        ('apiserver-client-pem', 'apiserver-client.pem', os.path.dirname(__file__) + '/certs/api-server-aggregation/apiserver-client.pem'),
+    ]
+
+    for name, mounted_filename, from_file in cert_configs:
+        mount = create_cert_configmap_and_mount(name, mounted_filename, namespace, from_file)
+        extra_mounts.append(mount)
+
+    return extra_mounts
+
+# This will generate a Dockerfile with COPY statements for each plugin that has been checked out
+def grafana_dockerfile_contents(context_dir, configs, grafana_image, grafana_version):
+    dockerfile="""
+    FROM %s:%s
+    """ % (grafana_image, grafana_version)
+
+    for repo, config in configs.items():
+        # TODO the pathing is wonky
+        dockerfile += "COPY --chown=grafana:root %s /tmp/plugins/%s\n" % (os.path.relpath(os.path.abspath(context_dir + '/' + config.plugin_dist_dir), os.path.abspath(context_dir)), config.plugin_id)
+
+    dockerfile += """
+    # The Grafana Helm Chart puts a volume mount over /var/lib/grafana, so we cannot
+    # copy files there. This is a hack. We might be able to entrypoint around this
+    RUN echo "#!/bin/sh" > /tmp/install-and-run.sh && \
+        echo "/bin/tar cf - plugins -C /tmp | (cd /var/lib/grafana; tar xfv -)" >> /tmp/install-and-run.sh && \
+        echo "/run.sh $*" >> /tmp/install-and-run.sh
+    RUN chmod +x /tmp/install-and-run.sh
+    ENTRYPOINT [ "/tmp/install-and-run.sh" ]
+    """
+    return dockerfile
+
+# https://docs.tilt.dev/live_update_reference.html
+def live_updates(base_dir, configs, sync_func=sync):
+    fallbacks = []
+    # Sync the dist dir to the plugin dir inside the image
+    syncs = [sync_func(base_dir + '/' + config.plugin_dist_dir, config.grafana_plugin_dir) for (_, config) in configs.items()]
+    runs = [config.restart_command for (_, config) in configs.items()]
+    return fallbacks + syncs + runs
+
+
+def load_plugins(base_path, plugin_json_files, run_func=run):
+    configs = {}
+    for file in plugin_json_files:
+        plugin_config = read_json(file)
+        plugin_id = plugin_config['id']
+        plugin_executable = plugin_config.get('executable', plugin_id)
+        plugin_dir = os.path.relpath(os.path.dirname(os.path.abspath(file)) + '/..', base_path)
+
+        plugin_dist_dir = plugin_dir + '/dist'
+        plugin_src_dir = plugin_dir + '/src'
+
+        configs[plugin_id] = struct(plugin_id   = plugin_id,
+                             executable         = plugin_executable,
+                             plugin_dir         = plugin_dir,
+                             plugin_dist_dir    = plugin_dist_dir,
+                             plugin_src_dir     = plugin_src_dir,
+                             enable_tracing     = plugin_config.get('tracing', False) == True,
+                             grafana_plugin_dir = "/var/lib/grafana/plugins/%s" % plugin_id,
+                             restart_command    = run_func('pkill {plugin_executable} || /bin/true'.format(plugin_executable=plugin_executable),
+                                                            trigger = ['{plugin_dist_dir}/{plugin_executable}_linux_amd64'.format(plugin_dist_dir=plugin_dist_dir, plugin_executable=plugin_executable)]))
+    return configs
+
+def get_or_create(dict, key):
+    if key not in dict:
+        dict[key] = {}
+    return dict[key]
+
+def grafana(
+    context,
+    plugin_files,
+    grafana_image='grafana/grafana',
+    grafana_version='latest',
+    namespace='grafana',
+    deps=[],
+    extra_env={},
+    extra_grafana_ini={},
+    additional_grafana_helm_chart_values_file=None,
+    extra_configmaps_mounts=[],
+):
+    """Deploys one or more plugin(s) in Grafana using the Helm Chart.
+
+    Args:
+        context                                   : The Docker context directory that is the root of the Dockerfile. Typically the 'plugin' directory
+        plugin_files                              : A path, or list of paths to the 'plugin.json' file for the plugin(s) you are running
+        grafana_image                             : The grafana image you want to use. Defaults to 'grafana/grafana'
+        grafana_version                           : The image tag for the version of grafana you want to use. Defaults to 'latest'
+        namespace                                 : The Kubernetes namespace to deploy to. Defaults to 'default'
+        deps                                      : A list of Tilt resources Grafana should wait for
+        extra_env                                 : A dict of env vars to pass to Grafana
+        extra_grafana_ini                         : A dict of key value pairs to configure the grafana.ini file
+        additional_grafana_helm_chart_values_file : Absolute path to a .yaml file which will be passed as an additional values file to the Grafana helm chart
+        extra_configmaps_mounts                 : A list of dicts of configmap mounts to add to the Grafana helm chart
+
+    Returns:
+      Nothing
+    """
+
+    # Convert to a list if it's not already
+    plugin_json_files = []
+    if type(plugin_files) == type([]):
+        plugin_json_files.extend(plugin_files)
+    else:
+        plugin_json_files.append(plugin_files)
+
+    plugins = load_plugins(os.path.abspath(context), plugin_json_files)
+
+    # This is the Grafana docker image we are about to build
+    image_repository = grafana_image
+    # TODO: Make this configurable
+    image_tag = 'ops-devenv'
+
+    default_grafana_values = os.path.dirname(__file__) + '/grafana-values.yaml'
+    # To trigger a rebuild/reload of Grafana, pickup the artifacts of the plugin builds (plugin/dist)
+    watched_files = [os.path.relpath(os.path.abspath( context + '/' + config.plugin_dist_dir), os.path.abspath(context))
+                    for (_, config) in plugins.items()]
+    # If the 'only' param below is empty, which is the case for AppPlatform repos,
+    # Tilt will rebuild grafana for any changes in 'context',
+    # which will be anything in the parent directory of this repo. To ensusure that the 'only'
+    # param is not empty add the default values file which should probably trigger a rebuild anyway.
+    watched_files.append(default_grafana_values)
+
+    print("context: %s" % context)
+
+    docker_build("%s:%s" % (image_repository, image_tag),
+                dockerfile_contents = grafana_dockerfile_contents(context, plugins, grafana_image, grafana_version),
+                context             = context,
+                only                = watched_files,
+                live_update         = live_updates(context, plugins))
+
+    # Load the default grafana values from this directory
+    chart_values = read_yaml(default_grafana_values)
+
+    # Create admin/admin secret for the Helm Chart
+    k8s_yaml(secret_from_dict(name = 'grafana-admin-creds',
+                              namespace = namespace,
+                              inputs = {'admin-user': 'admin', 'admin-password':'admin'}))
+
+    # Set the env vars
+    chart_values['env'] = {}
+    chart_values['env'].update(extra_env)
+
+    chart_values['image'] = {}
+    chart_values['image']['repository'] = image_repository
+    chart_values['image']['tag'] = image_tag
+
+    # Sets the passed in additional Grafana_init fields
+    if len(extra_grafana_ini) > 0:
+        chart_values["grafana.ini"].update(extra_grafana_ini)
+
+    # The assumption is that the Tiltfiles in the plugin repos will create the configmaps
+    # with the name <plugin_id>-provisioning. If they don't, then we need to add them here.
+    all_extra_mounts = []
+    if len(extra_configmaps_mounts) == 0:
+        extra_mounts = []
+        extra_mounts.extend(extra_configmaps_mounts)
+        for (_, plugin) in plugins.items():
+            plugin_id = plugin.plugin_id
+            # Tell the chart to mount it
+            extra_mounts.append({
+                'name'     : '%s-provisioning' % plugin_id,
+                'mountPath': '/etc/grafana/provisioning/plugins/%s-provisioning.yaml' % plugin_id,
+                'subPath'  : '%s-provisioning.yaml' % plugin_id,
+                'configMap': '%s-provisioning' % plugin_id,
+                'readOnly' : 'true'
+            })
+        all_extra_mounts = extra_mounts
+    else:
+        all_extra_mounts = extra_configmaps_mounts
+
+    # Load the apiserver certs as configmaps
+    all_extra_mounts.extend(load_apiserver_certs_as_configmap(namespace))
+
+    chart_values["grafana.ini"]['grafana-apiserver'] = {}
+    chart_values["grafana.ini"]['grafana-apiserver']['proxy_client_cert_file'] = '/etc/grafana/certs/apiserver-client.pem'
+    chart_values["grafana.ini"]['grafana-apiserver']['proxy_client_key_file'] = '/etc/grafana/certs/apiserver-client-key.pem'
+    # This may come later, as another way to configure the grafana apiserver to do the aggregation
+    # but it will require changes to each plugin's Tiltfile to communicate the intent
+    # see https://github.com/grafana/grafana/blob/35d127491912428075dba6f08a2c945adda17561/pkg/services/apiserver/aggregator/examples/autoregister/apiservices.yaml
+    # for more details
+    # chart_values["grafana.ini"]['grafana-apiserver']['remote_services_file'] = '/etc/grafana/certs/remote-services.yaml'
+
+    chart_values['extraConfigmapMounts'] = all_extra_mounts
+
+    # Setup tracing for plugins that want it
+    for (_, plugin) in plugins.items():
+        plugin_id = plugin.plugin_id
+        # Tell the chart to enable tracing if the plugin wants it
+        if plugin.enable_tracing:
+          grafana_ini = chart_values['grafana.ini']
+          plugin_values = get_or_create(grafana_ini, 'plugin.%s' % plugin_id)
+          plugin_values['tracing'] = True
+
+
+    # allow consumer of this tilt plugin to specify whatever additional helm values they'd like
+    if additional_grafana_helm_chart_values_file:
+        print("additional_grafana_helm_chart_values_file specified, reading vaules yaml file")
+
+        values_file_contents = read_yaml(additional_grafana_helm_chart_values_file, default={})
+        if values_file_contents:
+            print("succesfully read values file %s" % additional_grafana_helm_chart_values_file)
+            chart_values.update(values_file_contents)
+        else:
+            print("values file %s" % additional_grafana_helm_chart_values_file, "is empty, skipping")
+
+    # Write the values file as helm_remote wants the values file on disk
+    # The os.path.realpath() is to work around https://github.com/tilt-dev/tilt/issues/6200
+    rendered_values = os.path.realpath(os.path.dirname(os.getenv("TMPDIR", "/tmp/"))) + '/rendered-grafana-values.yaml'
+    # Trick to write to a local file from a string
+    # https://github.com/tilt-dev/tilt/issues/4827
+    local('cat > %s' % rendered_values,
+          stdin=encode_yaml(chart_values),
+          echo_off=True,
+          quiet=True)
+
+    helm_repo(
+        'grafana',
+        'https://grafana.github.io/helm-charts',
+        labels=['Grafana'],
+        resource_name='helm-repo-grafana',
+    )
+
+    # Deploy the chart
+    helm_resource(
+        'grafana',
+        'grafana/grafana',
+        namespace=namespace,
+        image_deps=[image_repository + ':' + image_tag],
+        image_keys=[('image.registry', 'image.repository', 'image.tag')],
+        flags=['--create-namespace', '--values=%s' % rendered_values],
+        labels=['Grafana'],
+        resource_deps=deps,
+        port_forwards=[3000],
+    )
+    # Tell Tilt to not watch the values file
+    watch_settings(ignore=rendered_values)

@@ -1,0 +1,54 @@
+---
+name: Deploy to Maven Central
+
+on:
+  push:
+    tags:
+      - "v*.*.*"
+
+jobs:
+  deploy:
+    if: ${{ github.repository == 'prometheus/client_java' }}
+    runs-on: ubuntu-24.04
+    permissions: {}
+
+    steps:
+      - name: Debug gpg key
+        env:
+          GPG_SIGNING_KEY: ${{ secrets.GPG_SIGNING_KEY }}
+        run: |
+          echo "${#GPG_SIGNING_KEY}"
+          echo "${GPG_SIGNING_KEY}" | gpg --batch --import-options import-show --import
+      - name: Checkout Plugin Repository
+        uses: actions/checkout@1af3b93b6815bc44a9784bd300feb67ff0d1eeb3 # v6
+        with:
+          persist-credentials: false
+
+      - uses: jdx/mise-action@146a28175021df8ca24f8ee1828cc2a60f980bd5 # v3.5.1
+        with:
+          version: v2025.11.7
+          sha256: b2fb7d4c8dad559ede4fb346fb12171298a8ec8648f7923730abcd92e9dda15c
+          cache: false
+
+      - name: Build release version
+        run: mise run build-release
+        env:
+          TAG: ${{ github.ref_name }}
+
+      - name: Set up Apache Maven Central
+        uses: actions/setup-java@dded0888837ed1f317902acf8a20df0ad188d165 # v5
+        with:
+          distribution: "temurin"
+          java-version: "21"
+          server-id: ossrh
+          server-username: MAVEN_USERNAME
+          server-password: MAVEN_CENTRAL_TOKEN
+          gpg-private-key: ${{ secrets.GPG_SIGNING_KEY }}
+          gpg-passphrase: MAVEN_GPG_PASSPHRASE
+
+      - name: Publish to Apache Maven Central
+        run: mvn deploy -P 'release,!default' -Dmaven.test.skip=true
+        env:
+          MAVEN_USERNAME: ${{ secrets.SONATYPE_MAVEN_REPOSITORY_USERNAME }}
+          MAVEN_CENTRAL_TOKEN: ${{ secrets.SONATYPE_MAVEN_REPOSITORY_PASSWORD }}
+          MAVEN_GPG_PASSPHRASE: ${{ secrets.GPG_SIGNING_PASSPHRASE }}

@@ -1,0 +1,136 @@
+name: Workflow using the k6 run action
+on:
+  pull_request:
+    branches:
+      - main
+  push:
+    branches:
+      - main
+
+permissions:
+  contents: read
+
+jobs:
+
+  unit-tests:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@08eba0b27e820071cde6df949e0beb9ba4906955 # v4
+        with:
+          persist-credentials: false
+      - name: Setup Node.js
+        id: setup-node
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version-file: .node-version
+          cache: npm
+      - name: Install dependencies
+        id: install
+        run: npm ci
+      - name: Run lint check
+        id: lint
+        run: npm run lint
+      - name: Run format check
+        id: format
+        run: npm run format:check
+      - name: Run tests
+        id: test
+        run: npm run test:coverage
+
+  protocol:
+    needs: [unit-tests]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - uses: grafana/shared-workflows/actions/get-vault-secrets@a37de51f3d713a30a9e4b21bcdfbd38170020593 # get-vault-secrets/v1.3.0
+        with:
+          # Secrets placed in the ci/repo/grafana/<repo>/<path> path in Vault
+          # Also stored in 1Password as "k6 Cloud CI/CD Secrets" (Vault is write-only)
+          repo_secrets: |
+            K6_CLOUD_TOKEN=k6-cloud:token
+            K6_CLOUD_PROJECT_ID=k6-cloud:project-id
+      - uses: actions/checkout@08eba0b27e820071cde6df949e0beb9ba4906955 # v4
+        with:
+          persist-credentials: false
+      - name: Setup Grafana k6
+        uses: grafana/setup-k6-action@main
+      - uses: ./
+        continue-on-error: true
+        with:
+          path: |
+            ./dev/protocol*.js
+          flags: --vus 10 --duration 30s
+          parallel: true
+          cloud-run-locally: false
+  protocol-without-flags:
+    needs: [unit-tests]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@08eba0b27e820071cde6df949e0beb9ba4906955 # v4
+        with:
+          persist-credentials: false
+      - name: Setup Grafana k6
+        uses: grafana/setup-k6-action@main
+      - uses: ./
+        continue-on-error: true
+        with:
+          path: |
+            ./dev/protocol*.js
+  show-complete-k6-output:
+    needs: [unit-tests]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@08eba0b27e820071cde6df949e0beb9ba4906955 # v4
+        with:
+          persist-credentials: false
+      - name: Setup Grafana k6
+        uses: grafana/setup-k6-action@main
+      - uses: ./
+        with:
+          path: |
+            ./dev/protocol.js
+          flags: --vus 10 --duration 30s
+          debug: true
+  verify-scripts:
+    needs: [unit-tests]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@08eba0b27e820071cde6df949e0beb9ba4906955 # v4
+        with:
+          persist-credentials: false
+      - name: Setup Grafana k6
+        uses: grafana/setup-k6-action@main
+      - uses: ./
+        continue-on-error: true
+        with:
+          path: |
+            ./dev/verify-script-tests/**.js
+          only-verify-scripts: true
+  env-var-test:
+    needs: [unit-tests]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    env:
+      TEST_SYSTEM_ENV_VAR: "test-system-env-var-value"
+    steps:
+      - uses: actions/checkout@08eba0b27e820071cde6df949e0beb9ba4906955 # v4
+        with:
+          persist-credentials: false
+      - name: Setup Grafana k6
+        uses: grafana/setup-k6-action@main
+      - uses: ./
+        with:
+          path: |
+            ./dev/env-var-test.js
+          flags: --vus 1 --duration 1s --env TEST_FLAG_ENV_VAR=test-flag-env-var-value -e TEST_SYSTEM_ENV_VAR_E=test-cli-e-env-var-value

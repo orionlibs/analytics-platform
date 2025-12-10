@@ -1,0 +1,218 @@
+rules:
+  - id: access-os-environment
+    patterns:
+      - pattern-either:
+          - pattern: os.Environ()
+          - pattern: os.Clearenv()
+          - pattern: os.ExpandEnv()
+          - pattern: syscall.Clearenv()
+          - pattern: syscall.Environ()
+    message: It is not permitted to access environment variables from plugins.
+    languages: [go]
+    severity: ERROR
+  - id: access-forbidden-os-environment
+    patterns:
+      - pattern-either:
+          - pattern: os.Getenv("$ENV")
+          - pattern: os.LookupEnv("$ENV")
+          - pattern: os.Setenv("$ENV")
+          - pattern: os.Unsetenv("$ENV")
+          - pattern: syscall.Getenv("$ENV")
+          - pattern: syscall.Setenv("$ENV")
+          - pattern: syscall.Unsetenv("$ENV")
+      - metavariable-regex:
+          metavariable: $ENV
+          regex: (?!(GF_PLUGIN.*|GF_VERSION|GF_EDITION|GF_ENTERPRISE_LICENSE_PATH|GF_ENTERPRISE_LICENSE_TEXT|GF_ENTERPRISE_APP_URL|GF_ENTERPRISE_LICENSE_VALIDATION_KEY|GF_ENTERPRISE_LICENSE_VALIDATION_TYPE|AWS_AUTH_AllowedAuthProviders|AWS_AUTH_AssumeRoleEnabled|AWS_AUTH_SESSION_DURATION|GFAZPL_AZURE_CLOUD|GFAZPL_MANAGED_IDENTITY_ENABLED|GFAZPL_MANAGED_IDENTITY_CLIENT_ID|AZURE_CLOUD|AZURE_MANAGED_IDENTITY_ENABLED|AZURE_MANAGED_IDENTITY_CLIENT_ID))
+    message: It is not permitted to access environment variables from plugins. $ENV is not an accessible variable.
+    languages: [go]
+    severity: WARNING
+  - id: access-file-system-with-fs
+    patterns:
+      - pattern-either:
+          - pattern: fs.$F(...)
+    message: It is not permitted to access the file system. Using fs.$F is not permitted.
+    languages: [go]
+    severity: ERROR
+  - id: access-file-system-with-filepath
+    patterns:
+      - pattern-either:
+          - pattern: filepath.Walk(...)
+          - pattern: filepath.WalkDir(...)
+          - pattern: filepath.VolumeName(...)
+          - pattern: filepath.EvalSymlinks(...)
+          - pattern: filepath.Glob(...)
+    message: It is not permitted to access the file system.
+    languages: [go]
+    severity: ERROR
+  - id: access-file-system-with-os
+    patterns:
+      - pattern-either:
+          - pattern: os.DirFS(...)
+          - pattern: os.Getwd(...)
+          - pattern: os.IsExist(...)
+          - pattern: os.IsNotExist(...)
+          - pattern: os.IsPermission(...)
+          - pattern: os.Lchown(...)
+          - pattern: os.Link(...)
+          - pattern: os.Mkdir(...)
+          - pattern: os.MkdirAll(...)
+          - pattern: os.MkdirTemp(...)
+          - pattern: os.Readfile(...)
+          - pattern: os.Readlink(...)
+          - pattern: os.Remove(...)
+          - pattern: os.RemoveAll(...)
+          - pattern: os.Rename(...)
+          - pattern: os.SameFile(...)
+          - pattern: os.Symlink(...)
+          - pattern: os.TempDir(...)
+          - pattern: os.Truncate(...)
+          - pattern: os.UserCacheDir(...)
+          - pattern: os.UserConfigDir(...)
+          - pattern: os.UserHomeDir(...)
+          - pattern: os.WriteFile(...)
+          - pattern: os.ReadDir(...)
+          - pattern: os.Create(...)
+          - pattern: os.CreateTemp(...)
+          - pattern: os.NewFile(...)
+          - pattern: os.Open(...)
+          - pattern: os.OpenFile(...)
+          - pattern: os.Chdir(...)
+          - pattern: os.Chmod(...)
+          - pattern: os.Chown(...)
+          - pattern: os.Chtimes(...)
+          - pattern: os.Close(...)
+          - pattern: os.Fd(...)
+          - pattern: os.Name(...)
+          - pattern: os.Read(...)
+          - pattern: os.ReadAt(...)
+          - pattern: os.ReadDir(...)
+          - pattern: os.Readdir(...)
+          - pattern: os.Readdirnames(...)
+          - pattern: os.Seek(...)
+          - pattern: os.Stat(...)
+          - pattern: os.Sync(...)
+          - pattern: os.Truncate(...)
+          - pattern: os.Write(...)
+          - pattern: os.WriteAt(...)
+          - pattern: os.WriteString(...)
+          - pattern: os.FileInfo(...)
+          - pattern: os.Lstat(...)
+    message: It is not permitted to access the file system.
+    languages: [go]
+    severity: ERROR
+  - id: access-syscall
+    patterns:
+      - pattern-either:
+          # note: this prevent many fs accesses and env variables
+          # generally speaking there's no valid reason for a plugin
+          # to use this module
+          - pattern: syscall.$F(...)
+    message: It is not permitted to use the syscall module. Using syscall.$F is not permitted
+    languages: [go]
+    severity: ERROR
+
+  - id: console-logging
+    pattern-either:
+      - pattern: console.log(...)
+      - pattern: console.info(...)
+      - pattern: console.table(...)
+      - pattern: console.debug(...)
+      - pattern: console.clear(...)
+      - pattern: console.count(...)
+      - pattern: console.countReset(...)
+      - pattern: console.dir(...)
+      - pattern: console.dirxml(...)
+      - pattern: console.group(...)
+      - pattern: console.groupEnd(...)
+      - pattern: console.time(...)
+      - pattern: console.timeEnd(...)
+      - pattern: console.timeLog(...)
+      - pattern: console.trace(...)
+    paths:
+      include:
+        - "src/**/*.ts"
+        - "src/**/*.tsx"
+      exclude:
+        - "*.spec.ts"
+        - "*.spec.tsx"
+        - "*.test.ts"
+        - "*.test.tsx"
+        - "*.js"
+    message: "Console logging detected. Plugins should not log to the console."
+    languages: [javascript, typescript]
+    severity: WARNING
+
+  - id: topnav-toggle
+    pattern-either:
+      - pattern: featureToggles.topnav
+    paths:
+      include:
+        - "src/**/*.ts"
+        - "src/**/*.tsx"
+      exclude:
+        - "*.spec.ts"
+        - "*.spec.tsx"
+        - "*.test.ts"
+        - "*.test.tsx"
+        - "*.js"
+    message: "The `topnav` toggle is deprecated and will be removed in a future version of Grafana. Plugins should default to using the code where the toggle is enabled."
+    languages: [typescript]
+    severity: ERROR
+
+  - id: window-properties
+    pattern-either:
+      - pattern-regex: window\.(grafanaBootData)
+      - pattern-regex: window\.(grafanaRuntime)
+      - pattern-regex: window\.(__grafanaSceneContext)
+    paths:
+      include:
+        - "src/**/*.ts"
+        - "src/**/*.tsx"
+      exclude:
+        - "*.spec.ts"
+        - "*.spec.tsx"
+        - "*.test.ts"
+        - "*.test.tsx"
+        - "*.js"
+    message: "Detected access to restricted window property: window.$1. Accessing window.$1 is not permitted."
+    languages: [typescript]
+    severity: ERROR
+
+  - id: access-old-react-internals
+    pattern-either:
+      - pattern-regex: __SECRET_INTERNALS_DO_NOT_USE_OR_YOU_WILL_BE_FIRED
+    paths:
+      include:
+        - "src/**/*.ts"
+        - "src/**/*.tsx"
+        - "src/**/*.js"
+        - "src/**/*.jsx"
+        - "**/*.js"
+        - "**/*.ts"
+        - "**/*.tsx"
+        - "**/*.jsx"
+    message: "Detected usage of React internal API '__SECRET_INTERNALS_DO_NOT_USE_OR_YOU_WILL_BE_FIRED'. This API is internal to React and should not be used directly as it may break in future React versions."
+    languages: [javascript, typescript]
+    severity: WARNING
+
+  - id: no-direct-css-imports
+    pattern-either:
+      - pattern-regex: import\s+['"].*\.(css|scss|less)['"]
+      - pattern: import { Global } from '@emotion/react'
+      - pattern: <Global ... />
+      - pattern: <Global />
+    paths:
+      include:
+        - "src/**/*.ts"
+        - "src/**/*.tsx"
+        - "src/**/*.js"
+        - "src/**/*.jsx"
+      exclude:
+        - "*.spec.ts"
+        - "*.spec.tsx"
+        - "*.test.ts"
+        - "*.test.tsx"
+        - "*.js"
+    message: "Direct CSS imports and Emotion UI Global components are not permitted. Use CSS-in-JS solutions like styled-components or emotion's css function instead."
+    languages: [javascript, typescript]
+    severity: ERROR

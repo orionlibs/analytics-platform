@@ -1,0 +1,21 @@
+#####################################################
+#
+# List of approvers for OpenTelemetry Collector Releases
+#
+#####################################################
+#
+# Learn about membership in OpenTelemetry community:
+#  https://github.com/open-telemetry/community/blob/main/community-membership.md
+#
+#
+# Learn about CODEOWNERS file format:
+#  https://help.github.com/en/articles/about-code-owners
+#
+
+* @open-telemetry/collector-releases-approvers
+
+/distributions/otelcol/manifest.yaml         @open-telemetry/collector-releases-approvers @open-telemetry/collector-approvers
+/distributions/otelcol-otlp/manifest.yaml    @open-telemetry/collector-releases-approvers @open-telemetry/collector-approvers
+/distributions/otelcol-contrib/manifest.yaml @open-telemetry/collector-releases-approvers @open-telemetry/collector-contrib-approvers
+/distributions/otelcol-k8s/manifest.yaml     @open-telemetry/collector-releases-approvers @open-telemetry/helm-approvers @open-telemetry/operator-approvers
+/distributions/otelcol-ebpf-profiler         @open-telemetry/collector-releases-approvers @open-telemetry/ebpf-profiler-approvers

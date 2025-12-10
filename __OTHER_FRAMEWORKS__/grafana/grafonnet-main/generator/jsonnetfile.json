@@ -1,0 +1,34 @@
+{
+  "version": 1,
+  "dependencies": [
+    {
+      "source": {
+        "git": {
+          "remote": "https://github.com/crdsonnet/astsonnet.git",
+          "subdir": ""
+        }
+      },
+      "version": "main"
+    },
+    {
+      "source": {
+        "git": {
+          "remote": "https://github.com/crdsonnet/crdsonnet.git",
+          "subdir": "crdsonnet"
+        }
+      },
+      "version": "master"
+    },
+    {
+      "source": {
+        "git": {
+          "remote": "https://github.com/grafana/grafana-foundation-sdk.git",
+          "subdir": "openapi"
+        }
+      },
+      "version": "v11.4.x+cog-v0.0.x",
+      "name": "grafana-foundation-sdk-v11.4.0"
+    }
+  ],
+  "legacyImports": true
+}

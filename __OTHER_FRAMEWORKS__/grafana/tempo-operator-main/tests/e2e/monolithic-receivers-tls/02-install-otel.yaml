@@ -1,0 +1,50 @@
+apiVersion: opentelemetry.io/v1beta1
+kind: OpenTelemetryCollector
+metadata:
+  name: opentelemetry
+spec:
+  volumeMounts:
+    - mountPath: /var/run/tls/receiver/ca
+      name: custom-ca
+      readOnly: true
+  volumes:
+    - configMap:
+        defaultMode: 420
+        name: custom-ca
+      name: custom-ca
+  config:
+    exporters:
+      otlp:
+        endpoint: tempo-simplest:4317
+        tls:
+          insecure: false
+          ca_file: "/var/run/tls/receiver/ca/service-ca.crt"
+      otlphttp:
+        endpoint: https://tempo-simplest:4318
+        tls:
+          insecure: false
+          ca_file: "/var/run/tls/receiver/ca/service-ca.crt"
+    receivers:
+      otlp/grpc:
+        protocols:
+          grpc: {}
+      otlp/http:
+        protocols:
+          http: {}
+    extensions:
+      health_check:
+        endpoint: 0.0.0.0:13133
+    service:
+      extensions: [health_check]
+      telemetry:
+        logs:
+          level: "DEBUG"
+          development: true
+          encoding: "json"
+      pipelines:
+        traces/grpc:
+          receivers: [otlp/grpc]
+          exporters: [otlp]
+        traces/http:
+          receivers: [ otlp/http ]
+          exporters: [ otlphttp ]

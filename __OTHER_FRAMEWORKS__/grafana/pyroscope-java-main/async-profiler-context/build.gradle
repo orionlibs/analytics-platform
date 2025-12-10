@@ -1,0 +1,216 @@
+//import com.github.jengelman.gradle.plugins.shadow.tasks.ConfigureShadowRelocation
+
+import java.security.MessageDigest
+
+plugins {
+    id 'java-library'
+    id 'maven-publish'
+    id 'signing'
+    id "de.undercouch.download" version "4.1.2"
+    id "com.gradleup.shadow"  version '8.3.9'
+}
+
+sourceCompatibility = JavaVersion.VERSION_1_8
+targetCompatibility = JavaVersion.VERSION_1_8
+
+repositories {
+    mavenCentral()
+}
+
+def asyncProfilerVersion = project.properties['async_profiler_version']
+def pyroscopeVersion = project.properties['pyroscope_version']
+dependencies {
+    api files("$buildDir/async-profiler/async-profiler.jar")
+    compileOnly 'org.jetbrains:annotations:24.1.0'
+    implementation 'com.google.protobuf:protobuf-java:4.33.0'
+    testImplementation group: 'org.junit.jupiter', name: 'junit-jupiter-api', version: '5.7.2'
+    testRuntimeOnly group: 'org.junit.jupiter', name: 'junit-jupiter-engine', version: '5.7.2'
+    testImplementation group: 'org.mockito', name: 'mockito-core', version: '3.12.4'
+    testImplementation group: 'org.mockito', name: 'mockito-junit-jupiter', version: '3.12.4'
+}
+
+jar {
+    from("$buildDir/async-profiler/native") {
+        include "**.so"
+        include "**.so.sha1"
+    }
+}
+
+test {
+    useJUnitPlatform()
+    maxHeapSize = "1g"
+    jvmArgs '-XX:MaxMetaspaceSize=512m'
+}
+
+java {
+    withJavadocJar()
+    withSourcesJar()
+}
+
+shadowJar {
+    exclude 'Log4j-*'
+    exclude 'META-INF/org/apache/logging/log4j/**'
+    exclude 'META-INF/services/**'
+
+    from("$buildDir/async-profiler/native") {
+        include "**.so"
+        include "**.so.sha1"
+    }
+
+    archiveFileName = "async-profiler-context.jar"
+
+    minimize()
+    archiveClassifier.set('')
+
+    relocate("com.google",    "io.pyroscope.vendor.com.google")
+    relocate("one.profiler",  "io.pyroscope.vendor.one.profiler")
+    dependencies {
+        exclude "org/jetbrains/**"
+        exclude "org/intellij/**"
+        exclude "google/protobuf/**"
+    }
+}
+
+tasks.register('asyncProfilerLib') {
+    def useLocalArtifacts = project.findProperty('useLocalAsyncProfilerArtifacts') == 'true'
+
+    def suffixes = [
+        ['linux-arm64', 'tar.gz'],
+        ['linux-x64', 'tar.gz'],
+        ['macos', 'zip']
+    ]
+
+    def asyncProfilerDir = file("$buildDir/async-profiler")
+    outputs.file "$asyncProfilerDir/async-profiler.jar"
+    suffixes.forEach { suffix ->
+        outputs.file "$asyncProfilerDir/native/libasyncProfiler-${suffix}.so"
+    }
+
+    doLast {
+        suffixes.forEach { suffix, ext ->
+            if (!useLocalArtifacts) {
+                def repo = "https://github.com/grafana/async-profiler"
+                download {
+                    src "$repo/releases/download/v${asyncProfilerVersion}/async-profiler-${asyncProfilerVersion}-${suffix}.${ext}"
+                    dest new File(asyncProfilerDir, "async-profiler-${asyncProfilerVersion}-${suffix}.${ext}")
+                    overwrite true
+                }
+            } else {
+                copy {
+                    from file("../async-profiler-${asyncProfilerVersion}-${suffix}.${ext}")
+                    into asyncProfilerDir
+                }
+            }
+
+            // Extract the native library files.
+            copy {
+                if (ext == "zip") {
+                    from zipTree("$asyncProfilerDir/async-profiler-${asyncProfilerVersion}-${suffix}.${ext}")
+                } else {
+                    from tarTree(resources.gzip("$asyncProfilerDir/async-profiler-${asyncProfilerVersion}-${suffix}.${ext}"))
+                }
+                include '**/libasyncProfiler.*'
+                eachFile {
+                    it.relativePath = new RelativePath(true, "native/", "libasyncProfiler-${suffix}.so")
+                }
+                includeEmptyDirs false
+                into asyncProfilerDir
+            }
+
+            // Write checksums for the library files.
+            // They are used for the library deployment.
+            def sha1 = MessageDigest.getInstance('SHA1')
+            sha1.update(file("$asyncProfilerDir/native/libasyncProfiler-${suffix}.so").toPath().readBytes())
+            def hexString = new StringBuilder()
+            for (b in sha1.digest()) {
+                hexString.append(String.format('%01x', b & 0xFF))
+            }
+            new File("$asyncProfilerDir/native/libasyncProfiler-${suffix}.so.sha1").text = hexString
+        }
+
+        // Extract the Java library.
+        copy {
+            from tarTree(resources.gzip("$asyncProfilerDir/async-profiler-${asyncProfilerVersion}-linux-x64.tar.gz"))
+            include '**/async-profiler.jar'
+            eachFile {
+                it.relativePath = new RelativePath(true, it.relativePath.segments.drop(2))
+            }
+            includeEmptyDirs false
+            into asyncProfilerDir
+        }
+    }
+}
+
+clean.dependsOn 'cleanAsyncProfilerLib'
+compileJava.dependsOn 'asyncProfilerLib'
+
+publishing {
+    publications {
+        shadow(MavenPublication) { publication ->
+            project.shadow.component(publication)
+            groupId = 'io.pyroscope'
+            artifactId = 'async-profiler-context'
+            version = pyroscopeVersion
+            artifacts = [ shadowJar, javadocJar, sourcesJar ]
+            pom {
+                name = 'Pyroscope Java agent'
+                description = 'async-profiler fork with contextID functionality and bundled shared libs'
+                url = 'https://pyroscope.io'
+                licenses {
+                    license {
+                        name = 'The Apache License, Version 2.0'
+                        url = 'http://www.apache.org/licenses/LICENSE-2.0.txt'
+                    }
+                }
+                developers {
+                    developer {
+                        id = 'pyroscope'
+                        name = 'Pyroscope'
+                        email = 'anatoly@pyroscope.io'
+                    }
+                }
+                scm {
+                    connection = 'scm:git:git://github.com/pyroscope-io/pyroscope-java.git'
+                    developerConnection = 'scm:git:ssh://github.com/pyroscope-io/pyroscope-java.git'
+                    url = 'https://github.com/pyroscope-io/pyroscope-java'
+                }
+            }
+        }
+    }
+    repositories {
+        maven {
+            credentials {
+                username project.hasProperty('nexusUsername') ? project.nexusUsername : ''
+                password project.hasProperty('nexusPassword') ? project.nexusPassword : ''
+            }
+            url "https://s01.oss.sonatype.org/service/local/staging/deploy/maven2/"
+        }
+    }
+}
+
+signing {
+    sign publishing.publications.shadow
+}
+
+afterEvaluate {
+    if (project.tasks.findByName('signShadowPublication')) {
+        project.tasks.named('signShadowPublication').configure {
+            dependsOn 'jar'
+            dependsOn 'sourcesJar'
+            dependsOn 'javadocJar'
+        }
+    }
+}
+
+tasks.register('generate-proto-classes') {
+    doLast {
+        exec {
+            commandLine 'protoc',
+                '-I', '.',
+                '--java_out', 'src/main/java',
+                'jfr_labels.proto'
+        }
+    }
+}
+
+generateMetadataFileForShadowPublication.dependsOn 'jar'

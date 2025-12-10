@@ -1,0 +1,5 @@
+[NOTE] smithy.example#MyService: This didn't happen | Foo
+[ERROR] smithy.example#MyService: service shape `operation` relationships must target a operation shape, but found (string: `smithy.api#String`) | Target
+[ERROR] smithy.example#MyService: service shape `resource` relationships must target a resource shape, but found (string: `smithy.api#String`) | Target
+[ERROR] smithy.example#MyService: service shape has a `operation` relationship to an unresolved shape `smithy.example#Missing1` | Target
+[ERROR] smithy.example#MyService: service shape has a `resource` relationship to an unresolved shape `smithy.example#Missing1` | Target

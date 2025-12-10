@@ -1,0 +1,42 @@
+name: CI - OpAMP supervisor
+
+on:
+  merge_group:
+  push:
+    branches:
+      - main
+      - release/*
+    paths:
+      - "distributions/otelcol/**"
+      - "cmd/**"
+      - ".github/**"
+      - "scripts/**"
+      - "Makefile"
+      - "go.mod"
+      - "go.sum"
+  pull_request:
+    branches:
+      - main
+      - release/*
+    paths:
+      - "distributions/otelcol/**"
+      - "cmd/**"
+      - ".github/**"
+      - "scripts/**"
+      - "Makefile"
+      - "go.mod"
+      - "go.sum"
+
+permissions:
+  contents: read
+
+jobs:
+  ci:
+    uses: ./.github/workflows/base-ci-binary.yaml
+    with:
+      binary: opampsupervisor
+      collector-dependency: 'open-telemetry/opentelemetry-collector-contrib'
+      dependency-target-folder: '.contrib'
+      linux-packages: true
+    secrets: inherit
+    permissions: write-all

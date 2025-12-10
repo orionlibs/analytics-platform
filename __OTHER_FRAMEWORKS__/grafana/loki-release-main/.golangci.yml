@@ -1,0 +1,84 @@
+# This file contains all available configuration options
+# with their default values.
+
+version: "2"
+# options for analysis running
+run:
+  # default concurrency is a available CPU number
+  concurrency: 16
+  # define go version
+  go: "1.20"
+  # exit code when at least one issue was found, default is 1
+  issues-exit-code: 1
+  # include test files or not, default is true
+  tests: true
+linters:
+  enable:
+    - copyloopvar
+    - gochecksumtype
+    - goconst
+    - misspell
+    - revive
+    - unconvert
+  disable:
+    - unparam
+    - unused
+  settings:
+    depguard:
+      rules:
+        Main:
+          allow:
+            - fmt
+            - testing
+            - github.com/hashicorp/go-uuid
+            - github.com/stretchr/testify
+    misspell:
+      ignore-rules:
+        - strat
+  exclusions:
+    generated: lax
+    presets:
+      - comments
+      - common-false-positives
+      - legacy
+      - std-error-handling
+    rules:
+      - path: pkg/scheduler/scheduler.go
+        text: 'SA1019: msg.GetHttpRequest is deprecated: Do not use'
+      - linters:
+          - goconst
+        path: (.+)_test\.go
+      - path: (.+)\.go$
+        text: Error return value of .*log\.Logger\)\.Log\x60 is not checked
+      - path: (.+)\.go$
+        text: Error return value of .*.Log.* is not checked
+      - path: (.+)\.go$
+        text: Error return value of `` is not checked
+    paths:
+      - third_party$
+      - builtin$
+      - examples$
+      - .*.pb.go
+      - .*.y.go
+      - .*.rl.go
+      - .*.deepcopy.go
+      - vendor
+      - node_modules
+issues:
+  fix: true
+formatters:
+  enable:
+    - gofmt
+    - goimports
+  exclusions:
+    generated: lax
+    paths:
+      - third_party$
+      - builtin$
+      - examples$
+      - .*.pb.go
+      - .*.y.go
+      - .*.rl.go
+      - .*.deepcopy.go
+      - vendor
+      - node_modules

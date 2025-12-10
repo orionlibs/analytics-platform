@@ -1,0 +1,28 @@
+---
+kind: pipeline
+name: foo
+platform:
+  arch: amd64
+  os: linux
+steps:
+- name: test
+  image: node:16
+  commands:
+    - ls
+    - env
+    - yarn install
+    - yarn build
+trigger:
+    branch:
+      - main
+    event:
+      - push
+      - pull_request
+    paths:
+        include: 
+          - plugins/foo-datasource/*
+---
+kind: signature
+hmac: 44c3b095ede157310e0fac5992b127c3ee7bb64d8ab6472474a982e8769619c5
+
+...

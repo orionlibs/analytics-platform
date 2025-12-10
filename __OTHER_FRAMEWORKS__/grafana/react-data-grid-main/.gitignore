@@ -1,0 +1,11 @@
+/.cache
+/coverage
+/dist
+/lib
+/node_modules
+/package-lock.json
+__screenshots__
+
+npm-debug.log
+**.orig
+.idea

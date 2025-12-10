@@ -1,0 +1,64 @@
+#!/usr/bin/env bash
+set -eo pipefail  # Exit immediately if a command fails.
+
+scriptDir=$(dirname "$(readlink -f "$0")")
+source "${scriptDir}/includes/cluster/common.sh"
+source "${scriptDir}/includes/cluster/kind.sh"
+source "${scriptDir}/includes/cluster/aks.sh"
+source "${scriptDir}/includes/cluster/eks.sh"
+source "${scriptDir}/includes/cluster/gke.sh"
+source "${scriptDir}/includes/cluster/minikube.sh"
+source "${scriptDir}/includes/cluster/openshift.sh"
+
+usage() {
+  echo "USAGE: delete-cluster [<test-dir>]"
+  echo ""
+  echo "Deletes a Kubernetes Cluster used for testing purposes."
+  echo ""
+  echo "  <test-dir>           - The test directory. If not provided, the current directory is used."
+  echo "                         Expects this file to exist:"
+  echo "    test-plan.yaml        - The test plan."
+}
+
+# Argument parsing
+if [ "${1}" == "-h" ] || [ "${1}" == "-help" ] || [ "${1}" == "--help" ]; then
+  usage
+  exit 0
+fi
+
+testDir=$1
+if [ -z "${testDir}" ]; then
+  testDir=$(pwd)
+elif [ ! -d "${testDir}" ]; then
+  echo "Argument is not a valid directory: ${testDir}"
+  usage
+  exit 1
+fi
+testPlan=$(realpath "${testDir}/test-plan.yaml")
+
+if [ ! -f "${testPlan}" ]; then
+  echo "test-plan.yaml file not found in ${testDir}"
+  usage
+  exit 1
+fi
+
+# Start of script
+clusterName=$(getClusterName "${testPlan}")
+clusterType=$(yq eval '.cluster.type' "${testPlan}")
+if [ -z "${clusterType}" ]; then
+  echo "Cluster type not specified in test plan. Please set 'cluster.type' in ${testPlan}."
+  usage
+  exit 1
+fi
+
+set -eo pipefail  # Exit immediately if a command fails.
+
+echo; echo "### Deleting cluster: ${clusterName} of type: ${clusterType}"
+if [ "${clusterType}" = "aks" ]; then             deleteAKSCluster "${testPlan}"
+elif [ "${clusterType}" = "eks" ]; then           deleteEKSCluster "${testPlan}"
+elif [ "${clusterType}" = "gke" ]; then           deleteGKECluster "${testPlan}"
+elif [ "${clusterType}" = "gke-autopilot" ]; then deleteGKECluster "${testPlan}"
+elif [ "${clusterType}" = "kind" ]; then          deleteKindCluster "${testPlan}"
+elif [ "${clusterType}" = "minikube" ]; then      deleteMinikubeCluster "${testPlan}"
+elif [ "${clusterType}" = "openshift" ]; then     deleteOpenShiftCluster "${testPlan}"
+fi

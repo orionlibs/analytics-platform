@@ -1,0 +1,42 @@
+package supported
+
+import (
+	"go.yaml.in/yaml/v3"
+)
+
+// Library represents a library with its name and version
+type Library struct {
+	Name    string `json:"name"`
+	Version string `json:"version"`
+}
+
+// InstrumentationType represents the type of instrumentation
+type InstrumentationType string
+
+const (
+	TypeJavaagent InstrumentationType = "javaagent"
+	TypeLibrary   InstrumentationType = "library"
+)
+
+// Instrumentation represents a single instrumentation with its metadata
+type Instrumentation struct {
+	Name           string                           `yaml:"name"`
+	Description    string                           `yaml:"description"`
+	SrcPath        string                           `yaml:"source_path"`
+	Link           string                           `yaml:"link,omitempty"`
+	TargetVersions map[InstrumentationType][]string `yaml:"target_versions"`
+}
+
+// SupportedModules represents a map of module names to their supported modules
+type SupportedModules map[string][]Instrumentation
+
+// LoadSupportedLibraries loads supported libraries from a YAML file
+func LoadSupportedLibraries(data []byte) (SupportedModules, error) {
+	modules := SupportedModules{}
+	err := yaml.Unmarshal(data, &modules)
+	if err != nil {
+		return nil, err
+	}
+	delete(modules, "internal")
+	return modules, nil
+}

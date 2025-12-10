@@ -1,0 +1,10 @@
+apiVersion: network.azure.upbound.io/v1beta1
+kind: SubnetRouteTableAssociation
+metadata:
+  name: example
+spec:
+  forProvider:
+    routeTableIdRef:
+      name: example
+    subnetIdRef:
+      name: example

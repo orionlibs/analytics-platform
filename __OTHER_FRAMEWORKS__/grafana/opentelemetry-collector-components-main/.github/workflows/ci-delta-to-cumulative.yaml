@@ -1,0 +1,15 @@
+name: Continuous Integration - delta-to-cumulative
+
+on:
+  workflow_run:
+    workflows: [Continuous Integration]
+    types:
+      - completed
+
+jobs:
+  release:
+    name: Continuous Integration - delta-to-cumulative - GoReleaser
+    uses: ./.github/workflows/base-goreleaser-ci.yaml
+    with:
+      distribution: delta-to-cumulative
+    secrets: inherit

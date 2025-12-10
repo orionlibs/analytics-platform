@@ -1,0 +1,84 @@
+/*
+ * Copyright 2020 Amazon.com, Inc. or its affiliates. All Rights Reserved.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License").
+ * You may not use this file except in compliance with the License.
+ * A copy of the License is located at
+ *
+ *  http://aws.amazon.com/apache2.0
+ *
+ * or in the "license" file accompanying this file. This file is distributed
+ * on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either
+ * express or implied. See the License for the specific language governing
+ * permissions and limitations under the License.
+ */
+
+package software.amazon.smithy.model.loader;
+
+import software.amazon.smithy.model.Model;
+import software.amazon.smithy.model.shapes.ToShapeId;
+import software.amazon.smithy.model.traits.PrivateTrait;
+
+/**
+ * Represents the prelude model available to every Smithy model.
+ *
+ * <p>The prelude consists of public prelude shapes like
+ * {@code smithy.api#String} and traits that are available to
+ * all models like {@code box} and {@code required}.
+ *
+ * <p>A key design requirement of the prelude is that it cannot require a
+ * loaded prelude model in order to reason about the prelude as this would
+ * result in infinite recursion while loading the prelude model.
+ */
+public final class Prelude {
+
+    /** The Smithy prelude namespace. */
+    public static final String NAMESPACE = "smithy.api";
+
+    private Prelude() {}
+
+    /**
+     * Checks if the given shape ID is defined by the prelude.
+     *
+     * <p>Specifically, this checks if the namespace of the provided shape ID
+     * is equal to {@code smithy.api}.
+     *
+     * @param id Shape ID to check.
+     * @return Returns true if the shape is a prelude shape.
+     */
+    public static boolean isPreludeShape(ToShapeId id) {
+        return id.toShapeId().getNamespace().equals(NAMESPACE);
+    }
+
+    /**
+     * Checks if the given shape is a public shape or trait defined by the
+     * prelude.
+     *
+     * @param id Shape to check.
+     * @return Returns true if the shape is a public prelude shape.
+     */
+    public static boolean isPublicPreludeShape(ToShapeId id) {
+        return getPreludeModel().getShape(id.toShapeId())
+                .filter(shape -> !shape.hasTrait(PrivateTrait.class))
+                .isPresent();
+    }
+
+    // Used by the ModelAssembler to load the prelude into another visitor.
+    static Model getPreludeModel() {
+        return PreludeHolder.PRELUDE;
+    }
+
+    // Lazy initialization holder class idiom for loading prelude traits and shapes.
+    private static final class PreludeHolder {
+        private static final Model PRELUDE = loadPrelude();
+
+        private static Model loadPrelude() {
+            return Model.assembler()
+                    .disablePrelude()
+                    .traitFactory(ModelAssembler.LazyTraitFactoryHolder.INSTANCE)
+                    .addImport(Prelude.class.getResource("prelude.smithy"))
+                    .assemble()
+                    .unwrap();
+        }
+    }
+}

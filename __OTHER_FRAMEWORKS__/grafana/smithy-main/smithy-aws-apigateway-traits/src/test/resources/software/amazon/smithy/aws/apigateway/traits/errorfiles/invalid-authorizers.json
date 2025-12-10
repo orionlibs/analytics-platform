@@ -1,0 +1,33 @@
+{
+    "smithy": "1.0",
+    "shapes": {
+        "ns.foo#SomeService": {
+            "type": "service",
+            "version": "2018-03-17",
+            "traits": {
+                "aws.auth#sigv4": {
+                    "name": "someservice"
+                },
+                "aws.apigateway#authorizers": {
+                    "invalid": {
+                        "scheme": "ns.foo#invalid"
+                    },
+                    "another": {
+                        "scheme": "smithy.api#httpBasicAuth",
+                        "type": "token",
+                        "uri": "arn:foo:baz"
+                    },
+                    "aws.v4": {
+                        "scheme": "aws.auth#sigv4",
+                        "type": "request",
+                        "uri": "arn:foo:baz",
+                        "credentials": "arn:foo:bar",
+                        "identitySource": "mapping.expression",
+                        "identityValidationExpression": "[A-Z]+",
+                        "resultTtlInSeconds": 100
+                    }
+                }
+            }
+        }
+    }
+}

@@ -1,0 +1,443 @@
+/////////////////////////////////////////////////////////////
+// METRIC NAMING CONVENTIONS
+/////////////////////////////////////////////////////////////
+// Source: JSON (Authoritative)
+//
+// Duration Metrics (all converted from ns to seconds):
+// - workflow.duration: Total workflow execution time
+//   Source: attributes["duration"] 
+//   Note: Originally calculated as (updatedAt - createdAt) for completed workflows
+//         or (current_time - startedAt) for running workflows
+//
+// - workflow.job.duration: Job execution time
+//   Source: attributes.jobs["*"].duration
+//   Note: Originally calculated as (completed_at - started_at) for completed jobs
+//         or (current_time - started_at) for running jobs
+//
+// - workflow.step.duration: Step execution time
+//   Source: attributes.jobs["*"].steps["*"].duration
+//   Note: Originally calculated as (completed_at - started_at) for completed steps
+//         or (current_time - started_at) for running steps
+//
+// Status Metrics:
+// - workflow.status: Current workflow status
+//   Source: attributes["status"]
+//
+// - workflow.conclusion: Workflow conclusion
+//   Source: attributes["conclusion"]
+//
+// - workflow.job.status: Job status 
+//   Source: attributes.jobs["*"].status
+//
+// - workflow.step.status: Step status
+//   Source: attributes.jobs["*"].steps["*"].status
+//
+// Retained Attributes:
+// Each metric datapoint retains these attributes:
+// - workflow.name: Name of the workflow
+// - workflow.run_id: ID of the workflow run
+
+/////////////////////////////////////////////////////////////
+// RECEIVERS
+/////////////////////////////////////////////////////////////
+
+// File log receiver for GitHub Actions workflow logs
+otelcol.receiver.filelog "github_actions_logs" {
+  // Use explicit full path with glob pattern for logs
+  include = [string.format("%s/*.log", env("LOGS_DIRECTORY"))]
+  exclude = ["**/*.json"] // Exclude JSON files to be safe
+  include_file_path = true
+  include_file_name = true
+  start_at = "beginning"
+  delete_after_read = true
+  
+  debug_metrics {
+    disable_high_cardinality_metrics = true
+    level = "detailed"
+  }
+  
+  resource = {
+    "service.name" = "github_actions",
+    "service.namespace" = env("GITHUB_REPOSITORY"),
+    "workflow.name" = env("WORKFLOW_NAME"),
+    "workflow.run_id" = env("WORKFLOW_RUN_ID"),
+    "source" = "github_actions",
+    "metric.source" = "logs",
+    "validation.enabled" = "true",  // Enable validation tracking
+  }
+
+  operators = [
+    // Parse job and optional step information from filename
+    {
+      id = "parse-filename",
+      type = "regex_parser",
+      parse_from = "attributes[\"log.file.name\"]",
+      regex = "^job-(?P<job_id>[0-9]+)(?:-step-(?P<step_number>[0-9]+))?\\.log$",
+      on_error = "drop",
+      parse_to = "attributes",
+    },
+    // Parse log line format to capture job_name, step_name, timestamp, and log message
+    {
+      id = "parse-log-line",
+      type = "regex_parser",
+      parse_from = "body",
+      regex = "^(?P<job_name>[^\\t]*?)\\t(?P<step_name>[^\\t]*?)\\t(?P<timestamp>[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}(\\.[0-9]+)?Z)(?:\\s+(?P<log_message>.*))?$",
+      on_error = "send",
+      parse_to = "attributes",
+      timestamp = {
+        parse_from = "attributes.timestamp",
+        layout_type = "strptime",
+        layout = "%Y-%m-%dT%H:%M:%S.%fZ",
+        on_error = "send",
+      },
+    },
+  ]
+
+  output {
+    logs = [otelcol.processor.batch.github_actions_batch.input]
+  }
+}
+
+// File log receiver for workflow metrics with enhanced validation
+otelcol.receiver.filelog "github_actions_metrics" {
+  // Use explicit full path with glob pattern for metrics
+  include = [string.format("%s/*.json", env("METRICS_DIRECTORY"))]
+  exclude = ["**/*.log"] // Exclude log files to be safe
+  include_file_path = true
+  include_file_name = true
+  start_at = "beginning"
+  delete_after_read = true
+  
+  debug_metrics {
+    disable_high_cardinality_metrics = false  // Enable high cardinality metrics for debugging
+    level = "detailed"
+  }
+
+  resource = {
+    "service.name" = "github_actions",
+    "service.namespace" = env("GITHUB_REPOSITORY"),
+    "workflow.name" = env("WORKFLOW_NAME"),
+    "workflow.run_id" = env("WORKFLOW_RUN_ID"),
+    "source" = "github_actions",
+    "metric.source" = "json",
+    "validation.enabled" = "true",
+  }
+
+  // Add debug logging operator at the start
+  operators = [
+    // Debug operator to log the file details
+    {
+      id = "debug-file-info",
+      type = "add",
+      field = "attributes.debug_file_info",
+      value = "Processing file from metrics directory: ${log.file.path}",
+    },
+    // Parse the entire body as JSON and handle the timestamp
+    {
+      id = "parse-metrics-json",
+      type = "json_parser",
+      parse_from = "body",
+      parse_to = "attributes",
+      on_error = "send",
+      timestamp = {
+        parse_from = "attributes.createdAt",
+        layout_type = "strptime",
+        layout = "%Y-%m-%dT%H:%M:%S.%fZ",
+        on_error = "send",
+      },
+    },
+    // Add raw message logging to capture the unprocessed content
+    {
+      id = "capture-raw-content",
+      type = "copy",
+      from = "body",
+      to = "attributes.raw_content",
+      on_error = "send",
+    },
+    // Only proceed if JSON parsing was successful
+    {
+      id = "check-json-parsed",
+      type = "filter",
+      expr = "exists(attributes)",
+      output = "check-workflow-name",
+    },
+    // Workflow level attributes with enhanced validation and field existence checks
+    // Only move workflowName if it exists
+    {
+      id = "check-workflow-name",
+      type = "filter",
+      expr = "exists(attributes[\"workflowName\"])",
+      output = "move-workflow-name",
+    },
+    {
+      id = "move-workflow-name",
+      type = "move",
+      from = "attributes[\"workflowName\"]",
+      to = "attributes[\"workflow.name\"]",
+      on_error = "send",
+    },
+    // Only move workflowDatabaseId if it exists
+    {
+      id = "check-workflow-database-id",
+      type = "filter",
+      expr = "exists(attributes[\"workflowDatabaseId\"])",
+      output = "move-workflow-database-id",
+    },
+    {
+      id = "move-workflow-database-id",
+      type = "move",
+      from = "attributes[\"workflowDatabaseId\"]",
+      to = "attributes[\"workflow.id\"]",
+      on_error = "send",
+    },
+    // Only move databaseId if it exists
+    {
+      id = "check-database-id",
+      type = "filter",
+      expr = "exists(attributes[\"databaseId\"])",
+      output = "move-database-id",
+    },
+    {
+      id = "move-database-id",
+      type = "move",
+      from = "attributes[\"databaseId\"]",
+      to = "attributes[\"run.id\"]",
+      on_error = "send",
+    },
+    // Only copy run.id if it exists
+    {
+      id = "check-run-id",
+      type = "filter",
+      expr = "exists(attributes[\"run.id\"])",
+      output = "copy-run-id-to-workflow-run-id",
+    },
+    {
+      id = "copy-run-id-to-workflow-run-id",
+      type = "copy",
+      from = "attributes[\"run.id\"]",
+      to = "attributes[\"workflow.run_id\"]",
+      on_error = "send",
+    },
+    // Only move status if it exists
+    {
+      id = "check-status",
+      type = "filter",
+      expr = "exists(attributes[\"status\"])",
+      output = "move-status",
+    },
+    {
+      id = "move-status",
+      type = "move",
+      from = "attributes[\"status\"]",
+      to = "attributes[\"workflow.status\"]",
+      on_error = "send",
+    },
+    // Only move conclusion if it exists
+    {
+      id = "check-conclusion",
+      type = "filter",
+      expr = "exists(attributes[\"conclusion\"])",
+      output = "move-conclusion",
+    },
+    {
+      id = "move-conclusion",
+      type = "move",
+      from = "attributes[\"conclusion\"]",
+      to = "attributes[\"workflow.conclusion\"]",
+      on_error = "send",
+    },
+    // Only move duration if it exists
+    {
+      id = "check-duration",
+      type = "filter",
+      expr = "exists(attributes[\"duration\"])",
+      output = "move-duration",
+    },
+    {
+      id = "move-duration",
+      type = "move",
+      from = "attributes[\"duration\"]",
+      to = "attributes[\"workflow.duration\"]",
+      on_error = "send",
+    },
+    // Job level attributes with enhanced validation and field existence checks
+    // Check if jobs array exists and has elements
+    {
+      id = "check-jobs-exist",
+      type = "filter",
+      expr = "exists(attributes.jobs) && length(attributes.jobs) > 0",
+      output = "job-attributes-router",
+    },
+    // Route to all job-level attribute processors
+    {
+      id = "job-attributes-router",
+      type = "router",
+      routes = [
+        { output = "copy-job-name", expr = "true" },
+        { output = "copy-job-status", expr = "true" },
+        { output = "copy-job-duration", expr = "true" },
+        { output = "copy-job-id", expr = "true" },
+      ],
+      default = "",
+    },
+    // Copy job attributes if they exist
+    {
+      id = "copy-job-name",
+      type = "copy",
+      from = "attributes.jobs[\"*\"].name",
+      to = "attributes[\"workflow.job.name\"]",
+      on_error = "send",
+    },
+    {
+      id = "copy-job-status",
+      type = "copy",
+      from = "attributes.jobs[\"*\"].status",
+      to = "attributes[\"workflow.job.status\"]",
+      on_error = "send",
+    },
+    {
+      id = "copy-job-duration",
+      type = "copy",
+      from = "attributes.jobs[\"*\"].duration",
+      to = "attributes[\"workflow.job.duration\"]",
+      on_error = "send",
+    },
+    {
+      id = "copy-job-id",
+      type = "copy",
+      from = "attributes.jobs[\"*\"].databaseId",
+      to = "attributes[\"workflow.job.id\"]",
+      on_error = "send",
+    },
+    // Step level attributes with enhanced validation and field existence checks
+    // Check if jobs with steps exist
+    {
+      id = "check-steps-exist",
+      type = "filter",
+      expr = "exists(attributes.jobs) && length(attributes.jobs) > 0 && exists(attributes.jobs[\"*\"].steps) && length(attributes.jobs[\"*\"].steps) > 0",
+      output = "step-attributes-router",
+    },
+    // Route to all step-level attribute processors
+    {
+      id = "step-attributes-router",
+      type = "router",
+      routes = [
+        { output = "copy-step-name", expr = "true" },
+        { output = "copy-step-status", expr = "true" },
+        { output = "copy-step-duration", expr = "true" },
+        { output = "copy-step-id", expr = "true" },
+      ],
+      default = "",
+    },
+    // Copy step attributes if they exist
+    {
+      id = "copy-step-name",
+      type = "copy",
+      from = "attributes.jobs[\"*\"].steps[\"*\"].name",
+      to = "attributes[\"workflow.step.name\"]",
+      on_error = "send",
+    },
+    {
+      id = "copy-step-status",
+      type = "copy",
+      from = "attributes.jobs[\"*\"].steps[\"*\"].status",
+      to = "attributes[\"workflow.step.status\"]",
+      on_error = "send",
+    },
+    {
+      id = "copy-step-duration",
+      type = "copy",
+      from = "attributes.jobs[\"*\"].steps[\"*\"].duration",
+      to = "attributes[\"workflow.step.duration\"]",
+      on_error = "send",
+    },
+    {
+      id = "copy-step-id",
+      type = "copy",
+      from = "attributes.jobs[\"*\"].steps[\"*\"].number",
+      to = "attributes[\"workflow.step.id\"]",
+      on_error = "send",
+    },
+  ]
+
+  output {
+    // Send logs output for debugging
+    logs = [otelcol.exporter.otlphttp.destination.input]
+    metrics = [otelcol.exporter.otlphttp.destination.input]
+  }
+}
+
+/////////////////////////////////////////////////////////////
+// PROCESSORS
+/////////////////////////////////////////////////////////////
+
+// Batch processor for better performance
+otelcol.processor.batch "github_actions_batch" {
+  timeout = "1s"  // Maximum time to wait before flushing the batch
+  send_batch_size = 1024  // Maximum batch size before flushing
+
+  output {
+    logs = [otelcol.processor.transform.github_actions_transform.input]
+  }
+}
+
+// Transform processor to standardize attributes and convert to metrics
+otelcol.processor.transform "github_actions_transform" {
+  error_mode = "propagate"
+  
+  log_statements {
+    context = "log"
+    statements = [
+      "set(attributes[\"workflow.job.name\"], attributes[\"job.name\"])",
+      "set(attributes[\"workflow.job.id\"], attributes[\"job.id\"])",
+      "set(attributes[\"workflow.step.name\"], attributes[\"step.name\"])",
+      "set(attributes[\"workflow.step.id\"], attributes[\"step.number\"])",
+    ]
+  }
+
+  metric_statements {
+    context = "datapoint"
+    statements = [
+      "set(metric.name, \"workflow.duration\")",
+      "set(datapoint.value_double, datapoint.attributes[\"workflow.duration\"] / 1000000000)",
+      "set(metric.unit, \"s\")",
+      "set(metric.name, \"workflow.job.duration\")",
+      "set(datapoint.value_double, datapoint.attributes[\"workflow.job.duration\"] / 1000000000)",
+      "set(metric.unit, \"s\")",
+      "set(metric.name, \"workflow.step.duration\")",
+      "set(datapoint.value_double, datapoint.attributes[\"workflow.step.duration\"] / 1000000000)",
+      "set(metric.unit, \"s\")",
+      "set(metric.name, \"workflow.status\")",
+      "set(datapoint.value_double, datapoint.attributes[\"workflow.status\"])",
+      "set(metric.name, \"workflow.conclusion\")",
+      "set(datapoint.value_double, datapoint.attributes[\"workflow.conclusion\"])",
+      "set(metric.name, \"workflow.job.status\")",
+      "set(datapoint.value_double, datapoint.attributes[\"workflow.job.status\"])",
+      "set(metric.name, \"workflow.step.status\")",
+      "set(datapoint.value_double, datapoint.attributes[\"workflow.step.status\"])",
+      "keep_keys(datapoint.attributes, [\"workflow.name\", \"workflow.run_id\"])",
+    ]
+  }
+
+  output {
+    logs = [otelcol.exporter.otlphttp.destination.input]
+    metrics = [otelcol.exporter.otlphttp.destination.input]
+  }
+}
+
+/////////////////////////////////////////////////////////////
+// EXPORTERS
+/////////////////////////////////////////////////////////////
+
+// Common exporter configuration
+otelcol.exporter.otlphttp "destination" {
+  client {
+    endpoint = env("TELEMETRY_URL")
+    auth = otelcol.auth.basic.destination.handler
+  }
+}
+
+otelcol.auth.basic "destination" {
+  username = env("TELEMETRY_USERNAME")
+  password = env("TELEMETRY_PASSWORD")
+}

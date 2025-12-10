@@ -1,0 +1,17 @@
+{application, opentelemetry_zipkin,
+ [{description, "OpenTelemetry Zipkin Exporter"},
+  {vsn, "1.1.1"},
+  {registered, []},
+  {applications,
+   [kernel,
+    stdlib,
+    inets,
+    opentelemetry_api
+   ]},
+  {exclude_paths, ["rebar.lock"]},
+  {env,[]},
+  {modules, []},
+
+  {licenses, ["Apache-2.0"]},
+  {links, [{"GitHub", "https://github.com/open-telemetry/opentelemetry-erlang"}]}
+ ]}.

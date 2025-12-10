@@ -1,0 +1,20 @@
+{
+    "smithy": "1.0",
+    "shapes": {
+        "ns.foo#String": {
+            "type": "string"
+        },
+        "ns.foo#List": {
+            "type": "list",
+            "member": {
+                "target": "ns.foo#String",
+                "traits": {
+                    "smithy.api#sensitive": {}
+                }
+            }
+        },
+        "ns.foo#List$member": {
+            "smithy.api#documentation": "Foo"
+        }
+    }
+}

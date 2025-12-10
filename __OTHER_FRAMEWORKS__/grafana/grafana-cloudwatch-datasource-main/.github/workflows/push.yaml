@@ -1,0 +1,20 @@
+name: Plugins - CI
+permissions: {}
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+
+jobs:
+  ci:
+    name: CI
+    permissions:
+      contents: read
+      id-token: write
+    uses: grafana/plugin-ci-workflows/.github/workflows/ci.yml@main
+    with:
+      plugin-version-suffix: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.sha || '' }}
+      golangci-lint-version: '2.0.2'
+      run-playwright-with-skip-grafana-dev-image: true

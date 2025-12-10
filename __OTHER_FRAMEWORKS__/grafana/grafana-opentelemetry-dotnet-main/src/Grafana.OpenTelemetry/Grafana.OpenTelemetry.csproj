@@ -1,0 +1,64 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <Description>Full Grafana distribution of OpenTelemetry .NET</Description>
+    <GenerateDocumentationFile>true</GenerateDocumentationFile>
+    <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
+    <TargetFrameworks>net10.0;net8.0;netstandard2.0;net462</TargetFrameworks>
+  </PropertyGroup>
+
+  <!--
+    Avoid problems with reflection when running in AOT mode
+    See https://github.com/dotnet/corert/blob/master/Documentation/using-corert/rd-xml-format.md
+  -->
+  <ItemGroup>
+    <RdXmlFile Include="rd.xml" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="../Grafana.OpenTelemetry.Base/Grafana.OpenTelemetry.Base.csproj" />
+    <PackageReference Include="MinVer" Version="6.0.0" PrivateAssets="all" />
+  </ItemGroup>
+
+  <!-- This dependency is pulled in by `OpenTelemetry.Instrumentation.Cassandra` with a minimum
+       version of 3.17.0. We change this to 3.22.0 to add support for tracing. -->
+  <ItemGroup>
+    <PackageReference Include="CassandraCSharpDriver" Version="[3.22.0,)" />
+  </ItemGroup>
+
+  <ItemGroup Label="Stable instrumentation packages with dependencies">
+    <PackageReference Include="OpenTelemetry.Instrumentation.AWS" Version="1.14.0" />
+    <PackageReference Include="OpenTelemetry.Instrumentation.AWSLambda" Version="1.14.0" />
+  </ItemGroup>
+
+  <ItemGroup Label="Non-stable instrumentation packages with dependencies, only .NET" Condition=" '$([MSBuild]::GetTargetFrameworkIdentifier(`$(TargetFramework)`))' != '.NETFramework' ">
+    <PackageReference Include="OpenTelemetry.Extensions.Hosting" Version="1.14.0" /> <!-- Needed for ASP.NET Core -->
+    <PackageReference Include="OpenTelemetry.Instrumentation.AspNetCore" Version="1.14.0" />
+  </ItemGroup>
+
+  <ItemGroup Label="Non-stable instrumentation packages with dependencies">
+    <PackageReference Include="OpenTelemetry.Instrumentation.Cassandra" Version="1.0.0-beta.4" />
+    <PackageReference Include="OpenTelemetry.Instrumentation.ElasticsearchClient" Version="1.14.0-beta.1" />
+    <PackageReference Include="OpenTelemetry.Instrumentation.EntityFrameworkCore" Version="1.14.0-beta.2" />
+    <PackageReference Include="OpenTelemetry.Instrumentation.Hangfire" Version="1.14.0-beta.1" />
+    <PackageReference Include="OpenTelemetry.Instrumentation.Quartz" Version="1.14.0-beta.2" />
+    <PackageReference Include="OpenTelemetry.Instrumentation.StackExchangeRedis" Version="1.14.0-beta.1" />
+    <PackageReference Include="OpenTelemetry.Instrumentation.Wcf" Version="1.14.0-beta.1" />
+  </ItemGroup>
+
+  <ItemGroup Label="Non-stable instrumentation packages with dependencies, only .NET Framework" Condition=" '$([MSBuild]::GetTargetFrameworkIdentifier(`$(TargetFramework)`))' == '.NETFramework' ">
+    <PackageReference Include="OpenTelemetry.Instrumentation.AspNet" Version="1.14.0-rc.1" />
+    <PackageReference Include="OpenTelemetry.Instrumentation.Owin" Version="1.14.0-beta.1" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <AssemblyAttribute Include="System.Runtime.CompilerServices.InternalsVisibleTo">
+      <_Parameter1>Grafana.OpenTelemetry.Tests</_Parameter1>
+    </AssemblyAttribute>
+  </ItemGroup>
+
+  <PropertyGroup Condition="$([MSBuild]::IsTargetFrameworkCompatible('$(TargetFramework)', 'net8.0'))">
+    <IsAotCompatible>true</IsAotCompatible>
+  </PropertyGroup>
+
+</Project>

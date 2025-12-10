@@ -1,0 +1,118 @@
+# Refer to https://github.com/open-telemetry/opentelemetry-collector/blob/main/cmd/mdatagen/metadata-schema.yaml
+# for the full schema
+type: githubactions
+
+status:
+  class: receiver
+  stability:
+    alpha: [traces, logs, metrics]
+  distributions:
+    - grafana-ci-otel-collector
+  codeowners:
+    active: [Elfo404, dsotirakis]
+    emeritus:
+
+resource_attributes:
+
+attributes:
+  ci.github.workflow.job.conclusion:
+    description: Job Conclusion
+    enum:
+      - success
+      - failure
+      - cancelled
+      - neutral
+      - "null"
+      - skipped
+      - timed_out
+      - action_required
+    type: string
+  ci.github.workflow.job.head_branch.is_main:
+    description: Whether the head branch is the main branch
+    type: bool
+  ci.github.workflow.job.labels:
+    description: Job labels.
+    type: string
+  ci.github.workflow.job.status:
+    description: Job status
+    enum:
+      - completed
+      - in_progress
+      - queued
+      - waiting
+      - aborted
+    type: string
+  ci.github.workflow.run.conclusion:
+    description: Run Conclusion
+    enum:
+      - success
+      - failure
+      - cancelled
+      - neutral
+      - "null"
+      - skipped
+      - timed_out
+      - action_required
+    type: string
+  ci.github.workflow.run.head_branch.is_main:
+    description: Whether the head branch is the main branch
+    type: bool
+  ci.github.workflow.run.labels:
+    description: Run labels.
+    type: string
+  ci.github.workflow.run.status:
+    description: Run status
+    enum:
+      - completed
+      - in_progress
+      - queued
+      - waiting
+      - aborted
+    type: string
+  vcs.repository.name:
+    description: Repository name
+    type: string
+  version:
+    description: The version of the cicd_o11y collector.
+    type: string
+
+metrics:
+  build.info:
+    enabled: true
+    description: Build info.
+    unit: "{build}"
+    gauge:
+      value_type: int
+    attributes: [version]
+  workflow.jobs.count:
+    enabled: true
+    description: Number of jobs.
+    unit: "{job}"
+    sum:
+      value_type: int
+      monotonic: true
+      aggregation_temporality: cumulative
+    attributes:
+      [
+        vcs.repository.name,
+        ci.github.workflow.job.labels,
+        ci.github.workflow.job.status,
+        ci.github.workflow.job.conclusion,
+        ci.github.workflow.job.head_branch.is_main,
+      ]
+  workflow.runs.count:
+    enabled: true
+    description: Number of runs.
+    unit: "{run}"
+    sum:
+      value_type: int
+      monotonic: true
+      aggregation_temporality: cumulative
+    attributes:
+      [
+        vcs.repository.name,
+        ci.github.workflow.run.labels,
+        ci.github.workflow.run.status,
+        ci.github.workflow.run.conclusion,
+        ci.github.workflow.run.head_branch.is_main,
+      ]

@@ -1,0 +1,104 @@
+public abstract interface annotation class io/opentelemetry/android/Incubating : java/lang/annotation/Annotation {
+}
+
+public final class io/opentelemetry/android/agent/OpenTelemetryRumInitializer {
+	public static final field INSTANCE Lio/opentelemetry/android/agent/OpenTelemetryRumInitializer;
+	public static final fun initialize (Landroid/content/Context;Lkotlin/jvm/functions/Function1;)Lio/opentelemetry/android/OpenTelemetryRum;
+	public static synthetic fun initialize$default (Landroid/content/Context;Lkotlin/jvm/functions/Function1;ILjava/lang/Object;)Lio/opentelemetry/android/OpenTelemetryRum;
+}
+
+public final class io/opentelemetry/android/agent/connectivity/Compression : java/lang/Enum {
+	public static final field GZIP Lio/opentelemetry/android/agent/connectivity/Compression;
+	public static final field NONE Lio/opentelemetry/android/agent/connectivity/Compression;
+	public static fun valueOf (Ljava/lang/String;)Lio/opentelemetry/android/agent/connectivity/Compression;
+	public static fun values ()[Lio/opentelemetry/android/agent/connectivity/Compression;
+}
+
+public final class io/opentelemetry/android/agent/dsl/DiskBufferingConfigurationSpec : io/opentelemetry/android/agent/dsl/instrumentation/CanBeEnabledAndDisabled {
+	public fun enabled (Z)V
+}
+
+public final class io/opentelemetry/android/agent/dsl/EndpointConfiguration {
+	public final fun getCompression ()Lio/opentelemetry/android/agent/connectivity/Compression;
+	public final fun getHeaders ()Ljava/util/Map;
+	public final fun getUrl ()Ljava/lang/String;
+	public final fun setCompression (Lio/opentelemetry/android/agent/connectivity/Compression;)V
+	public final fun setHeaders (Ljava/util/Map;)V
+	public final fun setUrl (Ljava/lang/String;)V
+}
+
+public final class io/opentelemetry/android/agent/dsl/HttpExportConfiguration {
+	public final fun getBaseHeaders ()Ljava/util/Map;
+	public final fun getBaseUrl ()Ljava/lang/String;
+	public final fun getCompression ()Lio/opentelemetry/android/agent/connectivity/Compression;
+	public final fun logs (Lkotlin/jvm/functions/Function1;)V
+	public final fun metrics (Lkotlin/jvm/functions/Function1;)V
+	public final fun setBaseHeaders (Ljava/util/Map;)V
+	public final fun setBaseUrl (Ljava/lang/String;)V
+	public final fun setCompression (Lio/opentelemetry/android/agent/connectivity/Compression;)V
+	public final fun spans (Lkotlin/jvm/functions/Function1;)V
+}
+
+public final class io/opentelemetry/android/agent/dsl/OpenTelemetryConfiguration {
+	public fun <init> ()V
+	public final fun diskBuffering (Lkotlin/jvm/functions/Function1;)V
+	public final fun globalAttributes (Lkotlin/jvm/functions/Function0;)V
+	public final fun httpExport (Lkotlin/jvm/functions/Function1;)V
+	public final fun instrumentations (Lkotlin/jvm/functions/Function1;)V
+	public final fun session (Lkotlin/jvm/functions/Function1;)V
+}
+
+public final class io/opentelemetry/android/agent/dsl/SessionConfiguration {
+	public final fun getBackgroundInactivityTimeout-UwyO8pc ()J
+	public final fun getMaxLifetime-UwyO8pc ()J
+	public final fun setBackgroundInactivityTimeout-LRDsOJo (J)V
+	public final fun setMaxLifetime-LRDsOJo (J)V
+}
+
+public final class io/opentelemetry/android/agent/dsl/instrumentation/ActivityLifecycleConfiguration : io/opentelemetry/android/agent/dsl/instrumentation/CanBeEnabledAndDisabled, io/opentelemetry/android/agent/dsl/instrumentation/ScreenLifecycleConfigurable {
+	public fun enabled (Z)V
+	public fun screenNameExtractor (Lio/opentelemetry/android/instrumentation/common/ScreenNameExtractor;)V
+	public fun tracerCustomizer (Lkotlin/jvm/functions/Function1;)V
+}
+
+public final class io/opentelemetry/android/agent/dsl/instrumentation/AnrReporterConfiguration : io/opentelemetry/android/agent/dsl/instrumentation/CanBeEnabledAndDisabled, io/opentelemetry/android/agent/dsl/instrumentation/WithEventAttributes {
+	public fun addAttributesExtractor (Lio/opentelemetry/android/instrumentation/common/EventAttributesExtractor;)V
+	public fun enabled (Z)V
+}
+
+public final class io/opentelemetry/android/agent/dsl/instrumentation/CrashReporterConfiguration : io/opentelemetry/android/agent/dsl/instrumentation/CanBeEnabledAndDisabled, io/opentelemetry/android/agent/dsl/instrumentation/WithEventAttributes {
+	public fun addAttributesExtractor (Lio/opentelemetry/android/instrumentation/common/EventAttributesExtractor;)V
+	public fun enabled (Z)V
+}
+
+public final class io/opentelemetry/android/agent/dsl/instrumentation/FragmentLifecycleConfiguration : io/opentelemetry/android/agent/dsl/instrumentation/CanBeEnabledAndDisabled, io/opentelemetry/android/agent/dsl/instrumentation/ScreenLifecycleConfigurable {
+	public fun enabled (Z)V
+	public fun screenNameExtractor (Lio/opentelemetry/android/instrumentation/common/ScreenNameExtractor;)V
+	public fun tracerCustomizer (Lkotlin/jvm/functions/Function1;)V
+}
+
+public final class io/opentelemetry/android/agent/dsl/instrumentation/InstrumentationConfiguration {
+	public final fun activity (Lkotlin/jvm/functions/Function1;)V
+	public final fun anrReporter (Lkotlin/jvm/functions/Function1;)V
+	public final fun crashReporter (Lkotlin/jvm/functions/Function1;)V
+	public final fun fragment (Lkotlin/jvm/functions/Function1;)V
+	public final fun networkMonitoring (Lkotlin/jvm/functions/Function1;)V
+	public final fun screenOrientation (Lkotlin/jvm/functions/Function1;)V
+	public final fun slowRenderingReporter (Lkotlin/jvm/functions/Function1;)V
+}
+
+public final class io/opentelemetry/android/agent/dsl/instrumentation/NetworkMonitoringConfiguration : io/opentelemetry/android/agent/dsl/instrumentation/CanBeEnabledAndDisabled {
+	public final fun addAttributesExtractor (Lio/opentelemetry/android/instrumentation/network/NetworkAttributesExtractor;)V
+	public fun enabled (Z)V
+}
+
+public final class io/opentelemetry/android/agent/dsl/instrumentation/ScreenOrientationConfiguration : io/opentelemetry/android/agent/dsl/instrumentation/CanBeEnabledAndDisabled {
+	public fun enabled (Z)V
+}
+
+public final class io/opentelemetry/android/agent/dsl/instrumentation/SlowRenderingReporterConfiguration : io/opentelemetry/android/agent/dsl/instrumentation/CanBeEnabledAndDisabled {
+	public final fun detectionPollInterval-LRDsOJo (J)V
+	public final fun enableVerboseDebugLogging ()V
+	public fun enabled (Z)V
+}
+

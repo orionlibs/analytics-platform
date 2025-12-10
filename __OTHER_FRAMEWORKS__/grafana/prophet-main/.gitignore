@@ -1,0 +1,40 @@
+# Compiled python modules.
+*.pyc
+
+# Persisted models.
+*.pkl
+
+# Setuptools distribution folder.
+python/dist/
+python_shim/dist/
+
+# test cache
+.pytest_cache
+python/prophet/tests/dask-worker-space
+
+# Python cache
+__pycache__
+
+# Python egg metadata, regenerated from source files by setuptools.
+python/*.egg-info
+python/build/
+python_shim/*.egg-info
+python_shim/build/
+
+# Notebook checkpoints
+.ipynb_checkpoints
+
+*.*~
+
+*.idea
+*.vscode
+*.DS_Store
+*.envrc
+
+# Development with Python
+python/prophet/bin/
+python/prophet/etc/
+python/prophet/lib/
+python/prophet/pyvenv.cfg
+python/prophet/share/
+python/prophet/stan_model/

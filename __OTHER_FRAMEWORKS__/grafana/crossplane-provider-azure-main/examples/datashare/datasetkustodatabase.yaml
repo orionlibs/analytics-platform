@@ -1,0 +1,38 @@
+apiVersion: datashare.azure.upbound.io/v1beta1
+kind: DataSetKustoDatabase
+metadata:
+  annotations:
+    upjet.upbound.io/manual-intervention: "This resource requires manual intervention."
+  name: examplekustodatabase
+spec:
+  forProvider:
+    kustoDatabaseIdRef:
+      name: example
+    shareIdRef:
+      name: examplekusto
+---
+apiVersion: kusto.azure.upbound.io/v1beta1
+kind: Database
+metadata:
+  annotations:
+    upjet.upbound.io/manual-intervention: "This resource requires manual intervention."
+  name: example
+spec:
+  forProvider:
+    clusterNameRef:
+      name: exampleupbounddataset
+    location: West Europe
+    resourceGroupNameRef:
+      name: example-rg-datashare
+---
+apiVersion: authorization.azure.upbound.io/v1beta1
+kind: RoleAssignment
+metadata:
+  annotations:
+    upjet.upbound.io/manual-intervention: "This resource requires manual intervention."
+  name: examplekustodatabase
+spec:
+  forProvider:
+    principalId: ${azurerm_kusto_cluster.example.id}
+    roleDefinitionName: Contributor
+    scope: ${azurerm_data_share.example.id}

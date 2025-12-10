@@ -1,0 +1,58 @@
+name: publish-npm
+on:
+  push:
+    branches:
+      - main
+      - v0.0.x
+
+# These permissions are needed to assume roles from Github's OIDC.
+permissions:
+  contents: read
+  id-token: write
+
+jobs:
+  publish:
+    name: Publish to NPM Package Registry
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v2
+        with:
+          ref: main
+          persist-credentials: false
+      # limit releases to version changes - https://github.com/EndBug/version-check
+      # EndBug/version-check@v1 as of Oct 8, 2020
+      - name: Check version changes
+        uses: EndBug/version-check@eea9dab124be9214bd32356f32f7d8945173db13
+        id: version_check
+        with:
+          # diff the commits rather than commit message for version changes
+          diff-search: true
+
+      - name: Version update detected
+        if: steps.version_check.outputs.changed == 'true'
+        env:
+          VERSION: ${{ steps.version_check.outputs.version }}
+          TYPE: ${{ steps.version_check.outputs.type }}
+        run: |
+          echo "Version change found! New version: $VERSION ($TYPE)"
+
+      - name: Setup .npmrc file for NPM registry
+        if: steps.version_check.outputs.changed == 'true'
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version: '20'
+          scope: '@grafana'
+          registry-url: 'https://registry.npmjs.org' 
+
+      - name: Install dependencies # use npm@latest for Trusted Publishing
+        if: steps.version_check.outputs.changed == 'true'
+        run: npm install -g npm@latest && npm install --ignore-scripts
+
+      - name: Build library
+        if: steps.version_check.outputs.changed == 'true'
+        run: npm run build
+
+      - name: Publish package to NPM
+        if: steps.version_check.outputs.changed == 'true'
+        run: npm publish ./dist --access public

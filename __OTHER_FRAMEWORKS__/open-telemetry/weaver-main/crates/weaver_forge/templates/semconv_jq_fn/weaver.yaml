@@ -1,0 +1,42 @@
+params:
+  excluded_namespaces: ["url", "network"]
+
+templates:
+  - template: semconv_attributes.json
+    filter: semconv_attributes
+    application_mode: single
+  - template: semconv_grouped_attributes.json
+    filter: >
+      semconv_grouped_attributes({ "stable_only": false, "ignore_code_generation_annotations": true })
+    application_mode: single
+  - template: semconv_grouped_attributes_stable.json
+    filter: >
+      semconv_grouped_attributes({
+        "exclude_root_namespace": $excluded_namespaces,
+        "stable_only": true
+      })
+    application_mode: single
+  - template: semconv_grouped_attributes_not_experimental.json
+    filter: >
+      semconv_grouped_attributes({
+        "exclude_root_namespace": $excluded_namespaces,
+        "exclude_stability": ["experimental"],
+      })
+    application_mode: single
+  - template: semconv_metrics.json
+    filter: >
+      semconv_grouped_metrics({ "stable_only": false })
+    application_mode: single
+  - template: semconv_metrics_not_deprecated.json
+    filter: >
+      semconv_grouped_metrics({ "exclude_deprecated": true })
+    application_mode: single    
+  - template: semconv_events.json
+    filter: >
+      .groups
+      | map(select(.type == "event"))
+      | map(. + {
+          event_namespace: (if .id | index(".") then (.id | split(".") | .[0:-1] | join(".")) else "other" end)
+        })
+      | sort_by(.event_namespace, .id)
+    application_mode: single

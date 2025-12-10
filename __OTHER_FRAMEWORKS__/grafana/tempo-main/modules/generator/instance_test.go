@@ -1,0 +1,479 @@
+package generator
+
+import (
+	"context"
+	"flag"
+	"os"
+	"sort"
+	"strings"
+	"testing"
+	"time"
+
+	"github.com/go-kit/log"
+	"github.com/grafana/tempo/modules/generator/processor"
+	"github.com/prometheus/client_golang/prometheus"
+	"github.com/prometheus/client_golang/prometheus/testutil"
+	"github.com/prometheus/prometheus/model/exemplar"
+	"github.com/prometheus/prometheus/model/histogram"
+	"github.com/prometheus/prometheus/model/labels"
+	"github.com/prometheus/prometheus/model/metadata"
+	prometheus_storage "github.com/prometheus/prometheus/storage"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
+
+	"github.com/grafana/tempo/modules/generator/processor/hostinfo"
+	"github.com/grafana/tempo/modules/generator/processor/spanmetrics"
+	"github.com/grafana/tempo/modules/generator/storage"
+	"github.com/grafana/tempo/pkg/tempopb"
+	v1 "github.com/grafana/tempo/pkg/tempopb/trace/v1"
+	"github.com/grafana/tempo/pkg/util/test"
+)
+
+func Test_instance_concurrency(t *testing.T) {
+	// Both instances use the same overrides, this map will be accessed by both
+	overrides := &mockOverrides{}
+	overrides.processors = map[string]struct{}{
+		processor.SpanMetricsName:   {},
+		processor.ServiceGraphsName: {},
+	}
+	cfg := &Config{}
+	cfg.RegisterFlagsAndApplyDefaults("", &flag.FlagSet{})
+
+	instance1, err := newInstance(cfg, "test", overrides, &noopStorage{}, log.NewNopLogger(), nil, nil, nil)
+	assert.NoError(t, err)
+
+	instance2, err := newInstance(cfg, "test", overrides, &noopStorage{}, log.NewNopLogger(), nil, nil, nil)
+	assert.NoError(t, err)
+
+	end := make(chan struct{})
+
+	accessor := func(f func()) {
+		for {
+			select {
+			case <-end:
+				return
+			default:
+				f()
+			}
+		}
+	}
+
+	go accessor(func() {
+		req := test.MakeBatch(1, nil)
+		instance1.pushSpans(context.Background(), &tempopb.PushSpansRequest{Batches: []*v1.ResourceSpans{req}})
+	})
+
+	go accessor(func() {
+		req := test.MakeBatch(1, nil)
+		instance2.pushSpans(context.Background(), &tempopb.PushSpansRequest{Batches: []*v1.ResourceSpans{req}})
+	})
+
+	go accessor(func() {
+		err := instance1.updateProcessors()
+		assert.NoError(t, err)
+	})
+
+	go accessor(func() {
+		err := instance2.updateProcessors()
+		assert.NoError(t, err)
+	})
+
+	time.Sleep(100 * time.Millisecond)
+
+	instance1.shutdown()
+	instance2.shutdown()
+
+	time.Sleep(10 * time.Millisecond)
+	close(end)
+}
+
+func TestInstancePushSpansSkipProcessors(t *testing.T) {
+	overrides := &mockOverrides{}
+	overrides.processors = map[string]struct{}{
+		processor.SpanMetricsName:   {},
+		processor.ServiceGraphsName: {},
+	}
+	const tenantID = "skip-processors-test"
+
+	cfg := &Config{}
+	cfg.RegisterFlagsAndApplyDefaults("", &flag.FlagSet{})
+	i, err := newInstance(cfg, tenantID, overrides, &noopStorage{}, log.NewNopLogger(), nil, nil, nil)
+	require.NoError(t, err)
+
+	req := test.MakeBatch(1, nil)
+
+	// Expose this series so it's present at the initial zero value even if not created/incremented by the test.
+	_ = metricSkippedProcessorPushes.WithLabelValues(tenantID)
+
+	t.Run("use metrics-generating processors", func(t *testing.T) {
+		i.pushSpans(context.Background(), &tempopb.PushSpansRequest{Batches: []*v1.ResourceSpans{req}})
+
+		expectMetrics := `
+# HELP tempo_metrics_generator_metrics_generation_skipped_processor_pushes_total The total number of processor pushes skipped because the request indicated that metrics should not be generated.
+# TYPE tempo_metrics_generator_metrics_generation_skipped_processor_pushes_total counter
+tempo_metrics_generator_metrics_generation_skipped_processor_pushes_total{tenant="skip-processors-test"} 0
+`
+		err := testutil.GatherAndCompare(
+			prometheus.DefaultGatherer,
+			strings.NewReader(expectMetrics),
+			"tempo_metrics_generator_metrics_generation_skipped_processor_pushes_total",
+		)
+		require.NoError(t, err)
+	})
+
+	t.Run("skip metrics-generating processors", func(t *testing.T) {
+		i.pushSpans(context.Background(), &tempopb.PushSpansRequest{Batches: []*v1.ResourceSpans{req}, SkipMetricsGeneration: true})
+
+		expectMetrics := `
+# HELP tempo_metrics_generator_metrics_generation_skipped_processor_pushes_total The total number of processor pushes skipped because the request indicated that metrics should not be generated.
+# TYPE tempo_metrics_generator_metrics_generation_skipped_processor_pushes_total counter
+tempo_metrics_generator_metrics_generation_skipped_processor_pushes_total{tenant="skip-processors-test"} 2
+`
+		err := testutil.GatherAndCompare(
+			prometheus.DefaultGatherer,
+			strings.NewReader(expectMetrics),
+			"tempo_metrics_generator_metrics_generation_skipped_processor_pushes_total",
+		)
+		require.NoError(t, err)
+	})
+}
+
+func Test_instance_updateProcessors(t *testing.T) {
+	cfg := Config{}
+	cfg.RegisterFlagsAndApplyDefaults("", &flag.FlagSet{})
+	logger := log.NewLogfmtLogger(log.NewSyncWriter(os.Stdout))
+	overrides := mockOverrides{}
+
+	instance, err := newInstance(&cfg, "test", &overrides, &noopStorage{}, logger, nil, nil, nil)
+	assert.NoError(t, err)
+
+	// stop the update goroutine
+	close(instance.shutdownCh)
+
+	// no processors should be present initially
+	assert.Len(t, instance.processors, 0)
+
+	t.Run("add servicegraphs processors", func(t *testing.T) {
+		overrides.processors = map[string]struct{}{
+			processor.ServiceGraphsName: {},
+		}
+		err := instance.updateProcessors()
+		assert.NoError(t, err)
+
+		assert.Len(t, instance.processors, 1)
+		assert.Equal(t, instance.processors[processor.ServiceGraphsName].Name(), processor.ServiceGraphsName)
+	})
+
+	t.Run("add unknown processor", func(t *testing.T) {
+		overrides.processors = map[string]struct{}{
+			"span-metricsss": {}, // typo in the overrides
+		}
+		err := instance.updateProcessors()
+		assert.Error(t, err)
+
+		// existing processors should not be removed when adding a new processor fails
+		assert.Len(t, instance.processors, 1)
+		assert.Equal(t, instance.processors[processor.ServiceGraphsName].Name(), processor.ServiceGraphsName)
+	})
+
+	t.Run("add spanmetrics processor", func(t *testing.T) {
+		overrides.processors = map[string]struct{}{
+			processor.ServiceGraphsName: {},
+			processor.SpanMetricsName:   {},
+		}
+		err := instance.updateProcessors()
+		assert.NoError(t, err)
+
+		assert.Len(t, instance.processors, 2)
+		assert.Equal(t, instance.processors[processor.ServiceGraphsName].Name(), processor.ServiceGraphsName)
+		assert.Equal(t, instance.processors[processor.SpanMetricsName].Name(), processor.SpanMetricsName)
+	})
+
+	t.Run("replace spanmetrics processor", func(t *testing.T) {
+		overrides.processors = map[string]struct{}{
+			processor.ServiceGraphsName: {},
+			processor.SpanMetricsName:   {},
+		}
+		overrides.spanMetricsDimensions = []string{"namespace"}
+		overrides.spanMetricsIntrinsicDimensions = map[string]bool{"status_message": true}
+
+		err := instance.updateProcessors()
+		assert.NoError(t, err)
+
+		var expectedConfig spanmetrics.Config
+		expectedConfig.RegisterFlagsAndApplyDefaults("", &flag.FlagSet{})
+		expectedConfig.Dimensions = []string{"namespace"}
+		expectedConfig.IntrinsicDimensions.StatusMessage = true
+
+		assert.Equal(t, expectedConfig, instance.processors[processor.SpanMetricsName].(*spanmetrics.Processor).Cfg)
+	})
+
+	t.Run("add hostinfo processor", func(t *testing.T) {
+		overrides.processors = map[string]struct{}{
+			processor.ServiceGraphsName: {},
+			processor.SpanMetricsName:   {},
+			processor.HostInfoName:      {},
+		}
+		err := instance.updateProcessors()
+		assert.NoError(t, err)
+
+		assert.Len(t, instance.processors, 3)
+		assert.Equal(t, instance.processors[processor.ServiceGraphsName].Name(), processor.ServiceGraphsName)
+		assert.Equal(t, instance.processors[processor.SpanMetricsName].Name(), processor.SpanMetricsName)
+		assert.Equal(t, instance.processors[processor.HostInfoName].Name(), processor.HostInfoName)
+	})
+
+	t.Run("replace hostinfo processor", func(t *testing.T) {
+		overrides.processors = map[string]struct{}{
+			processor.ServiceGraphsName: {},
+			processor.SpanMetricsName:   {},
+			processor.HostInfoName:      {},
+		}
+		overrides.hostInfoHostIdentifiers = []string{"host.id"}
+
+		overrides.hostInfoMetricName = "sample_traces_host_info"
+		err := instance.updateProcessors()
+		assert.NoError(t, err)
+
+		var expectedConfig hostinfo.Config
+		expectedConfig.RegisterFlagsAndApplyDefaults("", &flag.FlagSet{})
+		expectedConfig.HostIdentifiers = []string{"host.id"}
+		expectedConfig.MetricName = "sample_traces_host_info"
+
+		assert.Equal(t, expectedConfig, instance.processors[processor.HostInfoName].(*hostinfo.Processor).Cfg)
+	})
+
+	t.Run("remove processor", func(t *testing.T) {
+		overrides.processors = nil
+		err := instance.updateProcessors()
+		assert.NoError(t, err)
+
+		assert.Len(t, instance.processors, 0)
+	})
+
+	t.Run("add span-latency subprocessor", func(t *testing.T) {
+		overrides.processors = map[string]struct{}{
+			processor.ServiceGraphsName:  {},
+			spanmetrics.Latency.String(): {},
+		}
+		err := instance.updateProcessors()
+		assert.NoError(t, err)
+
+		var expectedConfig spanmetrics.Config
+		expectedConfig.RegisterFlagsAndApplyDefaults("", &flag.FlagSet{})
+		expectedConfig.Dimensions = []string{"namespace"}
+		expectedConfig.IntrinsicDimensions.StatusMessage = true
+		expectedConfig.HistogramBuckets = prometheus.ExponentialBuckets(0.002, 2, 14)
+		expectedConfig.Subprocessors[spanmetrics.Latency] = true
+		expectedConfig.Subprocessors[spanmetrics.Count] = false
+		expectedConfig.Subprocessors[spanmetrics.Size] = false
+
+		assert.Equal(t, expectedConfig, instance.processors[processor.SpanMetricsName].(*spanmetrics.Processor).Cfg)
+
+		expectedProcessors := []string{processor.ServiceGraphsName, processor.SpanMetricsName}
+		actualProcessors := make([]string, 0, len(instance.processors))
+
+		for name := range instance.processors {
+			actualProcessors = append(actualProcessors, name)
+		}
+
+		sort.Strings(actualProcessors)
+
+		assert.Equal(t, expectedProcessors, actualProcessors)
+	})
+
+	t.Run("replace span-latency subprocessor with span-count", func(t *testing.T) {
+		overrides.processors = map[string]struct{}{
+			processor.ServiceGraphsName: {},
+			spanmetrics.Count.String():  {},
+		}
+		err := instance.updateProcessors()
+		assert.NoError(t, err)
+
+		var expectedConfig spanmetrics.Config
+		expectedConfig.RegisterFlagsAndApplyDefaults("", &flag.FlagSet{})
+		expectedConfig.Dimensions = []string{"namespace"}
+		expectedConfig.IntrinsicDimensions.StatusMessage = true
+		expectedConfig.HistogramBuckets = nil
+		expectedConfig.Subprocessors[spanmetrics.Latency] = false
+		expectedConfig.Subprocessors[spanmetrics.Count] = true
+		expectedConfig.Subprocessors[spanmetrics.Size] = false
+
+		assert.Equal(t, expectedConfig, instance.processors[processor.SpanMetricsName].(*spanmetrics.Processor).Cfg)
+
+		expectedProcessors := []string{processor.ServiceGraphsName, processor.SpanMetricsName}
+		actualProcessors := make([]string, 0, len(instance.processors))
+
+		for name := range instance.processors {
+			actualProcessors = append(actualProcessors, name)
+		}
+
+		sort.Strings(actualProcessors)
+
+		assert.Equal(t, expectedProcessors, actualProcessors)
+	})
+
+	t.Run("use all three subprocessors at once", func(t *testing.T) {
+		overrides.processors = map[string]struct{}{
+			processor.ServiceGraphsName:  {},
+			spanmetrics.Count.String():   {},
+			spanmetrics.Latency.String(): {},
+			spanmetrics.Size.String():    {},
+		}
+		err := instance.updateProcessors()
+		assert.NoError(t, err)
+
+		var expectedConfig spanmetrics.Config
+		expectedConfig.RegisterFlagsAndApplyDefaults("", &flag.FlagSet{})
+		expectedConfig.Dimensions = []string{"namespace"}
+		expectedConfig.IntrinsicDimensions.StatusMessage = true
+		expectedConfig.HistogramBuckets = prometheus.ExponentialBuckets(0.002, 2, 14)
+		expectedConfig.Subprocessors[spanmetrics.Latency] = true
+		expectedConfig.Subprocessors[spanmetrics.Count] = true
+		expectedConfig.Subprocessors[spanmetrics.Size] = true
+
+		assert.Equal(t, expectedConfig, instance.processors[processor.SpanMetricsName].(*spanmetrics.Processor).Cfg)
+
+		expectedProcessors := []string{processor.ServiceGraphsName, processor.SpanMetricsName}
+		actualProcessors := make([]string, 0, len(instance.processors))
+
+		for name := range instance.processors {
+			actualProcessors = append(actualProcessors, name)
+		}
+
+		sort.Strings(actualProcessors)
+
+		assert.Equal(t, expectedProcessors, actualProcessors)
+	})
+
+	t.Run("replace subprocessors with span-metrics processor", func(t *testing.T) {
+		overrides.processors = map[string]struct{}{
+			processor.ServiceGraphsName: {},
+			processor.SpanMetricsName:   {},
+		}
+		err := instance.updateProcessors()
+		assert.NoError(t, err)
+
+		var expectedConfig spanmetrics.Config
+		expectedConfig.RegisterFlagsAndApplyDefaults("", &flag.FlagSet{})
+		expectedConfig.Dimensions = []string{"namespace"}
+		expectedConfig.IntrinsicDimensions.StatusMessage = true
+		expectedConfig.HistogramBuckets = prometheus.ExponentialBuckets(0.002, 2, 14)
+		expectedConfig.Subprocessors[spanmetrics.Latency] = true
+		expectedConfig.Subprocessors[spanmetrics.Count] = true
+
+		assert.Equal(t, expectedConfig, instance.processors[processor.SpanMetricsName].(*spanmetrics.Processor).Cfg)
+
+		expectedProcessors := []string{processor.ServiceGraphsName, processor.SpanMetricsName}
+		actualProcessors := make([]string, 0, len(instance.processors))
+
+		for name := range instance.processors {
+			actualProcessors = append(actualProcessors, name)
+		}
+
+		sort.Strings(actualProcessors)
+
+		assert.Equal(t, expectedProcessors, actualProcessors)
+	})
+
+	t.Run("replace span-metrics and servicegraphs processors when histograms impementation changes", func(t *testing.T) {
+		overrides.nativeHistograms = "native"
+		overrides.processors = map[string]struct{}{
+			processor.ServiceGraphsName: {},
+			processor.SpanMetricsName:   {},
+		}
+		err := instance.updateProcessors()
+		assert.NoError(t, err)
+
+		assertHistogramsReload := func(t *testing.T) {
+			desiredProcessors := instance.overrides.MetricsGeneratorProcessors(instance.instanceID)
+			desiredCfg, copyErr := instance.cfg.Processor.copyWithOverrides(instance.overrides, instance.instanceID)
+			assert.NoError(t, copyErr)
+			toAdd, toRemove, toReplace, diffErr := instance.diffProcessors(desiredProcessors, desiredCfg)
+			assert.NoError(t, diffErr)
+			assert.Empty(t, toAdd)
+			assert.Empty(t, toRemove)
+
+			sort.Strings(toReplace)
+			assert.Equal(t, []string{processor.ServiceGraphsName, processor.SpanMetricsName}, toReplace)
+		}
+
+		assertHistogramsNoChange := func(t *testing.T) {
+			desiredProcessors := instance.overrides.MetricsGeneratorProcessors(instance.instanceID)
+			desiredCfg, copyErr := instance.cfg.Processor.copyWithOverrides(instance.overrides, instance.instanceID)
+			assert.NoError(t, copyErr)
+			toAdd, toRemove, toReplace, diffErr := instance.diffProcessors(desiredProcessors, desiredCfg)
+			assert.NoError(t, diffErr)
+			assert.Empty(t, toAdd)
+			assert.Empty(t, toRemove)
+			assert.Empty(t, toReplace)
+		}
+
+		// Downgrade to classic
+		overrides.nativeHistograms = "classic"
+		assertHistogramsReload(t)
+
+		err = instance.updateProcessors()
+		assert.NoError(t, err)
+		assertHistogramsNoChange(t)
+
+		// Upgrade to both native and classic
+		overrides.nativeHistograms = "both"
+		assertHistogramsReload(t)
+
+		err = instance.updateProcessors()
+		assert.NoError(t, err)
+		assertHistogramsNoChange(t)
+
+		// Upgrade back to native
+		overrides.nativeHistograms = "native"
+		assertHistogramsReload(t)
+
+		err = instance.updateProcessors()
+		assert.NoError(t, err)
+		assertHistogramsNoChange(t)
+	})
+}
+
+type noopStorage struct{}
+
+var _ storage.Storage = (*noopStorage)(nil)
+
+func (m noopStorage) Appender(context.Context) prometheus_storage.Appender {
+	return &noopAppender{}
+}
+
+func (m noopStorage) Close() error { return nil }
+
+type noopAppender struct{}
+
+var _ prometheus_storage.Appender = (*noopAppender)(nil)
+
+func (n noopAppender) Append(prometheus_storage.SeriesRef, labels.Labels, int64, float64) (prometheus_storage.SeriesRef, error) {
+	return 0, nil
+}
+
+func (n noopAppender) AppendExemplar(prometheus_storage.SeriesRef, labels.Labels, exemplar.Exemplar) (prometheus_storage.SeriesRef, error) {
+	return 0, nil
+}
+
+func (n noopAppender) AppendHistogram(prometheus_storage.SeriesRef, labels.Labels, int64, *histogram.Histogram, *histogram.FloatHistogram) (prometheus_storage.SeriesRef, error) {
+	return 0, nil
+}
+
+func (n noopAppender) Commit() error { return nil }
+
+func (n noopAppender) Rollback() error                                { return nil }
+func (n noopAppender) SetOptions(_ *prometheus_storage.AppendOptions) {}
+
+func (n noopAppender) UpdateMetadata(prometheus_storage.SeriesRef, labels.Labels, metadata.Metadata) (prometheus_storage.SeriesRef, error) {
+	return 0, nil
+}
+
+func (n noopAppender) AppendCTZeroSample(_ prometheus_storage.SeriesRef, _ labels.Labels, _, _ int64) (prometheus_storage.SeriesRef, error) {
+	return 0, nil
+}
+
+func (n *noopAppender) AppendHistogramCTZeroSample(_ prometheus_storage.SeriesRef, _ labels.Labels, _, _ int64, _ *histogram.Histogram, _ *histogram.FloatHistogram) (prometheus_storage.SeriesRef, error) {
+	return 0, nil
+}

@@ -1,0 +1,176 @@
+name: "Grafana Query Integration"
+description: "Take converted rules and convert them into deployable outputs (alert rules, dashboards, etc.) and test them."
+author: "security-operations"
+
+inputs:
+  config_path:
+    description: "Path to the configuration file for the Sigma Rule Integrator"
+    required: true
+    default: ""
+  grafana_sa_token:
+    description: "Service account token for Grafana for query testing"
+    required: false
+    default: ""
+  pretty_print:
+    description: "Pretty print the JSON output"
+    required: false
+    default: "false"
+  output_log_lines:
+    description: "Output log lines to the outputs of the test_query_results"
+    required: false
+    default: "false"
+  all_rules:
+    description: "Whether to integrate all rules"
+    required: false
+    default: "false"
+  changed_files_from_base:
+    description: "Whether to use the changed files from the base branch"
+    required: false
+    default: "false"
+  actions_username:
+    description: "The username of the actions user"
+    required: false
+    default: "github-actions[bot]"
+  continue_on_query_testing_errors:
+    description: "Continue integration process even when query testing fails, but print errors and continue the action"
+    required: false
+    default: "true"
+
+outputs:
+  rules_integrated:
+    description: "The repository file names changed (added/updated or removed) by this Action"
+    value: ${{ steps.set-output.outputs.rules_integrated }}
+  test_query_results:
+    description: "The results of testing the queries against the datasource for the past hour"
+    value: ${{ steps.set-output.outputs.test_query_results }}
+
+runs:
+  using: "composite"
+  steps:
+    - name: Retrieve conversion and deployment paths from config
+      id: config-paths
+      shell: bash
+      env:
+        CONFIG_PATH: ${{ inputs.config_path }}
+      run: |
+        CONVERSION_PATH=$(yq -r '.folders.conversion_path' "${CONFIG_PATH}")
+        echo "conversion_path=${CONVERSION_PATH}" >> $GITHUB_OUTPUT
+        DEPLOYMENT_PATH=$(yq -r '.folders.deployment_path' "${CONFIG_PATH}")
+        echo "deployment_path=${DEPLOYMENT_PATH}" >> $GITHUB_OUTPUT
+
+    - name: Login to GitHub Container Registry
+      uses: docker/login-action@5e57cd118135c172c3672efd75eb46360885c0ef # v3.6.0
+      with:
+        registry: ghcr.io
+        username: ${{ github.actor }}
+        password: ${{ github.token }}
+    - name: Determine Image Reference
+      id: image-ref
+      shell: bash
+      env:
+        ACTION_REF: ${{ github.action_ref }}
+      run: |
+        REPO_ROOT="$(cd "$GITHUB_ACTION_PATH/../.." && pwd)"
+        "$REPO_ROOT/scripts/determine-image-ref/determine-image-ref.sh" "$ACTION_REF"
+    - name: Identify relevant commits
+      if: ${{ inputs.changed_files_from_base == 'false' }}
+      id: commits
+      shell: bash
+      env:
+        PULL_REQUEST_NUMBER: ${{ github.event.number || github.event.issue.number }}
+        ACTIONS_USERNAME: ${{ inputs.actions_username }}
+        GITHUB_TOKEN: ${{ github.token }}
+        GITHUB_REPOSITORY: ${{ github.repository }}
+        GITHUB_ACTIONS: 'true'
+      run: |
+        REPO_ROOT="$(cd "$GITHUB_ACTION_PATH/../.." && pwd)"
+        cd "$REPO_ROOT/scripts/identify-commits"
+        if [ ! -d "node_modules" ]; then
+          npm ci
+        fi
+        node identify-commits.js
+    - name: Calculate Change Files
+      id: changed-files
+      shell: bash
+      env:
+        CONVERSION_PATH: ${{ steps.config-paths.outputs.conversion_path }}
+        PREVIOUS_REF: ${{ steps.commits.outputs.previous-ref }}
+        BASE_REF: ${{ steps.commits.outputs.base-commit }}
+      run: |
+        git fetch origin
+        echo "Using CONVERSION_PATH: $CONVERSION_PATH"
+        CHANGED_FILES=$(git diff "$PREVIOUS_REF" --name-only --diff-filter=ACMR -- "$CONVERSION_PATH")
+        DELETED_FILES=$(git diff "$PREVIOUS_REF" --name-only --diff-filter=D -- "$CONVERSION_PATH")
+        TEST_FILES=$(git diff "$BASE_REF" --name-only --diff-filter=ACMR -- "$CONVERSION_PATH")
+        echo all_changed_files=${CHANGED_FILES//\\n/} >> "$GITHUB_OUTPUT"
+        echo deleted_files=${DELETED_FILES//\\n/} >> "$GITHUB_OUTPUT"
+        echo test_files=${TEST_FILES//\\n/} >> "$GITHUB_OUTPUT"
+
+    - name: Run Sigma Rule Integrator
+      id: integrate
+      shell: bash
+      env:
+        CONFIG_PATH: ${{ inputs.config_path }}
+        GRAFANA_SA_TOKEN: ${{ inputs.grafana_sa_token }}
+        PRETTY_PRINT: ${{ inputs.pretty_print }}
+        CHANGED_FILES: ${{ steps.changed-files.outputs.all_changed_files }}
+        DELETED_FILES: ${{ steps.changed-files.outputs.deleted_files }}
+        TEST_FILES: ${{ steps.changed-files.outputs.test_files }}
+        ALL_RULES: ${{ inputs.all_rules }}
+        CONTINUE_ON_QUERY_TESTING_ERRORS: ${{ inputs.continue_on_query_testing_errors }}
+        IMAGE_REF: ${{ steps.image-ref.outputs.image_ref }}
+      run: |
+        docker run --rm \
+            -v "$(pwd):/sigma-rules" \
+            -w /sigma-rules \
+            -e GITHUB_OUTPUT=/sigma-rules/github-output \
+            -e INTEGRATOR_CONFIG_PATH="$CONFIG_PATH" \
+            -e INTEGRATOR_GRAFANA_SA_TOKEN="$GRAFANA_SA_TOKEN" \
+            -e PRETTY_PRINT="$PRETTY_PRINT" \
+            -e CHANGED_FILES="$CHANGED_FILES" \
+            -e DELETED_FILES="$DELETED_FILES" \
+            -e TEST_FILES="$TEST_FILES" \
+            -e ALL_RULES="$ALL_RULES" \
+            -e CONTINUE_ON_QUERY_TESTING_ERRORS="$CONTINUE_ON_QUERY_TESTING_ERRORS" \
+            "ghcr.io/grafana/sigma-rule-deployment/sigma-rule-deployer:$IMAGE_REF" \
+            integrate
+    - name: Set output
+      id: set-output
+      shell: bash
+      run: |
+        mv github-output $GITHUB_OUTPUT
+
+    - name: Comment Integrations
+      id: comment-integrations
+      shell: bash
+      env:
+        PULL_REQUEST_NUMBER: ${{ github.event.number || github.event.issue.number }}
+        BASE_REF: ${{ steps.commits.outputs.base-commit }}
+        DEPLOYMENT_PATH: ${{ steps.config-paths.outputs.deployment_path }}
+        TEST_RESULTS: ${{ steps.set-output.outputs.test_query_results }}
+        COMMENT_TITLE: 'Sigma Rule Integrations'
+        COMMENT_IDENTIFIER: 'Sigma Rule Integrations'
+        GITHUB_TOKEN: ${{ github.token }}
+        GITHUB_REPOSITORY: ${{ github.repository }}
+        GITHUB_ACTIONS: 'true'
+      run: |
+        # Generate comment data (git operations)
+        git add "$DEPLOYMENT_PATH"
+        CHANGED_FILES=$(git diff "$BASE_REF" --name-only --diff-filter=ACMR -- "$DEPLOYMENT_PATH")
+        DELETED_FILES=$(git diff "$BASE_REF" --name-only --diff-filter=D -- "$DEPLOYMENT_PATH")
+        
+        # Normalize: replace newlines with spaces
+        CHANGED_FILES=${CHANGED_FILES//$'\n'/ }
+        DELETED_FILES=${DELETED_FILES//$'\n'/ }
+        
+        # Export for comment.js
+        export CHANGED_FILES
+        export DELETED_FILES
+        
+        # Run comment script
+        REPO_ROOT="$(cd "$GITHUB_ACTION_PATH/../.." && pwd)"
+        cd "$REPO_ROOT/scripts/comment-sigma-results"
+        if [ ! -d "node_modules" ]; then
+          npm ci
+        fi
+        node comment.js

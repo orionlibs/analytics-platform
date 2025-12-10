@@ -1,0 +1,15 @@
+name: "regex-labeler"
+description: "Finds a label to assign to an issue based on configured regex expressions and assigns it"
+inputs:
+  cfg-path:
+    default: ".github/regex-labeler.yml"
+    description: "Path for regex labeler config file"
+  gh-token:
+    default: ${{ github.token }}
+    description: "GitHub token to use for API calls"
+outputs:
+  label:
+    description: "The assigned label"
+runs:
+  using: "docker"
+  image: "docker://ghcr.io/grafana/issue-team-scheduler-regex-labeler:v0.16"

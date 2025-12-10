@@ -1,0 +1,97 @@
+{
+    "smithy": "1.0",
+    "shapes": {
+        "ns.foo#Service": {
+            "type": "service",
+            "version": "2018-03-17",
+            "resources": [
+                {
+                    "target": "ns.foo#A"
+                },
+                {
+                    "target": "ns.foo#B"
+                }
+            ],
+            "operations": [
+                {
+                    "target": "ns.foo#O1"
+                }
+            ],
+            "traits": {
+                "aws.api#service": {
+                    "sdkId": "Some Value"
+                },
+                "aws.apigateway#integration": {
+                    "type": "aws",
+                    "uri": "arn:Service",
+                    "httpMethod": "POST"
+                }
+            }
+        },
+        "ns.foo#A": {
+            "type": "resource",
+            "operations": [
+                {
+                    "target": "ns.foo#O2"
+                },
+                {
+                    "target": "ns.foo#O3"
+                }
+            ]
+        },
+        "ns.foo#B": {
+            "type": "resource",
+            "operations": [
+                {
+                    "target": "ns.foo#O4"
+                },
+                {
+                    "target": "ns.foo#O5"
+                }
+            ],
+            "traits": {
+                "aws.apigateway#integration": {
+                    "type": "aws",
+                    "uri": "arn:B",
+                    "httpMethod": "POST"
+                }
+            }
+        },
+        "ns.foo#O1": {
+            "type": "operation",
+            "traits": {
+                "aws.apigateway#integration": {
+                    "type": "aws",
+                    "uri": "arn:O1",
+                    "httpMethod": "POST"
+                }
+            }
+        },
+        "ns.foo#O2": {
+            "type": "operation"
+        },
+        "ns.foo#O3": {
+            "type": "operation",
+            "traits": {
+                "aws.apigateway#integration": {
+                    "type": "aws",
+                    "uri": "arn:O3",
+                    "httpMethod": "POST"
+                }
+            }
+        },
+        "ns.foo#O4": {
+            "type": "operation"
+        },
+        "ns.foo#O5": {
+            "type": "operation",
+            "traits": {
+                "aws.apigateway#integration": {
+                    "type": "aws",
+                    "uri": "arn:O5",
+                    "httpMethod": "POST"
+                }
+            }
+        }
+    }
+}

@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <link rel="shortcut icon" href=/src/fav32.png type=image/x-icon>
+    <script src="https://cdn.jsdelivr.net/npm/d3@6.7.0/dist/d3.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@hpcc-js/wasm@1.12.8/dist/index.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/d3-graphviz@4.1.0/build/d3-graphviz.min.js"></script>
+
+    <script type="importmap">
+      {
+        "imports": {
+          "@grafana/lezer-traceql": "../dist/index.es.js",
+          "@lezer/lr": "https://cdn.jsdelivr.net/npm/@lezer/lr@1.3.0/dist/index.js",
+          "@lezer/common": "https://cdn.jsdelivr.net/npm/@lezer/common@1.0.3/dist/index.js"
+        }
+      }
+    </script>
+
+    <style>
+      #out > svg {
+        width: 100%;
+        height: 100vh;
+      }
+    </style>
+  </head>
+  <body>
+    <textarea style="width: 100%; resize: vertical" id="in" type="text">{ span.foo = 5 }</textarea>
+    <div><span id="cursor-pos" ></span><span id="is-invalid" style="color: #ee0000"></span></div>
+    <div id="out"></div>
+    <script type="module">
+      import('@grafana/lezer-traceql').then(
+        (lezerTraceql) => {
+          const inElem = document.querySelector('#in');
+          const cursorPosElem = document.querySelector('#cursor-pos');
+          const isInvalidElem = document.querySelector('#is-invalid');
+
+          let currentlyVisualizedText = '';
+          let currentlyVisualizedPos = 0;
+
+          const graphViz = d3.select('#out').graphviz();
+
+          inElem.focus();
+          inElem.setSelectionRange(25, 25);
+
+          function getNodeText(node) {
+            const prefix = node.type.isError ? 'ERROR' : node.name;
+            return `${prefix}_${node.index}__${node.from}_${node.to}`;
+          }
+
+          function getGraphLine(node) {
+            const nodeText = getNodeText(node);
+            if (node.parent != null) {
+              const parentText = getNodeText(node.parent);
+              return `${parentText}->${nodeText}`;
+            }
+          }
+
+          function render() {
+            const text = inElem.value;
+            const pos = inElem.selectionStart;
+            const errorNodeCursors = [];
+
+            if (text === currentlyVisualizedText && pos === currentlyVisualizedPos) {
+              // no changes
+              return;
+            }
+
+            const tree = lezerTraceql.parser.parse(text);
+            const cur = tree.cursor(0);
+            const graphLines = [];
+            graphLines.push(getGraphLine(cur.node));
+            while (cur.next()) {
+              if (cur.node.type.isError) {
+                errorNodeCursors.push({...cur});
+              }
+              graphLines.push(getGraphLine(cur.node));
+            }
+
+            const posCur = tree.cursorAt(pos, 1);  // select node corresponding to character on the right of the cursor
+            const nodeText = getNodeText(posCur);
+
+            // Plot tree:
+            // - plot nodes and arrows
+            // - fill selected node
+            // - show red text for error nodes, if any
+            const graphText = `digraph {
+              ${graphLines.join('\n')}
+              ${nodeText} [style=filled]
+              ${(errorNodeCursors || []).map(e => `${getNodeText(e)} [fontcolor="#ff0000"]`).join('\n')}
+            }`.trim();
+
+            graphViz.renderDot(graphText);
+
+            currentlyVisualizedText = text;
+            currentlyVisualizedPos = pos;
+
+            cursorPosElem.innerHTML = pos.toString();
+            
+            // Show error message if errors are detected.
+            // We need to enforce the inner HTML to be an empty string if there are no errors because we need
+            // to reset it in case it was set in the previous render cycle
+            isInvalidElem.innerHTML = errorNodeCursors.length ? " Invalid query!" : "";
+          }
+
+          render();
+
+          inElem.addEventListener('keyup', render);
+          inElem.addEventListener('click', render);
+        },
+        (error) => {
+          window.alert('module import failed. this requires a browser with import map support.');
+          console.error(error);
+        }
+      );
+    </script>
+  </body>
+</html>

@@ -1,0 +1,86 @@
+{
+    "smithy": "1.0",
+    "shapes": {
+        "example.namespace#String": {
+            "type": "string",
+            "traits": {
+                "smithy.api#sensitive": {}
+            }
+        },
+        "example.namespace#Byte": {
+            "type": "byte"
+        },
+        "example.namespace#Short": {
+            "type": "short"
+        },
+        "example.namespace#Integer": {
+            "type": "integer"
+        },
+        "example.namespace#Float": {
+            "type": "float"
+        },
+        "example.namespace#Double": {
+            "type": "double"
+        },
+        "example.namespace#Long": {
+            "type": "long"
+        },
+        "example.namespace#BigDecimal": {
+            "type": "bigDecimal"
+        },
+        "example.namespace#BigInteger": {
+            "type": "bigInteger"
+        },
+        "example.namespace#Blob": {
+            "type": "blob"
+        },
+        "example.namespace#Boolean": {
+            "type": "boolean"
+        },
+        "example.namespace#Timestamp": {
+            "type": "timestamp"
+        },
+        "example.namespace#List": {
+            "type": "list",
+            "member": {
+                "target": "example.namespace#Timestamp"
+            }
+        },
+        "example.namespace#Map": {
+            "type": "map",
+            "key": {
+                "target": "example.namespace#String"
+            },
+            "value": {
+                "target": "example.namespace#List"
+            }
+        },
+        "example.namespace#Structure": {
+            "type": "structure",
+            "members": {
+                "memberName": {
+                    "target": "example.namespace#String"
+                }
+            }
+        },
+        "example.namespace#TaggedUnion": {
+            "type": "union",
+            "members": {
+                "foo": {
+                    "target": "example.namespace#String"
+                },
+                "baz": {
+                    "target": "example.namespace#Integer"
+                }
+            }
+        }
+    },
+    "metadata": {
+        "foo": "baz",
+        "bar": "qux",
+        "list": [
+            "a",
+            "b"
+        ]
+    }
+}

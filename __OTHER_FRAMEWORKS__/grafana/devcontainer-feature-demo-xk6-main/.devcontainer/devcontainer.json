@@ -1,0 +1,13 @@
+{
+  "name": "devcontainer-feature-demo-xk6",
+  "image": "mcr.microsoft.com/devcontainers/base:1-bookworm",
+
+  "features": {
+    "ghcr.io/devcontainers/features/go:1": {
+      "version": "1.23",
+      "golangciLintVersion": "1.63.4"
+    },
+    "ghcr.io/grafana/devcontainer-features/xk6:1": { "version": "0.14.0" },
+    "ghcr.io/devcontainers/features/node:1": { "version": "22" }
+  }
+}

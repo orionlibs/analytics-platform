@@ -1,0 +1,61 @@
+name: Publish to crates.io
+
+on:
+  workflow_dispatch:
+  release:
+    types: [published]
+
+permissions:
+  contents: read
+
+jobs:
+  publish-pyroscope:
+    name: pyroscope-lib
+    runs-on: ubuntu-x64-small
+    if: "startsWith(github.event.release.tag_name, 'lib-')"
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          persist-credentials: false
+      - uses: dtolnay/rust-toolchain@888c2e1ea69ab0d4330cbf0af1ecc7b68f368cc1
+        with:
+          toolchain: 1.85.0
+      - name: publish pyroscope crate
+        run: |
+          cargo login ${{ secrets.CARGO_TOKEN }}
+          cargo publish
+  publish-pprofrs:
+    name: "Backend: pprofrs"
+    runs-on: ubuntu-x64-small
+    if: "startsWith(github.event.release.tag_name, 'pprofrs-')"
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          persist-credentials: false
+      - uses: dtolnay/rust-toolchain@888c2e1ea69ab0d4330cbf0af1ecc7b68f368cc1
+        with:
+          toolchain: 1.85.0
+      - name: publish pprofrs crate
+        run: |
+          set -ex
+          cargo login ${{ secrets.CARGO_TOKEN }}
+          cargo publish --manifest-path pyroscope_backends/pyroscope_pprofrs/Cargo.toml
+  publish-python:
+    name: "Python" 
+    runs-on: ubuntu-x64-small
+    if: "startsWith(github.event.release.tag_name, 'python-')"
+    steps:
+      - uses: robinraju/release-downloader@daf26c55d821e836577a15f77d86ddc078948b05 # 1.12
+        with: 
+          tag: ${{ github.event.release.tag_name }}
+          fileName: "*"
+          tarBall: false 
+          zipBall: false 
+          out-file-path: "dist"
+          token: ${{ secrets.GITHUB_TOKEN }}
+      - name: Publish a Python distribution to PyPI
+        uses: pypa/gh-action-pypi-publish@ed0c53931b1dc9bd32cbe73a98c7f6766f8a527e # v1.13.0
+        with:
+          user: __token__
+          password: ${{ secrets.PYPI_API_TOKEN }}
+

@@ -1,0 +1,241 @@
+#!/usr/bin/env bash
+set -eo pipefail  # Exit immediately if a command fails.
+
+scriptDir=$(dirname "$(readlink -f "$0")")
+source "${scriptDir}/includes/cluster/common.sh"
+
+usage() {
+  echo "USAGE: deploy-subject [<test-dir>]"
+  echo ""
+  echo "Deploys the subject to be tested."
+  echo ""
+  echo "  <test-dir>           - The test directory. If not provided, the current directory is used."
+  echo "                         Expects this file to exist:"
+  echo "    test-plan.yaml        - The test plan."
+}
+
+# Argument parsing
+if [ "${1}" == "-h" ] || [ "${1}" == "-help" ] || [ "${1}" == "--help" ]; then
+  usage
+  exit 0
+fi
+
+testDir=$1
+if [ -z "${testDir}" ]; then
+  testDir=$(pwd)
+elif [ ! -d "${testDir}" ]; then
+  echo "Argument is not a valid directory: ${testDir}"
+  usage
+  exit 1
+fi
+testPlan=$(realpath "${testDir}/test-plan.yaml")
+
+if [ ! -f "${testPlan}" ]; then
+  echo "test-plan.yaml file not found in ${testDir}"
+  usage
+  exit 1
+fi
+
+# Start of script
+clusterName=$(getClusterName "${testPlan}")
+
+subjectType=$(yq eval '.subject.type // "helm"' "${testPlan}")
+subjectPath=$(yq eval '.subject.path // ""' "${testPlan}")
+
+extraArgs=()
+for arg in $(yq eval -r '.subject.extraArgs[] // ""' "${testPlan}"); do
+  extraArgs+=("${arg}")
+done
+
+# Check for a namespace
+namespaceArg=()
+releaseNamespace=$(yq eval '.subject.namespace // ""' "${testPlan}")
+if [ -n "${releaseNamespace}" ]; then
+  namespaceArg=(--namespace "${releaseNamespace}" --create-namespace)
+fi
+
+if [ "${subjectType}" == "manifest" ]; then
+  echo; echo "### Deploying manifest: ${subjectPath}"
+  subjectPath=$(realpath "${testDir}/${subjectPath}")
+  applyCommand=(kubectl apply -f "${subjectPath}" "${namespaceArg[@]}" "${extraArgs[@]}")
+  echo "${applyCommand[@]}"
+  "${applyCommand[@]}"
+elif [ "${subjectType}" == "terraform" ]; then
+  echo; echo "### Deploying via terraform: ${subjectPath}"
+  subjectPath=$(realpath "${testDir}/${subjectPath}")
+  initCommmand=(terraform -chdir="${subjectPath}" init)
+  echo "${initCommmand[@]}"
+  "${initCommmand[@]}"
+  applyCommand=(terraform -chdir="${subjectPath}" apply -auto-approve)
+  echo "${applyCommand[@]}"
+  "${applyCommand[@]}"
+elif [ "${subjectType}" == "helmfile" ]; then
+  echo; echo "### Deploying via helmfile: ${subjectPath}"
+  subjectPath=$(realpath "${testDir}/${subjectPath}")
+  applyCommand=(helmfile apply -f "${subjectPath}" "${namespaceArg[@]}" "${extraArgs[@]}")
+  echo "${applyCommand[@]}"
+  "${applyCommand[@]}"
+elif [ "${subjectType}" == "helm" ]; then
+  releaseName=$(yq eval '.subject.releaseName // .name' "${testPlan}")
+
+  helmCommand=(helm upgrade --install --wait "${releaseName}")
+  helmUpgradeCommand=(helm upgrade --install --wait "${releaseName}")
+
+  chart=$(yq eval '.subject.chart // ""' "${testPlan}")
+  repository=$(yq eval '.subject.repository // ""' "${testPlan}")
+
+  chartArg=()
+  if [ -n "${chart}" ] && [ -n "${repository}" ]; then
+    chartName=$(helm show chart --repo "${repository}" "${chart}" | yq .name)
+    chartArg=(--repo "${repository}" "${chart}")
+  fi
+
+  if [ -n "${subjectPath}" ]; then
+    if ! grep "^oci://" <<< "${subjectPath}" > /dev/null; then
+      subjectPath=$(realpath "${testDir}/${subjectPath}")
+    fi
+    chartName=$(helm show chart "${subjectPath}" | yq .name)
+    chartArg=("${subjectPath}")
+  fi
+
+  versionArg=()
+  chartVersion=$(yq eval '.subject.version // ""' "${testPlan}")
+  if [ -n "${chartVersion}" ]; then
+    if [ "${chartVersion}" == "latest" ]; then
+      versionArg=()
+    elif [ "${chartVersion}" == "previous-major" ]; then
+      IFS='.' read -r major _ _ <<< "$(helm show chart "${chartArg[@]}" | yq .version)}"
+      versionArg=(--version "$((major > 0 ? major - 1 : 0))")
+    elif [ "${chartVersion}" == "previous-minor" ]; then
+      IFS='.' read -r major minor _ <<< "$(helm show chart "${chartArg[@]}" | yq .version)"
+      versionArg=(--version "${major}.$(( minor > 0 ? minor - 1 : 0 ))")
+    elif [ "${chartVersion}" == "previous-patch" ]; then
+      IFS='.' read -r major minor patch <<< "$(helm show chart "${chartArg[@]}" | yq .version)"
+      versionArg=(--version "${major}.${minor}.$(( patch > 0 ? patch - 1 : 0 ))")
+    else
+      versionArg=(--version "${chartVersion}")
+    fi
+  fi
+
+  # Check for a values file
+  valuesArg=()
+  chartValuesFile=$(yq eval '.subject.valuesFile // ""' "${testPlan}")
+  if [ -n "${chartValuesFile}" ]; then
+    chartValuesFile=$(realpath "${testDir}/${chartValuesFile}")
+    if [ -f "${chartValuesFile}" ]; then
+      valuesArg+=(-f "${chartValuesFile}")
+    else
+      echo "Upgrade values file not found: ${chartValuesFile}."
+      exit 1
+    fi
+  fi
+
+  # Check for values that are defined directly in the test plan
+  chartValues=$(yq eval '.subject.values // ""' "${testPlan}")
+  if [ -n "${chartValues}" ]; then
+    valuesFile=$(mktemp /tmp/values.yaml.XXXXXX)
+    trap 'rm -f "${valuesFile}"' EXIT  # Ensure the temporary file is removed on exit
+    echo "${chartValues}" > "${valuesFile}"
+    valuesArg+=(-f "${valuesFile}")
+  fi
+
+  # Check for `set` directives
+  setCount=$(yq eval '.subject.set | length - 0' "${testPlan}")
+  if [ "${setCount}" -gt 0 ]; then
+    for i in $(seq 0 "${setCount}"); do
+      setKey=$(yq eval -r ".subject.set[${i}].key // \"\"" "${testPlan}")
+      setValue=$(yq eval -r ".subject.set[${i}].value // \"\"" "${testPlan}")
+      setValueFrom=$(yq eval -r ".subject.set[${i}].valueFrom // \"\"" "${testPlan}")
+      if [ -z "${setKey}" ]; then
+        echo "Skipping empty set key at index ${i}"
+        continue
+      fi
+      if [ -n "${setValue}" ]; then
+        valuesArg+=(--set "${setKey}=${setValue}")
+      elif [ -n "${setValueFrom}" ]; then
+        if [ "${setValueFrom}" == "clusterName" ]; then
+          valuesArg+=(--set "${setKey}=${clusterName}")
+        else
+          echo "Unknown valueFrom source: ${setValueFrom} at index ${i}"
+          exit 1
+        fi
+      else
+        echo "Either value or valueFrom must be set for key: ${setKey} at index ${i}"
+      fi
+    done
+  fi
+
+  # Run the helm command
+  echo; echo "### Deploying Helm chart: ${chartName}"
+  helmCommand+=("${chartArg[@]}" "${versionArg[@]}" "${namespaceArg[@]}" "${valuesArg[@]}" "${extraArgs[@]}")
+  echo "${helmCommand[@]}"
+  "${helmCommand[@]}"
+fi
+
+# Run post-install options
+postInstallFilesCount=$(yq eval '.subject.postInstall.files | length - 1' "${testPlan}")
+if [ "${postInstallFilesCount}" -ge 0 ]; then
+  for i in $(seq 0 "${postInstallFilesCount}"); do
+    postInstallFile=$(yq eval ".subject.postInstall.files[${i}]" "${testPlan}")
+    postInstallFile=$(realpath "${testDir}/${postInstallFile}")
+    if [ -f "${postInstallFile}" ]; then
+      echo "#### Deploying Post-install manifest: ${postInstallFile}"
+      kubectl apply -f "${postInstallFile}"
+    else
+      echo "Post-install file not found: ${postInstallFile}."
+      exit 1
+    fi
+  done
+fi
+
+if [ "${subjectType}" == "helm" ]; then
+  upgradeValues=$(yq eval '.subject.upgrade.values // ""' "${testPlan}")
+  upgradeValuesFile=$(yq eval '.subject.upgrade.valuesFile // ""' "${testPlan}")
+  upgradeVersion=$(yq eval '.subject.upgrade.version // ""' "${testPlan}")
+  upgradePath=$(yq eval '.subject.upgrade.path // ""' "${testPlan}")
+  if [ -n "${upgradeValues}" ] || [ -n "${upgradeValuesFile}" ] || [ -n "${upgradeVersion}" ] || [ -n "${upgradePath}" ]; then
+    # Check for values that are defined directly in the test plan
+    if [ -n "${upgradeValues}" ]; then
+      valuesFile=$(mktemp /tmp/values.yaml.XXXXXX)
+      trap 'rm -f "${valuesFile}"' EXIT  # Ensure the temporary file is removed on exit
+      echo "${upgradeValues}" > "${valuesFile}"
+      valuesArg=(-f "${valuesFile}")
+    fi
+
+    # Check for a values file
+    if [ -n "${upgradeValuesFile}" ]; then
+      upgradeValuesFile=$(realpath "${testDir}/${upgradeValuesFile}")
+      if [ -f "${upgradeValuesFile}" ]; then
+        valuesArg=(-f "${upgradeValuesFile}")
+      else
+        echo "Upgrade values file not found: ${upgradeValuesFile}."
+        exit 1
+      fi
+    fi
+
+    if [ -n "${upgradeVersion}" ]; then
+      if [ "${upgradeVersion}" == "latest" ]; then
+        versionArg=()
+      else
+        versionArg=(--version "${upgradeVersion}")
+      fi
+    fi
+
+    if [ -n "${upgradePath}" ]; then
+      if ! grep "^oci://" <<< "${upgradePath}" > /dev/null; then
+        upgradePath=$(realpath "${testDir}/${upgradePath}")
+      fi
+      chartArg=("${upgradePath}")
+    fi
+
+    # Run the helm upgrade command
+    echo; echo "### Upgrading Helm chart: ${chartName}"
+    helmUpgradeCommand+=("${chartArg[@]}" "${versionArg[@]}" "${namespaceArg[@]}" "${valuesArg[@]}")
+    extraArgs=$(yq eval -r '.subject.upgrade.extraArgs[] // ""' "${testPlan}")
+    for arg in ${extraArgs}; do
+      helmUpgradeCommand+=("${arg}")
+    done
+    echo "${helmUpgradeCommand[@]}"
+    "${helmUpgradeCommand[@]}"
+  fi
+fi

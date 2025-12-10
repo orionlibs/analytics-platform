@@ -1,0 +1,77 @@
+//  🌟 This was machine generated.  Do not edit. 🌟
+//  
+//  Frame[0] {
+//      "type": "timeseries-wide",
+//      "typeVersion": [
+//          0,
+//          1
+//      ]
+//  }
+//  Name: 
+//  Dimensions: 2 Fields by 5 Rows
+//  +------------------+-------------------------------+
+//  | Name: queryCount | Name: time                    |
+//  | Labels:          | Labels:                       |
+//  | Type: []*float64 | Type: []*time.Time            |
+//  +------------------+-------------------------------+
+//  | 10               | 2024-05-22 10:09:00 +0000 UTC |
+//  | 10               | 2024-05-22 11:36:00 +0000 UTC |
+//  | 20               | 2024-05-22 12:28:00 +0000 UTC |
+//  | 10               | 2024-05-22 12:41:00 +0000 UTC |
+//  | 10               | 2024-05-22 14:44:00 +0000 UTC |
+//  +------------------+-------------------------------+
+//  
+//  
+//  🌟 This was machine generated.  Do not edit. 🌟
+{
+  "status": 200,
+  "frames": [
+    {
+      "schema": {
+        "meta": {
+          "type": "timeseries-wide",
+          "typeVersion": [
+            0,
+            1
+          ]
+        },
+        "fields": [
+          {
+            "name": "queryCount",
+            "type": "number",
+            "typeInfo": {
+              "frame": "float64",
+              "nullable": true
+            }
+          },
+          {
+            "name": "time",
+            "type": "time",
+            "typeInfo": {
+              "frame": "time.Time",
+              "nullable": true
+            }
+          }
+        ]
+      },
+      "data": {
+        "values": [
+          [
+            10,
+            10,
+            20,
+            10,
+            10
+          ],
+          [
+            1716372540000,
+            1716377760000,
+            1716380880000,
+            1716381660000,
+            1716389040000
+          ]
+        ]
+      }
+    }
+  ]
+}

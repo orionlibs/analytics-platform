@@ -1,0 +1,31 @@
+name: CI
+on:
+  pull_request: ~
+  push:
+    branches:
+      - main
+
+permissions:
+  contents: read
+
+jobs:
+  linters:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 #v5.0.0
+        with:
+          persist-credentials: false
+
+      - name: Install devbox
+        uses: jetify-com/devbox-install-action@a0d2d53632934ae004f878c840055956d9f741b0 #v0.14.0
+        with:
+          enable-cache: 'true'
+
+      - name: Install vendors
+        run: devbox run yarn install --frozen-lockfile
+
+      - name: Compile codebase
+        run: devbox run yarn run compile
+
+      - name: Run linters
+        run: devbox run yarn run lint

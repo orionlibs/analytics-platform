@@ -1,0 +1,134 @@
+plugins {
+    id 'org.springframework.boot' version '2.4.2'
+    id 'io.spring.dependency-management' version '1.0.10.RELEASE'
+    id 'java'
+    id 'application'
+    id 'maven-publish'
+}
+
+group 'ai.asserts.aws-cloudwatch-exporter'
+version = new Date().format("YY.M.0") + '.' + 'git rev-parse --short HEAD'.execute().text.trim()
+
+repositories {
+    mavenCentral()
+}
+
+application {
+    mainClass = 'ai.asserts.aws.CloudWatchExporterApplication'
+}
+
+compileJava {
+    sourceCompatibility = '1.8'
+    targetCompatibility = '1.8'
+}
+
+dependencies {
+    implementation(
+            project(":config"),
+            "com.google.guava:guava:$guavaVersion",
+            "io.micrometer:micrometer-registry-prometheus:$micrometerVersion",
+            "io.hekate:hekate-spring-boot:$hekateVersion",
+            "io.hekate:hekate-jclouds-aws:$hekateVersion",
+            "io.prometheus:simpleclient:$prometheusVersion",
+            "io.prometheus:simpleclient_common:$prometheusVersion",
+            "org.aspectj:aspectjweaver:1.9.6",
+            "com.fasterxml.jackson.core:jackson-databind:$jacksonVersion",
+            "com.fasterxml.jackson.dataformat:jackson-dataformat-yaml:$jacksonVersion",
+            "org.springframework.boot:spring-boot-starter-actuator:$springBootVersion",
+            "org.springframework.boot:spring-boot-starter-web:$springBootVersion",
+            "org.springframework.metrics:spring-metrics:$springMetricsVersion",
+            "org.springframework.boot:spring-boot-starter:$springBootVersion",
+            "software.amazon.awssdk:cloudwatch:$awsSdkVersion",
+            "software.amazon.awssdk:cloudwatchevents:$awsSdkVersion",
+            "software.amazon.awssdk:cloudwatchlogs:$awsSdkVersion",
+            "software.amazon.awssdk:sts:$awsSdkVersion",
+            "software.amazon.awssdk:sqs:$awsSdkVersion",
+            "software.amazon.awssdk:sns:$awsSdkVersion",
+            "software.amazon.awssdk:lambda:$awsSdkVersion",
+            "software.amazon.awssdk:dynamodb:$awsSdkVersion",
+            "software.amazon.awssdk:s3:$awsSdkVersion",
+            "software.amazon.awssdk:ecs:$awsSdkVersion",
+            "software.amazon.awssdk:ec2:$awsSdkVersion",
+            "software.amazon.awssdk:resourcegroupstaggingapi:$awsSdkVersion",
+            "software.amazon.awssdk:config:$awsSdkVersion",
+            "software.amazon.awssdk:elasticloadbalancingv2:$awsSdkVersion",
+            "software.amazon.awssdk:elasticloadbalancing:$awsSdkVersion",
+            "software.amazon.awssdk:autoscaling:$awsSdkVersion",
+            "software.amazon.awssdk:apigateway:$awsSdkVersion",
+            "software.amazon.awssdk:sts:$awsSdkVersion",
+            "software.amazon.awssdk:kinesisanalyticsv2:$awsSdkVersion",
+            "software.amazon.awssdk:firehose:$awsSdkVersion",
+            "software.amazon.awssdk:secretsmanager:$awsSdkVersion",
+            "software.amazon.awssdk:redshift:$awsSdkVersion",
+            "software.amazon.awssdk:kinesis:$awsSdkVersion",
+            "software.amazon.awssdk:rds:$awsSdkVersion",
+            "software.amazon.awssdk:emr:$awsSdkVersion",
+    )
+
+    compileOnly(
+            "org.projectlombok:lombok:$lombokVersion"
+    )
+    annotationProcessor "org.projectlombok:lombok:$lombokVersion"
+
+    testImplementation(
+            "org.junit.jupiter:junit-jupiter-api:$junitJupiterVersion",
+            "org.easymock:easymock:$easyMockVersion"
+    )
+    testRuntimeOnly(
+            "org.junit.jupiter:junit-jupiter-engine:$junitJupiterVersion",
+    )
+}
+
+springBoot {
+    buildInfo()
+}
+
+bootJar {
+    enabled = true
+    manifest {
+        attributes(
+                "Implementation-Title": "AWS Exporter",
+                "Implementation-Vendor": "Asserts",
+                "Implementation-Version": archiveVersion)
+    }
+}
+
+// To test Hekate locally
+//bootRun {
+//    jvmArgs = [
+//            "-Daws_exporter.tenant_mode=single",
+//            "-Daws_exporter.deployment_mode=single-tenant-distributed",
+//            "-Daws_exporter.enabled=true",
+//            "-Dhekate.enable=true",
+//            "-Dhekate.cluster.seed.cloudstore.enable=true",
+//            "-Dhekate.cluster.seed.cloudstore.provider=aws-s3",
+//            "-Dhekate.cluster.seed.cloudstore.container=asserts-hekate-cluster",
+//            "-Dhekate.cluster.namespace=aws-exporter"
+//    ]
+//}
+
+jar {
+    enabled = true
+}
+
+test {
+    useJUnitPlatform()
+}
+
+publishing {
+    repositories {
+        maven {
+            name = "AssertsMavenRepo"
+            url = "s3://asserts-maven-repo"
+            authentication {
+                awsIm(AwsImAuthentication)
+            }
+        }
+    }
+    publications {
+        gpr(MavenPublication) {
+            from(components.java)
+        }
+    }
+}
+

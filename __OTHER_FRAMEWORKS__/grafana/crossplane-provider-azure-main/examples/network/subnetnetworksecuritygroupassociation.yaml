@@ -1,0 +1,10 @@
+apiVersion: network.azure.upbound.io/v1beta1
+kind: SubnetNetworkSecurityGroupAssociation
+metadata:
+  name: example
+spec:
+  forProvider:
+    networkSecurityGroupIdRef:
+      name: example
+    subnetIdRef:
+      name: example

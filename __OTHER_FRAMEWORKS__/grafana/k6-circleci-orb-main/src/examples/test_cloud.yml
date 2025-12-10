@@ -1,0 +1,13 @@
+description: |
+  Executes a k6 test in the k6 Cloud.
+  Ensure you set your K6_CLOUD_TOKEN on the CircleCI environment variables.
+usage:
+  version: 2.1
+  orbs:
+    grafana: grafana/k6@1.1.0 # This version number refers to the version of the orb, not the version of k6
+  workflows:
+    load_test:
+      jobs:
+        - grafana/k6:
+            cloud: true
+            script: tests/cloud-test.js

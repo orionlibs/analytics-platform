@@ -1,0 +1,19 @@
+name: watch
+
+on:
+  schedule:
+    - cron: "5 */2 * * *"
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+
+permissions:
+  actions: write
+  pages: write
+  id-token: write
+  contents: read
+
+jobs:
+  custom-registry:
+    uses: grafana/k6-extension-registry/.github/workflows/custom-registry.yml@main

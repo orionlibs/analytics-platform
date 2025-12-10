@@ -1,0 +1,15 @@
+receivers:
+  awsxray:
+
+extensions:
+  health_check:
+
+exporters:
+  debug:
+
+service:
+  extensions: [health_check]
+  pipelines:
+    traces:
+      receivers: [awsxray]
+      exporters: [debug]

@@ -1,0 +1,17 @@
+# Ignore dist folder
+dist/
+node_modules/
+
+# Sensitive files
+.env*
+*config*.json
+*secrets*
+*.pem
+*.key
+credentials.json
+
+# Ignore dev environment files
+.vscode/
+.idea/
+
+.DS_Store

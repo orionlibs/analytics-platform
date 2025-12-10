@@ -1,0 +1,17 @@
+{
+  "name": "@bsull/augurs-js-testpkg",
+  "type": "module",
+  "private": true,
+  "devDependencies": {
+    "@bsull/augurs": "../augurs",
+    "@bsull/augurs-prophet-wasmstan": "0.2.0",
+    "@types/node": "22.13.10",
+    "typescript": "5.9.3",
+    "vitest": "3.2.4"
+  },
+  "scripts": {
+    "test": "vitest",
+    "test:ci": "vitest run",
+    "typecheck": "tsc --noEmit"
+  }
+}

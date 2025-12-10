@@ -1,0 +1,19 @@
+{
+  "extends": ["@grafana/eslint-config"],
+  "rules": {
+    "react/prop-types": "off",
+    "react/react-in-jsx-scope": "off",
+    "@typescript-eslint/consistent-type-imports": [
+      "error",
+      {
+        "fixStyle": "inline-type-imports",
+        "prefer": "type-imports"
+      },
+    ],
+  },
+  "settings": {
+    "react": {
+      "version": "detect"
+    }
+  }
+}

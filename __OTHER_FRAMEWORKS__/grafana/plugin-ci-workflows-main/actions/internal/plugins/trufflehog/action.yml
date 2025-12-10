@@ -1,0 +1,51 @@
+name: Plugins - Trufflehog secrets scanning
+description: Scans plugin zip files for secrets using Trufflehog.
+
+inputs:
+  trufflehog-version:
+    description: |
+      Version of Trufflehog to install (e.g.: 3.88.1).
+    required: true
+  folder:
+    description: |
+      Folder containing plugin zip files to scan.
+      It will be scanned recursively.
+    required: true
+  include-detectors:
+    description: |
+      Comma-separated list of detector types to include.
+      Protobuf name or IDs may be used, as well as ranges.
+      This value will be passed via the `--include-detectors` option to Trufflehog.
+      If not provided, the flag is not passed.
+    required: false
+  exclude-detectors:
+    description: |
+      Comma-separated list of detector types to exclude.
+      Protobuf name or IDs may be used, as well as ranges.
+      IDs defined here take precedence over the include list.
+      This value will be passed via the `--exclude-detectors` option to Trufflehog.
+      If not provided, the flag is not passed.
+    required: false
+
+runs:
+  using: composite
+  steps:
+    - name: Install Trufflehog
+      shell: bash
+      run: |
+        curl -sSfL https://raw.githubusercontent.com/trufflesecurity/trufflehog/v${TRUFFLEHOG_VERSION}/scripts/install.sh | bash -s -- "v${TRUFFLEHOG_VERSION}"
+      env:
+        TRUFFLEHOG_VERSION: ${{ inputs.trufflehog-version }}
+
+    - name: Run Trufflehog
+      shell: bash
+      run: |
+        ./bin/trufflehog filesystem "${FOLDER}" \
+        --no-update --fail --github-actions \
+        --results=verified,unknown \
+        --include-detectors="${INCLUDE_DETECTORS}" \
+        --exclude-detectors="${EXCLUDE_DETECTORS}"
+      env:
+        INCLUDE_DETECTORS: ${{ inputs.include-detectors || 'all' }}
+        EXCLUDE_DETECTORS: ${{ inputs.exclude-detectors }}
+        FOLDER: ${{ inputs.folder }}

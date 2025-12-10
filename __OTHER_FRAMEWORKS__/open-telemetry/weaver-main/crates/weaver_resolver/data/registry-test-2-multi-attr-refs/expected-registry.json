@@ -1,0 +1,89 @@
+{
+  "registry_url": "https://127.0.0.1",
+  "groups": [
+    {
+      "id": "metric.messaging.attributes",
+      "type": "attribute_group",
+      "brief": "Common messaging metrics attributes.",
+      "attributes": [
+        30,
+        31
+      ],
+      "lineage": {
+        "provenance": {
+          "registry_id": "default",
+          "path": "data/registry-test-2-multi-attr-refs/registry/metrics-messaging.yaml"
+        },
+        "attributes": {
+          "messaging.destination.name": {
+            "source_group": "registry.messaging",
+            "inherited_fields": [
+              "brief",
+              "examples",
+              "note",
+              "stability"
+            ],
+            "locally_overridden_fields": [
+              "requirement_level"
+            ]
+          },
+          "messaging.destination.template": {
+            "source_group": "registry.messaging",
+            "inherited_fields": [
+              "brief",
+              "examples",
+              "note",
+              "stability"
+            ],
+            "locally_overridden_fields": [
+              "requirement_level"
+            ]
+          }
+        }
+      }
+    },
+    {
+      "id": "registry.messaging",
+      "type": "attribute_group",
+      "brief": "Attributes describing telemetry around messaging systems and messaging activities.",
+      "attributes": [
+        0,
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7,
+        8,
+        9,
+        10,
+        11,
+        12,
+        13,
+        14,
+        15,
+        16,
+        17,
+        18,
+        19,
+        20,
+        21,
+        22,
+        23,
+        24,
+        25,
+        26,
+        27,
+        28,
+        29
+      ],
+      "lineage": {
+        "provenance": {
+          "registry_id": "default",
+          "path": "data/registry-test-2-multi-attr-refs/registry/registry-messaging.yaml"
+        }
+      }
+    }
+  ]
+}

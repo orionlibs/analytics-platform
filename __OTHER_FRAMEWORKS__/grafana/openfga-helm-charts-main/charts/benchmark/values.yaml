@@ -1,0 +1,18 @@
+k6:
+  projectID:
+  secretKeyName: k6-cloud-token
+  secretKeyToken: token
+  setupTimeoutInMs: 1200000
+resources:
+  requests:
+    memory: 256Mi
+  limits:
+    memory: 512Mi
+Nparam: 1
+Mparam: 1
+Kparam: 1
+testCase: 1
+testCheck: true
+testListObject: false
+tuplesPerWrite: 100
+tuplesPosition: start

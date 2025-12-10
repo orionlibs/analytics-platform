@@ -1,0 +1,19 @@
+---
+yaml-files:
+  - "*.yaml"
+  - "*.yml"
+  - ".yamllint"
+
+ignore:
+  - .git
+  - charts/**/templates
+  - charts/**/docs/examples/*/output.yaml
+  - kubeconfig.yaml
+  - node_modules
+
+extends: default
+
+rules:
+  line-length:
+    max: 200
+    level: warning

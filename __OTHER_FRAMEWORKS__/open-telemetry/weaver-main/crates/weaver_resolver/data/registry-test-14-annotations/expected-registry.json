@@ -1,0 +1,55 @@
+{
+  "registry_url": "https://127.0.0.1",
+  "groups": [
+    {
+      "id": "attrs",
+      "type": "attribute_group",
+      "brief": "Attributes",
+      "attributes": [
+        0,
+        1
+      ],
+      "lineage": {
+        "provenance": {
+          "registry_id": "default",
+          "path": "data/registry-test-14-annotations/registry/group-with-annotations.yaml"
+        }
+      },
+      "annotations": {
+        "privacy_sensitivity": "PII",
+        "code_generation": {
+          "exclude": true
+        }
+      }
+    },
+    {
+      "id": "attrs_ext",
+      "type": "attribute_group",
+      "brief": "Attributes",
+      "attributes": [
+        2
+      ],
+      "lineage": {
+        "provenance": {
+          "registry_id": "default",
+          "path": "data/registry-test-14-annotations/registry/group-with-annotations.yaml"
+        },
+        "attributes": {
+          "attr1": {
+            "source_group": "attrs",
+            "inherited_fields": [
+              "brief",
+              "examples",
+              "note",
+              "requirement_level",
+              "stability"
+            ],
+            "locally_overridden_fields": [
+              "annotations"
+            ]
+          }
+        }
+      }
+    }
+  ]
+}

@@ -1,0 +1,177 @@
+name: Docker
+
+on:
+  merge_group:
+  pull_request:
+  push:
+    tags:
+      - "*"
+    branches:
+      - main
+
+env:
+  REGISTRY_IMAGE: ghcr.io/grafana/flagger-k6-webhook
+  TAG_CONFIG: |
+    type=raw,value=latest,enable=${{ github.ref == 'refs/heads/main' && github.event_name == 'push' }}
+    type=raw,value={{tag}},enable=${{ startsWith(github.ref, 'refs/tags/') && github.event_name == 'push' }}
+    type=sha,enable=${{ github.event_name == 'pull_request' }}
+
+jobs:
+  # We create a docker image per platform in this first step:
+  build:
+    strategy:
+      fail-fast: false
+      # Based on
+      # https://github.com/orgs/community/discussions/26253#discussioncomment-6745038
+      # we only want amd64 images to be built for PRs to speed up the feedback
+      # loop:
+      matrix:
+        platform:
+          - linux/amd64
+          - linux/arm64
+        isPR:
+          - ${{ github.event_name == 'pull_request' }}
+        include:
+          - platform: linux/amd64
+        exclude:
+          - isPR: true
+
+    runs-on: ubuntu-latest
+
+    permissions:
+      contents: read
+      packages: write
+
+    steps:
+      - name: Login to GitHub Container Registry
+        uses: docker/login-action@5e57cd118135c172c3672efd75eb46360885c0ef # v3.6.0
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Checkout Repository
+        id: checkout
+        uses: actions/checkout@1af3b93b6815bc44a9784bd300feb67ff0d1eeb3 # v6.0.0
+        with:
+          # Workaround for https://github.com/actions/checkout/issues/1467 as the
+          # project is not that large:
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@c7c53464625b32c7a7e944ae62b3e17d2b600130 # v3.7.0
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@e468171a9de216ec08956ac3ada2f0791b6bd435 # v3.11.1
+
+      - name: Get version
+        id: version
+        env:
+          GIT_REF_TYPE: "${{ github.ref_type }}"
+        run: |
+          if [[ "$GIT_REF_TYPE" == "tag" ]]; then
+            echo "binary_version=$(git describe --tags --abbrev=0 --match 'v*')" >> "${GITHUB_OUTPUT}"
+          else
+            echo "binary_version=$(git describe --tags --match 'v*')" >> "${GITHUB_OUTPUT}"
+          fi
+
+      - name: Extract metadata (tags, labels) for Docker
+        id: meta
+        uses: docker/metadata-action@318604b99e75e41977312d83839a89be02ca4893 # v5.9.0
+        with:
+          images: ${{ env.REGISTRY_IMAGE }}
+          tags: ${{ env.TAG_CONFIG }}
+
+      - name: Build and push Docker image
+        id: build
+        uses: docker/build-push-action@263435318d21b8e681c14492fe198d362a7d2c83 # v6.18.0
+        with:
+          context: .
+          platforms: ${{ matrix.platform }}
+          labels: ${{ steps.meta.outputs.labels }}
+          outputs: |
+            type=image,name=${{ env.REGISTRY_IMAGE }},push-by-digest=true,name-canonical=true,push=${{ github.event_name != 'pull_request' }}
+            ${{ github.event_name == 'pull_request' && 'type=docker,name=testimage' || ''}}
+          build-args: |
+            GO_LDFLAGS=-X github.com/prometheus/common/version.Revision=${{ steps.checkout.outputs.commit }} -X github.com/prometheus/common/version.Version=${{ steps.version.outputs.binary_version }}
+
+      - name: Print binary version
+        if: github.event_name == 'pull_request'
+        run: |
+          docker run --rm "testimage:latest" --version
+
+      - name: Export digest
+        id: digest
+        if: github.event_name != 'pull_request'
+        env:
+          DIGEST: ${{ steps.build.outputs.digest }}
+        run: |
+          mkdir -p /tmp/digests
+          touch "/tmp/digests/${DIGEST#sha256:}"
+          echo "artifact_name=digests-${{ matrix.platform }}" | sed -e 's/\//-/g' >> "$GITHUB_OUTPUT"
+
+      - name: Upload digest
+        if: github.event_name != 'pull_request'
+        uses: actions/upload-artifact@330a01c490aca151604b8cf639adc76d48f6c5d4 # v5.0.0
+        with:
+          name: ${{ steps.digest.outputs.artifact_name }}
+          path: /tmp/digests/*
+          if-no-files-found: error
+          retention-days: 1
+
+  merge:
+    runs-on: ubuntu-latest
+    if: github.event_name != 'pull_request'
+    permissions:
+      contents: read
+      packages: write
+    needs:
+      - build
+    steps:
+      - name: Download digests (linux/amd64)
+        uses: actions/download-artifact@018cc2cf5baa6db3ef3c5f8a56943fffe632ef53 # v6.0.0
+        with:
+          name: digests-linux-amd64
+          path: /tmp/digests-linux-amd64
+
+      - name: Download digests (linux/arm64)
+        uses: actions/download-artifact@018cc2cf5baa6db3ef3c5f8a56943fffe632ef53 # v6.0.0
+        with:
+          name: digests-linux-arm64
+          path: /tmp/digests-linux-arm64
+
+      - name: Merge digests
+        run: |
+          mkdir -p /tmp/digests
+          cp /tmp/digests-linux-amd64/* /tmp/digests/
+          cp /tmp/digests-linux-arm64/* /tmp/digests/
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@e468171a9de216ec08956ac3ada2f0791b6bd435 # v3.11.1
+
+      - name: Docker meta
+        id: meta
+        uses: docker/metadata-action@318604b99e75e41977312d83839a89be02ca4893 # v5.9.0
+        with:
+          images: ${{ env.REGISTRY_IMAGE }}
+          tags: ${{ env.TAG_CONFIG }}
+
+      - name: Login to GitHub Container Registry
+        uses: docker/login-action@5e57cd118135c172c3672efd75eb46360885c0ef # v3.6.0
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Create manifest list and push
+        working-directory: /tmp/digests
+        run: |
+          docker buildx imagetools create $(jq -cr '.tags | map("-t " + .) | join(" ")' <<< "$DOCKER_METADATA_OUTPUT_JSON") \
+            $(printf '${{ env.REGISTRY_IMAGE }}@sha256:%s ' *)
+
+      - name: Inspect image
+        env:
+          RELEASE_VERSION: "${{ steps.meta.outputs.version }}"
+        run: |
+          docker buildx imagetools inspect ${{ env.REGISTRY_IMAGE }}:${RELEASE_VERSION}

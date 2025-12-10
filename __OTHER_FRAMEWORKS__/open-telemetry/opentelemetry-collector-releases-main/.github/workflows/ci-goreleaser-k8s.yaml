@@ -1,0 +1,50 @@
+name: CI - k8s - GoReleaser
+
+on:
+  merge_group:
+  push:
+    branches:
+      - main
+      - release/*
+    paths:
+      - "distributions/otelcol-k8s/**"
+      - "cmd/**"
+      - ".github/**"
+      - "scripts/**"
+      - "Makefile"
+      - "go.mod"
+      - "go.sum"
+  pull_request:
+    branches:
+      - main
+      - release/*
+    paths:
+      - "distributions/otelcol-k8s/**"
+      - "cmd/**"
+      - ".github/**"
+      - "scripts/**"
+      - "Makefile"
+      - "go.mod"
+      - "go.sum"
+
+permissions:
+  contents: read
+
+jobs:
+  check-goreleaser:
+    name: CI - k8s - GoReleaser
+    uses: ./.github/workflows/base-ci-goreleaser.yaml
+    with:
+      distribution: otelcol-k8s
+      goos: '[ "linux" ]'
+      goarch: '[ "amd64", "arm64", "ppc64le", "riscv64", "s390x" ]'
+    secrets: inherit
+  check-goreleaser-windows:
+    name: CI - k8s - GoReleaser
+    uses: ./.github/workflows/base-ci-goreleaser.yaml
+    with:
+      distribution: otelcol-k8s
+      goos: '[ "windows" ]'
+      goarch: '[ "amd64" ]'
+      runner_os: 'windows-2022'
+    secrets: inherit

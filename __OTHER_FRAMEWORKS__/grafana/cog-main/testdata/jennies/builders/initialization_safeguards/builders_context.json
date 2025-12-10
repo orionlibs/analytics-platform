@@ -1,0 +1,265 @@
+{
+  "Schemas": [
+    {
+      "Package": "initialization_safeguards",
+      "Metadata": {},
+      "Objects": {
+        "LegendOptions": {
+          "Name": "LegendOptions",
+          "Type": {
+            "Kind": "struct",
+            "Nullable": false,
+            "Struct": {
+              "Fields": [
+                {
+                  "Name": "show",
+                  "Type": {
+                    "Kind": "scalar",
+                    "Nullable": false,
+                    "Scalar": {
+                      "ScalarKind": "bool"
+                    }
+                  },
+                  "Required": true
+                }
+              ]
+            }
+          },
+          "SelfRef": {
+            "ReferredPkg": "initialization_safeguards",
+            "ReferredType": "LegendOptions"
+          }
+        },
+        "Options": {
+          "Name": "Options",
+          "Type": {
+            "Kind": "struct",
+            "Nullable": false,
+            "Struct": {
+              "Fields": [
+                {
+                  "Name": "legend",
+                  "Type": {
+                    "Kind": "ref",
+                    "Nullable": false,
+                    "Default": {
+                      "show": true
+                    },
+                    "Ref": {
+                      "ReferredPkg": "initialization_safeguards",
+                      "ReferredType": "LegendOptions"
+                    }
+                  },
+                  "Required": true
+                }
+              ]
+            }
+          },
+          "SelfRef": {
+            "ReferredPkg": "initialization_safeguards",
+            "ReferredType": "Options"
+          }
+        },
+        "SomePanel": {
+          "Name": "SomePanel",
+          "Type": {
+            "Kind": "struct",
+            "Nullable": false,
+            "Struct": {
+              "Fields": [
+                {
+                  "Name": "title",
+                  "Type": {
+                    "Kind": "scalar",
+                    "Nullable": false,
+                    "Scalar": {
+                      "ScalarKind": "string"
+                    }
+                  },
+                  "Required": true
+                },
+                {
+                  "Name": "options",
+                  "Type": {
+                    "Kind": "ref",
+                    "Nullable": true,
+                    "Ref": {
+                      "ReferredPkg": "initialization_safeguards",
+                      "ReferredType": "Options"
+                    }
+                  },
+                  "Required": false
+                }
+              ]
+            }
+          },
+          "SelfRef": {
+            "ReferredPkg": "initialization_safeguards",
+            "ReferredType": "SomePanel"
+          }
+        }
+      }
+    }
+  ],
+  "Builders": [
+    {
+      "For": {
+        "Name": "SomePanel",
+        "Type": {
+          "Kind": "struct",
+          "Nullable": false,
+          "Struct": {
+            "Fields": [
+              {
+                "Name": "title",
+                "Type": {
+                  "Kind": "scalar",
+                  "Nullable": false,
+                  "Scalar": {
+                    "ScalarKind": "string"
+                  }
+                },
+                "Required": true
+              },
+              {
+                "Name": "options",
+                "Type": {
+                  "Kind": "ref",
+                  "Nullable": true,
+                  "Ref": {
+                    "ReferredPkg": "initialization_safeguards",
+                    "ReferredType": "Options"
+                  }
+                },
+                "Required": false
+              }
+            ]
+          }
+        },
+        "SelfRef": {
+          "ReferredPkg": "initialization_safeguards",
+          "ReferredType": "SomePanel"
+        }
+      },
+      "Package": "initialization_safeguards",
+      "Name": "SomePanel",
+      "Options": [
+        {
+          "Name": "title",
+          "Args": [
+            {
+              "Name": "title",
+              "Type": {
+                "Kind": "scalar",
+                "Nullable": false,
+                "Scalar": {
+                  "ScalarKind": "string"
+                }
+              }
+            }
+          ],
+          "Assignments": [
+            {
+              "Path": [
+                {
+                  "Identifier": "title",
+                  "Type": {
+                    "Kind": "scalar",
+                    "Nullable": false,
+                    "Scalar": {
+                      "ScalarKind": "string"
+                    }
+                  }
+                }
+              ],
+              "Value": {
+                "Argument": {
+                  "Name": "title",
+                  "Type": {
+                    "Kind": "scalar",
+                    "Nullable": false,
+                    "Scalar": {
+                      "ScalarKind": "string"
+                    }
+                  }
+                }
+              },
+              "Method": "direct"
+            }
+          ],
+          "IsConstructorArg": false
+        },
+        {
+          "Name": "showLegend",
+          "Args": [
+            {
+              "Name": "show",
+              "Type": {
+                "Kind": "scalar",
+                "Nullable": false,
+                "Scalar": {
+                  "ScalarKind": "bool"
+                }
+              }
+            }
+          ],
+          "Assignments": [
+            {
+              "Path": [
+                {
+                  "Identifier": "options",
+                  "Type": {
+                    "Kind": "ref",
+                    "Nullable": true,
+                    "Ref": {
+                      "ReferredPkg": "initialization_safeguards",
+                      "ReferredType": "Options"
+                    }
+                  }
+                },
+                {
+                  "Identifier": "legend",
+                  "Type": {
+                    "Kind": "ref",
+                    "Nullable": false,
+                    "Default": {
+                      "show": true
+                    },
+                    "Ref": {
+                      "ReferredPkg": "initialization_safeguards",
+                      "ReferredType": "LegendOptions"
+                    }
+                  }
+                },
+                {
+                  "Identifier": "show",
+                  "Type": {
+                    "Kind": "scalar",
+                    "Nullable": false,
+                    "Scalar": {
+                      "ScalarKind": "bool"
+                    }
+                  }
+                }
+              ],
+              "Value": {
+                "Argument": {
+                  "Name": "show",
+                  "Type": {
+                    "Kind": "scalar",
+                    "Nullable": false,
+                    "Scalar": {
+                      "ScalarKind": "bool"
+                    }
+                  }
+                }
+              },
+              "Method": "direct"
+            }
+          ],
+          "IsConstructorArg": false
+        }
+      ]
+    }
+  ]
+}

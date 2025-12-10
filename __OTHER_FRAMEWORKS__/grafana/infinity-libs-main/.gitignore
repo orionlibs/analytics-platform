@@ -1,0 +1,16 @@
+# packages
+node_modules
+
+# build
+.turbo
+dist
+
+# temp files
+temp
+*.log
+
+# env
+.env
+
+# IDE
+.idea

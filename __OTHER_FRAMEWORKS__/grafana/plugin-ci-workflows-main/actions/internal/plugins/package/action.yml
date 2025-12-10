@@ -1,0 +1,99 @@
+name: Plugins - Sign and package ZIP(s)
+description: Signs and packages a plugin into ZIP file(s).
+
+inputs:
+  dist-folder:
+    description: Plugin 'dist' folder to sign and add to the ZIP.
+    required: false
+    default: "dist"
+  output-folder:
+    description: Folder where output ZIP file(s) will be saved
+    required: true
+  universal:
+    description: |
+      If true, package only a single "universal" ZIP.
+      If false, package separate ZIPs for each os/arch.
+    required: false
+    default: "true"
+  access-policy-token:
+    description: |
+      Grafana access policy token used to sign the plugin.
+      If not provided, the plugin will not be signed.
+    required: false
+    default: ""
+  allow-unsigned:
+    description: |
+      If true, allow packaging unsigned plugins (print a warning if the plugin could not be signed).
+      If false, only allow packaging signed plugins (fail the action if the plugin could not be signed).
+    required: false
+    default: "false"
+  signature-type:
+    description: Specify signature type to use when signing the plugin
+    required: false
+    default: "grafana"
+
+outputs:
+  zip:
+    description: |
+      ZIP file name(s)
+      This can be a string or JSON array, depending on 'universal'.
+      If 'universal' is true, this will be a string.
+      If 'universal' is false, this will be a JSON array of strings.
+    value: ${{ steps.output.outputs.zip }}
+
+runs:
+  using: composite
+  steps:
+    - name: Environment check
+      run: |
+        if [ -z "${ACCESS_POLICY_TOKEN}" ]; then
+          echo "Warning: No access policy token provided, plugin will not be signed."
+          if [ "${ALLOW_UNSIGNED}" != "true" ]; then
+            echo "Error: Packaging unsigned plugins is not allowed."
+            echo "Please provide a Grafana access policy token."
+            exit 1
+          fi
+        fi
+      env:
+        ACCESS_POLICY_TOKEN: ${{ inputs.access-policy-token }}
+        ALLOW_UNSIGNED: ${{ inputs.allow-unsigned }}
+      shell: bash
+
+    - name: Package universal ZIP
+      if: inputs.universal == 'true'
+      shell: bash
+      run: >
+        ${{ github.action_path }}/package.sh
+        --universal
+        ${DIST_FOLDER} ${OUTPUT_FOLDER}
+      env:
+        GRAFANA_ACCESS_POLICY_TOKEN: ${{ inputs.access-policy-token }}
+        SIGNATURE_TYPE: ${{ inputs.signature-type }}
+        DIST_FOLDER: ${{ inputs.dist-folder }}
+        OUTPUT_FOLDER: ${{ inputs.output-folder }}
+
+    - name: Package os/arch ZIPs
+      if: inputs.universal != 'true'
+      shell: bash
+      run: >
+        ${{ github.action_path }}/package.sh
+        ${DIST_FOLDER} ${OUTPUT_FOLDER}
+      env:
+        GRAFANA_ACCESS_POLICY_TOKEN: ${{ inputs.access-policy-token }}
+        SIGNATURE_TYPE: ${{ inputs.signature-type }}
+        DIST_FOLDER: ${{ inputs.dist-folder }}
+        OUTPUT_FOLDER: ${{ inputs.output-folder }}
+
+    - name: Output
+      id: output
+      shell: bash
+      run: |
+        cd ${OUTPUT_FOLDER}
+        if [ ${UNIVERSAL} == 'true' ]; then
+          echo "zip=$(ls -1 *.zip)" >> "$GITHUB_OUTPUT"
+        else
+          echo "zip=$(ls -1 *.zip | jq -RncM '[inputs]')" >> "$GITHUB_OUTPUT"
+        fi
+      env:
+        OUTPUT_FOLDER: ${{ inputs.output-folder }}
+        UNIVERSAL: ${{ inputs.universal }}

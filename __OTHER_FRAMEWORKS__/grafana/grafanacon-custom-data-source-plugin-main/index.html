@@ -1,0 +1,384 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>API Server for Grafanacon</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            line-height: 1.6;
+            margin: 20px;
+            max-width: 800px;
+        }
+        h1 {
+            color: #3B7A57;
+        }
+        a {
+            color: #0066cc;
+        }
+        .endpoint {
+            background-color: #f4f4f4;
+            padding: 10px;
+            border-radius: 5px;
+            margin: 10px 0;
+        }
+        .commit-section {
+            margin-top: 30px;
+            border-top: 1px solid #ddd;
+            padding-top: 20px;
+        }
+        .commit-item {
+            margin-bottom: 15px;
+            padding-bottom: 15px;
+            border-bottom: 1px dashed #eee;
+            position: relative;
+            padding-left: 35px;
+        }
+        .commit-number {
+            position: absolute;
+            left: 0;
+            top: 0;
+            background-color: #3B7A57;
+            color: white;
+            width: 25px;
+            height: 25px;
+            border-radius: 50%;
+            text-align: center;
+            line-height: 25px;
+            font-weight: bold;
+        }
+        .list-item-number {
+            display: inline-block;
+            background-color: #5a9b78;
+            color: white;
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            text-align: center;
+            line-height: 20px;
+            font-weight: bold;
+            font-size: 0.8em;
+            margin-right: 5px;
+        }
+        .commit-title {
+            font-weight: bold;
+            margin-bottom: 5px;
+        }
+        .commit-description {
+            margin-left: 20px;
+            color: #555;
+        }
+        /* Linkable header styles */
+        h1[id], h2[id], h3[id] {
+            position: relative;
+        }
+        h1[id]:hover:after, h2[id]:hover:after, h3[id]:hover:after {
+            content: " 🔗";
+            font-size: 0.8em;
+            color: #999;
+        }
+        h1[id], h2[id], h3[id] {
+            scroll-margin-top: 20px;
+        }
+        /* Table of contents */
+        .toc {
+            background-color: #f8f8f8;
+            padding: 15px;
+            border-radius: 5px;
+            margin-bottom: 30px;
+        }
+        .toc ul {
+            padding-left: 20px;
+        }
+        .commit-item ul {
+            list-style-type: none;
+            padding-left: 0;
+        }
+    </style>
+</head>
+<body>
+    <h1 id="main-title"><a href="#main-title">Road Weather Station API Server</a></h1>
+    <p>This server mimics the data and api from Open Data Seattle's <a href="https://dev.socrata.com/foundry/data.seattle.gov/egc4-d24i">Road Weather Station API</a>. This page contains documenation on how to access this mocked server as well as other helpful resources from the workshop.</p>
+    
+    <div class="toc">
+        <h3>On This Page:</h3>
+        <ul>
+            <li><a href="#endpoints">Available Endpoints</a></li>
+            <li><a href="#authentication">Authentication</a></li>
+            <li><a href="#workshop-commits">Workshop Commits</a></li>
+        </ul>
+    </div>
+    
+    <h2 id="endpoints"><a href="#endpoints">Available Endpoints:</a></h2>
+    <div class="endpoint">
+        <p><strong>All data:</strong></p>
+        <a href="http://localhost:8080/resource/egc4-d24i.json?$$app_token=good">
+            http://localhost:8080/resource/egc4-d24i.json?$$app_token=good
+        </a>
+    </div>
+    
+    <div class="endpoint">
+        <p><strong>Filter by station name:</strong></p>
+        <a href="http://localhost:8080/resource/egc4-d24i.json?$$app_token=good&stationname=JoseRizalBridgeNorth">
+            http://localhost:8080/resource/egc4-d24i.json?$$app_token=good&stationname=JoseRizalBridgeNorth
+        </a>
+    </div>
+    
+    <div class="endpoint">
+        <p><strong>Docker internal access:</strong></p>
+        <a href="http://host.docker.internal:8080/resource/egc4-d24i.json?$$app_token=good">
+            http://host.docker.internal:8080/resource/egc4-d24i.json?$$app_token=good
+        </a>
+    </div>
+    
+    <h2 id="authentication"><a href="#authentication">Authentication:</a></h2>
+    <p>All requests require the app token parameter: <code>$$app_token=good</code></p>
+    <p>You can test failing authentication with: <code>$$app_token=bad</code></p>
+    
+    <div class="commit-section">
+        <h2 id="workshop-commits"><a href="#workshop-commits">Workshop Commits</a></h2>
+        <p>Reference these commits to follow the workshop progress or catch up:</p>
+        
+        <div class="commit-item">
+            <div class="commit-number">1</div>
+            <div class="commit-title">
+                <a href="https://github.com/grafana/grafanacon-custom-data-source-plugin-example/commit/c41fd8a73a4e19137f83a8d191fa06b2c5db19e5" target="_blank">
+                    Initial Commit
+                </a>
+            </div>
+            <div class="commit-description">
+                Start of the workshop with all scaffolding code generated
+            </div>
+        </div>
+        
+        <div class="commit-item">
+            <div class="commit-number">2</div>
+            <div class="commit-title">
+                <a href="https://github.com/grafana/grafanacon-custom-data-source-plugin-example/commit/28d8dab6604c898af0ea73a1528e8b5401844f8c" target="_blank">
+                    Implemented Check Health
+                </a>
+            </div>
+            <div>
+                <ul>
+                    <li>
+                        <span class="list-item-number">A</span>
+                        <a href="http://github.com/grafana/grafanacon-custom-data-source-plugin-example/commit/28d8dab6604c898af0ea73a1528e8b5401844f8c#diff-3c1bbe21d50836befcccc2df86e0ceb27afbb4444eb924d015be9298df27604eR8" target="_blank">
+                            Added Alerting
+                        </a>
+                    </li>
+                    <li>
+                        <span class="list-item-number">B</span>
+                        <a href="https://github.com/grafana/grafanacon-custom-data-source-plugin-example/commit/28d8dab6604c898af0ea73a1528e8b5401844f8c#diff-3fde9d1a396e140fefc7676e1bd237d67b6864552b6f45af1ebcc27bcd0bb6e9R5-R7" target="_blank">
+                            Enable Local Host Access for Docker
+                        </a>
+                    </li>
+                    <li>
+                        <span class="list-item-number">C</span>
+                        <a href="https://github.com/grafana/grafanacon-custom-data-source-plugin-example/commit/28d8dab6604c898af0ea73a1528e8b5401844f8c#diff-213832a772024707da1a5234b077c6f336e32d7316a0bfb5d228517e9886febeR6-R138" target="_blank">
+                            Implement Check Health
+                        </a>
+                    </li>
+                    
+                </ul>
+            </div>
+        </div>
+        
+        <div class="commit-item">
+            <div class="commit-number">3</div>
+            <div class="commit-title">
+                <a href="https://github.com/grafana/grafanacon-custom-data-source-plugin-example/commit/a38426de914df98d9df47bf69fcbb9aa84da45dc" target="_blank">
+                    Config Page Changes
+                </a>
+            </div>
+            <div>
+                <ul>
+                    <li>
+                        <span class="list-item-number">A</span>
+                        <a href="https://github.com/grafana/grafanacon-custom-data-source-plugin-example/commit/a38426de914df98d9df47bf69fcbb9aa84da45dc#diff-c54113cf61ec99691748a3890bfbeb00e10efb3f0a76f03a0fd9ec49072e410aL25-L33" target="_blank">
+                            Changed config types
+                        </a>
+                    </li>
+                    <li>
+                        <span class="list-item-number">B</span>
+                        <a href="https://github.com/grafana/grafanacon-custom-data-source-plugin-example/commit/a38426de914df98d9df47bf69fcbb9aa84da45dc#diff-063c7e81345a5b45505362abfe2607aa4fad173db58547bea0d9ea633c628ec9L11-L20" target="_blank">
+                            Edit Config change handlers from path to domain and resource
+                        </a>
+                    </li>
+                    <li>
+                        <span class="list-item-number">C</span>
+                        <a href="https://github.com/grafana/grafanacon-custom-data-source-plugin-example/commit/a38426de914df98d9df47bf69fcbb9aa84da45dc#diff-063c7e81345a5b45505362abfe2607aa4fad173db58547bea0d9ea633c628ec9L22-L43" target="_blank">
+                            Edit change handlers from api key to app token
+                        </a>
+                    </li>
+                    <li>
+                        <span class="list-item-number">D</span>
+                        <a href="https://github.com/grafana/grafanacon-custom-data-source-plugin-example/commit/a38426de914df98d9df47bf69fcbb9aa84da45dc#diff-063c7e81345a5b45505362abfe2607aa4fad173db58547bea0d9ea633c628ec9L47-L55" target="_blank">
+                            Edit returned components from path input to domain and resource inputs
+                        </a>
+                    </li>
+                    <li>
+                        <span class="list-item-number">E</span>
+                        <a href="https://github.com/grafana/grafanacon-custom-data-source-plugin-example/commit/a38426de914df98d9df47bf69fcbb9aa84da45dc#diff-063c7e81345a5b45505362abfe2607aa4fad173db58547bea0d9ea633c628ec9L57-L68" target="_blank">
+                            Edit returned components from api key to app token
+                        </a>
+                    </li>
+
+                    
+                </ul>
+            </div>
+        </div>
+        
+        <div class="commit-item">
+            <div class="commit-number">4</div>
+            <div class="commit-title">
+                <a href="https://github.com/grafana/grafanacon-custom-data-source-plugin-example/commit/6509b58a9ea808dd642e16b710cd92b0d31ae1d5" target="_blank">
+                    Config Page Backend
+                </a>
+            </div>
+            <div>
+                <ul>
+                    <li>
+                        <span class="list-item-number">A</span>
+                        <a href="https://github.com/grafana/grafanacon-custom-data-source-plugin-example/commit/6509b58a9ea808dd642e16b710cd92b0d31ae1d5#diff-02ffefb1a56a2ddf4c020fbc72386cabb9a93a0a91545b7b79129248c3c472cfL10-L35" target="_blank">
+                            Update model settings to use app token, domain, and resource
+                        </a>
+                    </li>
+                    <li>
+                        <span class="list-item-number">B</span>
+                        <a href="https://github.com/grafana/grafanacon-custom-data-source-plugin-example/commit/6509b58a9ea808dd642e16b710cd92b0d31ae1d5#diff-213832a772024707da1a5234b077c6f336e32d7316a0bfb5d228517e9886febeL106-L115" target="_blank">
+                            Update url to use app token, domain, and resource
+                        </a>
+                    </li>
+                </ul>
+            </div>
+        </div>
+        
+        <div class="commit-item">
+            <div class="commit-number">5</div>
+            <div class="commit-title">
+                <a href="https://github.com/grafana/grafanacon-custom-data-source-plugin-example/commit/97070e1173f9fb7aa262287e55c27f37ae44a1a1" target="_blank">
+                    Query Data implemented
+                </a>
+            </div>
+            <div>
+                <ul>
+                    <li>
+                        <span class="list-item-number">A</span>
+                        <a href="https://github.com/grafana/grafanacon-custom-data-source-plugin-example/commit/97070e1173f9fb7aa262287e55c27f37ae44a1a1#diff-213832a772024707da1a5234b077c6f336e32d7316a0bfb5d228517e9886febeR83-R92" target="_blank">
+                            Query Data function to create a url from app token, domain, and resource
+                        </a>
+                    </li>
+                    <li>
+                        <span class="list-item-number">B</span>
+                        <a href="https://github.com/grafana/grafanacon-custom-data-source-plugin-example/commit/97070e1173f9fb7aa262287e55c27f37ae44a1a1#diff-213832a772024707da1a5234b077c6f336e32d7316a0bfb5d228517e9886febeR92-R101" target="_blank">
+                            Use that url to fetch data from the external api
+                        </a>
+                    </li>
+                    <li>
+                        <span class="list-item-number">C</span>
+                        <a href="https://github.com/grafana/grafanacon-custom-data-source-plugin-example/commit/97070e1173f9fb7aa262287e55c27f37ae44a1a1#diff-213832a772024707da1a5234b077c6f336e32d7316a0bfb5d228517e9886febeR65-R72" target="_blank">
+                            Define structure of data to be returned
+                        </a>
+                    </li>
+                    <li>
+                        <span class="list-item-number">D</span>
+                        <a href="https://github.com/grafana/grafanacon-custom-data-source-plugin-example/commit/97070e1173f9fb7aa262287e55c27f37ae44a1a1#diff-213832a772024707da1a5234b077c6f336e32d7316a0bfb5d228517e9886febeR103-R109" target="_blank">
+                            Use that struct to parse the data
+                        </a>
+                    </li>
+                    <li>
+                        <span class="list-item-number">E</span>
+                        <a href="https://github.com/grafana/grafanacon-custom-data-source-plugin-example/commit/97070e1173f9fb7aa262287e55c27f37ae44a1a1#diff-213832a772024707da1a5234b077c6f336e32d7316a0bfb5d228517e9886febeR110-R129" target="_blank">
+                            Reformat parsed data into a columnar format
+                        </a>
+                    </li>
+                    <li>
+                        <span class="list-item-number">F</span>
+                        <a href="https://github.com/grafana/grafanacon-custom-data-source-plugin-example/commit/97070e1173f9fb7aa262287e55c27f37ae44a1a1#diff-213832a772024707da1a5234b077c6f336e32d7316a0bfb5d228517e9886febeR136-R140" target="_blank">
+                            Update the returned data frame to have our columnar formatted data
+                        </a>
+                    </li>
+                </ul>
+            </div>
+        </div>
+        
+        <div class="commit-item">
+            <div class="commit-number">6</div>
+            <div class="commit-title">
+                <a href="https://github.com/grafana/grafanacon-custom-data-source-plugin-example/commit/eac4f88b6a42b87f2f335d9a6a00bfb089fe5607" target="_blank">
+                    Query Editor updated
+                </a>
+            </div>
+            <div>
+                <ul>
+                    <li>
+                        <span class="list-item-number">A</span>
+                        <a href="https://github.com/grafana/grafanacon-custom-data-source-plugin-example/commit/eac4f88b6a42b87f2f335d9a6a00bfb089fe5607#diff-c54113cf61ec99691748a3890bfbeb00e10efb3f0a76f03a0fd9ec49072e410aL4-L12" target="_blank">
+                            Update the query object types to remove constant
+                        </a>
+                    </li>
+                    <li>
+                        <span class="list-item-number">B</span>
+                        <a href="https://github.com/grafana/grafanacon-custom-data-source-plugin-example/commit/eac4f88b6a42b87f2f335d9a6a00bfb089fe5607#diff-1e81a0c80f025829f8963ff74016a6d3c09b10e4331eabc9318a70179e4322bfL13-L21" target="_blank">
+                            Remove on change handler for the constant property
+                        </a>
+                    </li>
+                    <li>
+                        <span class="list-item-number">C</span>
+                        <a href="https://github.com/grafana/grafanacon-custom-data-source-plugin-example/commit/eac4f88b6a42b87f2f335d9a6a00bfb089fe5607#diff-1e81a0c80f025829f8963ff74016a6d3c09b10e4331eabc9318a70179e4322bfL23-L34" target="_blank">
+                            Remove input field for constant property
+                        </a>
+                    </li>
+                </ul>
+            </div>
+        </div>
+        
+        <div class="commit-item">
+            <div class="commit-number">7</div>
+            <div class="commit-title">
+                <a href="https://github.com/grafana/grafanacon-custom-data-source-plugin-example/commit/8bed2ea34b98ce82a98fe0f5441b7f915258c8ca" target="_blank">
+                    Finished tutorial
+                </a>
+            </div>
+            <div>
+                <ul>
+                    <li>
+                        <span class="list-item-number">A</span>
+                        <a href="https://github.com/grafana/grafanacon-custom-data-source-plugin-example/commit/8bed2ea34b98ce82a98fe0f5441b7f915258c8ca#diff-213832a772024707da1a5234b077c6f336e32d7316a0bfb5d228517e9886febeL64-L83" target="_blank">
+                            Define shape of query object on backend
+                        </a>
+                    </li>
+                    <li>
+                        <span class="list-item-number">B</span>
+                        <a href="https://github.com/grafana/grafanacon-custom-data-source-plugin-example/commit/8bed2ea34b98ce82a98fe0f5441b7f915258c8ca#diff-213832a772024707da1a5234b077c6f336e32d7316a0bfb5d228517e9886febeL91-L92" target="_blank">
+                            Use querytext in building url
+                        </a>
+                    </li>
+                    <li>
+                        <span class="list-item-number">C</span>
+                        <a href="https://github.com/grafana/grafanacon-custom-data-source-plugin-example/commit/8bed2ea34b98ce82a98fe0f5441b7f915258c8ca#diff-1e81a0c80f025829f8963ff74016a6d3c09b10e4331eabc9318a70179e4322bfL17-L25" target="_blank">
+                           Small style fixes
+                        </a>
+                    </li>
+                </ul>
+            </div>
+        </div>
+        
+        <!-- Add more commits here as they become available
+        <div class="commit-item">
+            <div class="commit-number">8</div>
+            <div class="commit-title">
+                <a href="#" target="_blank">
+                    Next commit...
+                </a>
+            </div>
+            <div class="commit-description">
+                Description of next commit (placeholder)
+            </div>
+        </div> 
+        -->
+        
+    </div>
+</body>
+</html> 

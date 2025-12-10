@@ -1,0 +1,20 @@
+# Require some statuses to pass only if certain files are modified.
+
+policy:
+  approval:
+    - or:
+        - MERGE_WITH_GENERATED
+        - override policies
+
+approval_rules:
+  - name: override policies
+    requires:
+      count: 1
+      permissions:
+        - write
+    options:
+      methods:
+        comments:
+          - "policy bot: approve"
+          - "policy-bot: approve"
+        github_review: false

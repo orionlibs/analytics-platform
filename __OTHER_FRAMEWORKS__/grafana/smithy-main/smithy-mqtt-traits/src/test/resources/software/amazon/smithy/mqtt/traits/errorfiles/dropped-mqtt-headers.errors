@@ -1,0 +1,2 @@
+[DANGER] smithy.example#Foo: This member is used as part of an MQTT event stream event, and MQTT event streams do not support the eventHeader trait. | MqttSubscribeOutput
+[DANGER] smithy.example#Foo: This member is used as part of an MQTT event stream event, and MQTT event streams do not support the eventHeader trait. | MqttSubscribeOutput

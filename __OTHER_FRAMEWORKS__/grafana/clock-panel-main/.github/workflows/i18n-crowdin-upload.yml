@@ -1,0 +1,19 @@
+name: Crowdin Upload Action
+
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - 'src/locales/en-US/grafana-clock-panel.json'
+    branches:
+      - main
+
+jobs:
+  upload-sources-to-crowdin:
+    uses: grafana/grafana-github-actions/.github/workflows/crowdin-upload.yml@7d2b4af1112747f82e12adfbc00be44fecb3b616
+    with:
+      crowdin_project_id: 36
+
+    permissions:
+      contents: read
+      id-token: write # needed to get vault secrets

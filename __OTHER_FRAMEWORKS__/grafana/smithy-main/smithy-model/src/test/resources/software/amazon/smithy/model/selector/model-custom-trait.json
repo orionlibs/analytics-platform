@@ -1,0 +1,74 @@
+{
+    "smithy": "1.0",
+    "shapes": {
+        "com.example#beta": {
+            "type": "structure",
+            "traits": {
+                "smithy.api#trait": {
+                    "selector": "member:test(< structure)"
+                }
+            }
+        },
+        "com.example#structuredTrait": {
+            "type": "structure",
+            "members": {
+                "lorem": {
+                    "target": "com.example#StringShape",
+                    "traits": {
+                        "smithy.api#required": {}
+                    }
+                },
+                "ipsum": {
+                    "target": "com.example#StringShape",
+                    "traits": {
+                        "smithy.api#required": {}
+                    }
+                },
+                "dolor": {
+                    "target": "com.example#StringShape"
+                }
+            },
+            "traits": {
+                "smithy.api#trait": {
+                    "selector": "string",
+                    "conflicts": [
+                        "com.example#beta"
+                    ]
+                }
+            }
+        },
+        "com.example#MyShape": {
+            "type": "structure",
+            "members": {
+                "foo": {
+                    "target": "com.example#StringShape",
+                    "traits": {
+                        "smithy.api#required": {},
+                        "com.example#beta": {}
+                    }
+                }
+            }
+        },
+        "com.example#StringShape": {
+            "type": "string",
+            "traits": {
+                "com.example#structuredTrait": {
+                    "lorem": "This is a custom trait!",
+                    "ipsum": "lorem and ipsum are both required values."
+                }
+            }
+        },
+        "com.example#AnotherStructureShape": {
+            "type": "structure",
+            "members": {
+                "bar": {
+                    "target": "com.example#MyShape",
+                    "traits": {
+                        "smithy.api#required": {},
+                        "com.example#beta": {}
+                    }
+                }
+            }
+        }
+    }
+}

@@ -1,0 +1,44 @@
+{
+  "Package": "grafanatest",
+  "Metadata": {},
+  "EntryPoint": "AnyOf",
+  "EntryPointType": {
+    "Kind": "ref",
+    "Nullable": false,
+    "Ref": {
+      "ReferredPkg": "grafanatest",
+      "ReferredType": "AnyOf"
+    }
+  },
+  "Objects": {
+    "AnyOf": {
+      "Name": "AnyOf",
+      "Type": {
+        "Kind": "disjunction",
+        "Nullable": false,
+        "Disjunction": {
+          "Branches": [
+            {
+              "Kind": "scalar",
+              "Nullable": false,
+              "Scalar": {
+                "ScalarKind": "int64"
+              }
+            },
+            {
+              "Kind": "scalar",
+              "Nullable": false,
+              "Scalar": {
+                "ScalarKind": "string"
+              }
+            }
+          ]
+        }
+      },
+      "SelfRef": {
+        "ReferredPkg": "grafanatest",
+        "ReferredType": "AnyOf"
+      }
+    }
+  }
+}

@@ -1,0 +1,21 @@
+{
+  "name": "ironclad-selectors",
+  "version": "0.0.1-pre-alpha",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "tsc": "tsc",
+    "build": "rimraf dist && tsc --noEmit && node build.js",
+    "watch": "esbuild --watch --bundle --sourcemap --outdir=dist --format=esm src/index.ts"
+  },
+  "author": "",
+  "license": "ISC",
+  "devDependencies": {
+    "@playwright/test": "1.44.0",
+    "@types/node": "20.12.12",
+    "esbuild": "0.21.2",
+    "esbuild-plugin-tsc": "0.4.0",
+    "rimraf": "5.0.7",
+    "typescript": "5.4.5"
+  }
+}

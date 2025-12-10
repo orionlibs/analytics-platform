@@ -1,0 +1,72 @@
+groups:
+    - name: NewAlerts_OrderCheck
+      interval: 30s
+      rules:
+        - alert: NewAlerts_OrderCheck_Rule1
+          expr: '{__name__="alert_generator_test_suite", alertname="NewAlerts_OrderCheck_Rule1", rulegroup="NewAlerts_OrderCheck"} > 10'
+          for: 3m
+          labels:
+            foo: bar
+            rulegroup: NewAlerts_OrderCheck
+          annotations:
+            description: This should produce more alerts later
+        - alert: NewAlerts_OrderCheck_Rule2
+          expr: (ALERTS{alertstate="firing", alertname="NewAlerts_OrderCheck_Rule1", foo="bar", rulegroup="NewAlerts_OrderCheck", variant="one"} + ignoring(variant) ALERTS{alertstate="firing", alertname="NewAlerts_OrderCheck_Rule1", foo="bar", rulegroup="NewAlerts_OrderCheck", variant="two"}) == 2
+          labels:
+            ba_dum: tss
+            foo: baz
+            rulegroup: NewAlerts_OrderCheck
+          annotations:
+            description: Based on ALERTS. Old alertname was {{$labels.alertname}}. foo was {{.Labels.foo}}.
+    - name: PendingAndFiringAndResolved
+      interval: 30s
+      rules:
+        - alert: PendingAndFiringAndResolved_SimpleAlert
+          expr: '{__name__="alert_generator_test_suite", alertname="PendingAndFiringAndResolved_SimpleAlert", rulegroup="PendingAndFiringAndResolved"} > 10'
+          for: 6m
+          labels:
+            foo: bar
+            rulegroup: PendingAndFiringAndResolved
+          annotations:
+            description: SimpleAlert is firing
+            summary: The value is {{$value}} {{.Value}}
+    - name: PendingAndResolved_AlwaysInactive
+      interval: 30s
+      rules:
+        - alert: PendingAndResolved_AlwaysInactive_PendingAlert
+          expr: '{__name__="alert_generator_test_suite", alertname="PendingAndResolved_AlwaysInactive_PendingAlert", rulegroup="PendingAndResolved_AlwaysInactive"} > 10'
+          for: 3m
+          labels:
+            foo: bar
+            rulegroup: PendingAndResolved_AlwaysInactive
+          annotations:
+            description: SimpleAlert is firing
+        - alert: PendingAndResolved_AlwaysInactive_InactiveAlert
+          expr: '{__name__="alert_generator_test_suite", alertname="PendingAndResolved_AlwaysInactive_InactiveAlert", rulegroup="PendingAndResolved_AlwaysInactive"} > 99'
+          for: 3m
+          labels:
+            ba_dum: tss
+            rulegroup: PendingAndResolved_AlwaysInactive
+          annotations:
+            description: This should never fire
+    - name: ZeroFor_SmallFor
+      interval: 30s
+      rules:
+        - alert: ZeroFor_SmallFor_ZeroFor
+          expr: '{__name__="alert_generator_test_suite", alertname="ZeroFor_SmallFor_ZeroFor", rulegroup="ZeroFor_SmallFor"} > 10'
+          labels:
+            foo: bar
+            rulegroup: ZeroFor_SmallFor
+          annotations:
+            description: This should immediately fire
+            template_query_test: '{{ define "testtemplate" }}Args are: {{.arg0}} {{.arg1}} {{.arg2}}. {{ with query "alert_generator_test_suite{rulegroup=''ZeroFor_SmallFor'',for=''template''}" }}first_id:{{ . | sortByLabel "id" | first | label "id"}},{{ range $v := sortByLabel "id" .}}{{ . | label "id" }}:{{ . | value }},{{end}}{{end}}{{ end }}{{ template "testtemplate" (args "foo" "bar" 99) }}'
+            template_test: '{{humanize 1048576}} {{humanize1024 1048576}} {{humanizeDuration 135.3563}} {{humanizePercentage 0.959}} {{humanizeTimestamp 1643114203}}'
+        - alert: ZeroFor_SmallFor_SmallFor
+          expr: '{__name__="alert_generator_test_suite", alertname="ZeroFor_SmallFor_SmallFor", rulegroup="ZeroFor_SmallFor"} > 13'
+          for: 15s
+          labels:
+            ba_dum: tss
+            rulegroup: ZeroFor_SmallFor
+          annotations:
+            description: This should fire after an interval
+            template_test: '{{title "this part"}} {{toUpper "is testing"}} {{toLower "THE STRINGS"}}. {{ stripPort "[::1]:6006"}} {{ stripPort "127.0.0.1:4004"}}. {{parseDuration "2h10m15s"}}. {{if match "[0-9]+" "1234"}}{{reReplaceAll "r.*d" "replaced" "rpld text"}}{{end}}. {{if match "[0-9]+$" "1234a"}}WRONG{{end}}.'

@@ -1,0 +1,26 @@
+.rebar3
+_*
+.eunit
+*.o
+*.beam
+*.plt
+*.swp
+*.swo
+.erlang.cookie
+ebin
+log
+erl_crash.dump
+.rebar
+logs
+_build
+.idea
+*.iml
+rebar3.crashdump
+*~
+doc
+!_index.md
+guides
+# don't commit the stuff required for commitlint to work
+node_modules
+package-lock.json
+package.json

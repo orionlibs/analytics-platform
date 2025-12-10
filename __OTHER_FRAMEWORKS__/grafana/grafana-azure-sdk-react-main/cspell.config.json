@@ -1,0 +1,13 @@
+{
+  "ignorePaths": [".github/**", "node_modules/**", "dist/**", "yarn.lock", "src/resources/**", "compiled/**"],
+  "words": [
+    "clientsecret",
+    "currentuser",
+    "typecheck",
+    "workloadidentity",
+    "datasource",
+    "azuremonitor",
+    "chinaazuremonitor",
+    "govazuremonitor"
+  ]
+}

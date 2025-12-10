@@ -1,0 +1,121 @@
+{
+  "editable": true,
+  "__inputs": [
+    {
+      "name": "DS_PROMETHEUS",
+      "label": "prom",
+      "type": "datasource",
+      "pluginId": "prom"
+    }
+  ],
+  "annotations": {
+    "list": [
+      {
+        "builtIn": 1,
+        "datasource": {
+          "type": "grafana",
+          "uid": "-- Grafana --"
+        },
+        "enable": true,
+        "hide": true,
+        "name": "Annotations & Alerts",
+        "type": "dashboard"
+      }
+    ]
+  },
+  "rows": [
+    {
+      "panels": [
+        {
+          "type": "timeseries",
+          "title": "Timeseries",
+          "targets": [
+            {
+              "expr": "up{job=\"$job\"}"
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "panels": [
+    {
+      "type": "timeseries",
+      "title": "Timeseries",
+      "targets": [
+        {
+          "expr": "up{job=\"$job\"}"
+        }
+      ]
+    },
+    {
+      "type": "row",
+      "title": "Dashboard row",
+      "panels": [
+        {
+          "type": "timeseries",
+          "title": "Timeseries",
+          "targets": [
+            {
+              "expr": "up{job=\"$job\"}"
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "templating": {
+    "list": [
+      {
+        "current": {
+          "text": "default",
+          "value": "default"
+        },
+        "hide": 0,
+        "label": "Data Source",
+        "name": "datasource",
+        "options": [],
+        "query": "prometheus",
+        "refresh": 1,
+        "regex": "",
+        "type": "datasource"
+      },
+      {
+        "name": "job",
+        "label": "job",
+        "datasource": "$datasource",
+        "type": "query",
+        "query": "query_result(up{})",
+        "multi": true,
+        "allValue": ".+"
+      },
+      {
+        "filters": [],
+        "hide": 0,
+        "name": "query0",
+        "skipUrlSync": false,
+        "type": "adhoc"
+      },
+      {
+        "current": {
+          "selected": true,
+          "text": "10",
+          "value": "10"
+        },
+        "hide": 0,
+        "includeAll": false,
+        "multi": false,
+        "name": "limit",
+        "options": [
+          {
+            "selected": true,
+            "text": "10",
+            "value": "10"
+          }
+        ],
+        "type": "custom"
+      }
+    ]
+  },
+  "title": "Sample dashboard"
+}

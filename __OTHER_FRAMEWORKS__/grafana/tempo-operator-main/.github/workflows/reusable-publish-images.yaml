@@ -1,0 +1,85 @@
+name: Reusable - Publish Operator Images
+
+on:
+  workflow_call:
+    inputs:
+      publish_bundle:
+        type: boolean
+        required: true
+      version_tag:
+        type: string
+        required: true
+      push:
+        type: boolean
+        required: true
+
+permissions: {}
+
+jobs:
+  publish:
+    name: Publish container images
+    runs-on: ubuntu-22.04
+    permissions:
+      packages: write # push container image
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+        with:
+          persist-credentials: false
+
+      - name: Unshallow
+        run: git fetch --prune --unshallow
+
+      - name: Describe the current state
+        run: git describe --tags --always
+
+      - name: Docker meta
+        id: docker_meta
+        uses: docker/metadata-action@318604b99e75e41977312d83839a89be02ca4893 # v5.9.0
+        with:
+          images: ghcr.io/${{ github.repository }}/tempo-operator
+          tags: |
+            type=semver,pattern={{version}},value=${{ inputs.version_tag }}
+            type=semver,pattern={{major}}.{{minor}},value=${{ inputs.version_tag }}
+            type=semver,pattern={{raw}},value=${{ inputs.version_tag }}
+            type=ref,event=branch
+
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@c7c53464625b32c7a7e944ae62b3e17d2b600130 # v3.7.0
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@e468171a9de216ec08956ac3ada2f0791b6bd435 # v3.11.1
+
+      - name: Login to GitHub Package Registry
+        uses: docker/login-action@5e57cd118135c172c3672efd75eb46360885c0ef #v3.6.0
+        with:
+          registry: ghcr.io
+          username: ${{ github.repository_owner }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build and push Operator image
+        uses: docker/build-push-action@263435318d21b8e681c14492fe198d362a7d2c83 #v6.18.0
+        with:
+          context: .
+          file: ./Dockerfile
+          platforms: linux/amd64,linux/arm64
+          push: ${{ inputs.push }}
+          tags: ${{ steps.docker_meta.outputs.tags }}
+          labels: ${{ steps.docker_meta.outputs.labels }}
+
+      - name: Publish operator bundle and catalog
+        if: ${{ inputs.publish_bundle }}
+        run: make bundle bundle-build bundle-push catalog-build catalog-push
+        env:
+          IMG_PREFIX: ghcr.io/${{ github.repository }}
+
+      - name: Build and push must-gather image
+        if: ${{ inputs.publish_bundle }}
+        uses: docker/build-push-action@263435318d21b8e681c14492fe198d362a7d2c83 #v6.18.0
+        with:
+          context: .
+          file: ./cmd/gather/Dockerfile
+          platforms: linux/amd64,linux/arm64,linux/s390x,linux/ppc64le
+          push: ${{ inputs.push }}
+          tags: ghcr.io/${{ github.repository }}/must-gather:${{ inputs.version_tag }}
+          labels: ${{ steps.docker_meta.outputs.labels }}

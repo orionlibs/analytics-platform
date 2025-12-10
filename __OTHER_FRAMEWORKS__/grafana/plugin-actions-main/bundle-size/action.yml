@@ -1,0 +1,108 @@
+name: "Grafana Bundle Size"
+description: "Compares and reports frontend bundle size changes in pull requests"
+
+inputs:
+  token:
+    description: "Github token for the repository."
+    required: false
+    default: "${{ github.token }}"
+  node-version:
+    description: "The version of node to use."
+    required: false
+    default: "22"
+  threshold:
+    description: "Only post reports to PRs if the total entrypoint diff percentage is greater than this number."
+    required: false
+    default: "5"
+  working-directory:
+    description: "The working directory to run the action in."
+    required: false
+    default: "."
+  main-branch-stats-artifact:
+    description: "The name of the artifact that contains the main branch stats."
+    required: false
+    default: "main-branch-stats"
+
+runs:
+  using: "composite"
+
+  steps:
+    - name: Check if pull request event
+      if: ${{ github.event_name != 'pull_request' && github.event_name != 'push' && github.event_name != 'workflow_dispatch' }}
+      run: |
+        echo "This action is intended to run only on pull_request, push or workflow_dispatch events. Exiting."
+        exit 0
+      shell: bash
+
+    - name: Set up Node.js
+      uses: actions/setup-node@2028fbc5c25fe9cf00d9f06a71cc4710d4507903 # v6.0.0
+      with:
+        node-version: ${{ inputs.node-version }}
+
+    - name: Install dependencies
+      run: ${{ github.action_path }}/pm.sh install
+      shell: bash
+
+    - name: Build project to generate stats
+      working-directory: ${{ inputs.working-directory }}
+      run: |
+        if [ "${GITHUB_EVENT_NAME}" == "push" ] || [ "${GITHUB_EVENT_NAME}" == "workflow_dispatch" ] && [ "${GITHUB_REF}" == "refs/heads/main" ]; then
+          ${{ github.action_path }}/pm.sh buildMain
+        elif [ "${GITHUB_EVENT_NAME}" == "pull_request" ]; then
+          ${{ github.action_path }}/pm.sh buildPR
+        else
+          echo "This action is intended to run only on pull_request or push events. Exiting."
+          exit 0
+        fi
+      shell: bash
+      env:
+        GITHUB_REF: ${{ github.ref }}
+        GITHUB_EVENT_NAME: ${{ github.event_name }}
+
+    - name: Upload main branch stats.json artifact
+      if: ${{ github.event_name == 'push' || github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main' }}
+      uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+      with:
+        name: ${{ inputs.main-branch-stats-artifact }}
+        path: ${{ inputs.working-directory }}/stats.json
+        overwrite: true
+
+    - name: Get main stats artifact run-id
+      if: ${{ github.event_name == 'pull_request' }}
+      id: "main-stats-info"
+      env:
+        MAIN_STATS_ARTIFACT: ${{ inputs.main-branch-stats-artifact }}
+        GH_TOKEN: ${{ inputs.token }}
+      run: |
+        MAIN_STATS_RUN_ID=$(gh api /repos/${{ github.repository }}/actions/artifacts?name=${MAIN_STATS_ARTIFACT} --jq ".artifacts | map(select(.name == \"${MAIN_STATS_ARTIFACT}\")) | sort_by(.created_at) | reverse | .[0].workflow_run.id")
+        echo "run-id=${MAIN_STATS_RUN_ID}" >> $GITHUB_OUTPUT
+      shell: bash
+
+    - name: Download main branch stats artifact
+      if: ${{ github.event_name == 'pull_request' && steps.main-stats-info.outputs.run-id != '' }}
+      uses: actions/download-artifact@634f93cb2916e3fdff6788551b99b062d0335ce0 # v5.0.0
+      with:
+        name: ${{ inputs.main-branch-stats-artifact }}
+        path: ${{ inputs.working-directory }}
+        github-token: ${{ inputs.token }}
+        run-id: ${{ steps.main-stats-info.outputs.run-id }}
+
+    - name: Generate stats report and comment on PR
+      if: ${{ github.event_name == 'pull_request' && steps.main-stats-info.outputs.run-id != '' }}
+      uses: actions/github-script@f28e40c7f34bde8b3046d885e986cb6290c5673b # v7.1.0
+      with:
+        script: |
+          const script = require('${{ github.action_path }}/index.js')
+          const { THRESHOLD, WORKING_DIRECTORY } = process.env
+          await script({github, context, core}, THRESHOLD, `${WORKING_DIRECTORY}/stats.json`, `${WORKING_DIRECTORY}/pr-stats.json`, `${WORKING_DIRECTORY}`)
+      env:
+        THRESHOLD: ${{ inputs.threshold }}
+        WORKING_DIRECTORY: ${{ inputs.working-directory }}
+
+    - name: Warn if main stats artifact could not be found
+      if: ${{ github.event_name == 'pull_request' && steps.main-stats-info.outputs.run-id == '' }}
+      run: echo "::warning title=Main stats artifact could not be found::Please run this workflow manually (using workflow_dispatch) or push a commit to the main branch to generate it."
+      shell: bash
+      env:
+        THRESHOLD: ${{ inputs.threshold }}
+        WORKING_DIRECTORY: ${{ inputs.working-directory }}

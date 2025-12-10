@@ -1,0 +1,22 @@
+dist/
+node_modules/
+unpacked_bin/
+__debug_bin
+config/custom.yaml
+.idea
+.bin
+.npmrc
+
+bin/
+
+# osv-scanner and other testdata.
+# GoLand creates those but we don't need them.
+pkg/analysis/passes/osvscanner/testdata/golang/critical/go.sum
+pkg/analysis/passes/osvscanner/testdata/golang/high/go.sum
+pkg/analysis/passes/osvscanner/testdata/golang/low/go.sum
+pkg/analysis/passes/osvscanner/testdata/golang/moderate/go.sum
+pkg/analysis/passes/osvscanner/testdata/golang/none/go.sum
+pkg/analysis/passes/sdkusage/testdata/sdk-2-months-old/go.sum
+pkg/analysis/passes/sdkusage/testdata/sdk-5-months-old/go.sum
+pkg/analysis/passes/sdkusage/testdata/validgomod/go.sum
+

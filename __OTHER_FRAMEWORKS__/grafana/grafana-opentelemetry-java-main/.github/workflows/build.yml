@@ -1,0 +1,36 @@
+name: Build
+
+on: [pull_request]
+
+permissions: {}
+
+jobs:
+  build:
+    runs-on: ${{ matrix.os }}-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu]
+        java:
+          - 8 # TestedInstrumentationsSmokeTest only runs with this version, so update this test when 8 gets removed from the test matrix
+          - 11
+          - 17
+          - 21
+    steps:
+      - name: Check out
+        with:
+          persist-credentials: false
+        uses: actions/checkout@1af3b93b6815bc44a9784bd300feb67ff0d1eeb3 # v6.0.0
+      - name: Set up JDK
+        uses: actions/setup-java@dded0888837ed1f317902acf8a20df0ad188d165 # v5.0.0
+        with:
+          java-version: 17
+          distribution: temurin
+          cache: "gradle"
+      - name: Setup Gradle and run build
+        uses: gradle/actions/setup-gradle@4d9f0ba0025fe599b4ebab900eb7f3a1d93ef4c2 # v5.0.0
+      - name: Build
+        run: ./gradlew build
+        env:
+          CHECK_GENERATED_FILES: true
+          SMOKE_TEST_JAVA_VERSION: ${{ matrix.java }} # the smoke tests will pick this up

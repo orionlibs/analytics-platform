@@ -1,0 +1,85 @@
+[tools]
+"go:github.com/gohugoio/hugo" = "v0.152.2"
+"go:github.com/grafana/oats" = "0.5.0"
+java = "temurin-25.0.1+8.0.LTS"
+lychee = "0.21.0"
+protoc = "33.1"
+
+[tasks.ci]
+description = "CI Build"
+run = "./mvnw clean install"
+env.REQUIRE_PROTO_UP_TO_DATE = "true"
+env.PROTO_GENERATION = "true"
+
+[tasks.format]
+description = "format source code"
+run = "./mvnw spotless:apply"
+
+[tasks.clean]
+description = "clean all modules"
+run = "./mvnw clean"
+
+[tasks.compile]
+description = "bare compile, ignoring formatting and linters"
+run = "./mvnw install -DskipTests -Dspotless.check.skip=true -Dcoverage.skip=true -Dcheckstyle.skip=true -Dwarnings=-nowarn"
+
+[tasks.generate]
+description = "bare compile, ignoring formatting and linters"
+run = [
+  "mise use --pin protoc@latest",
+  "./mvnw clean install -DskipTests -Dspotless.check.skip=true -Dcoverage.skip=true -Dcheckstyle.skip=true -Dwarnings=-nowarn"
+]
+env.PROTO_GENERATION = "true"
+
+[tasks.test]
+description = "run unit tests, ignoring formatting and linters"
+run = "./mvnw test -Dspotless.check.skip=true -Dcoverage.skip=true -Dcheckstyle.skip=true -Dwarnings=-nowarn"
+
+[tasks.test-all]
+description = "run all tests"
+run = "./mvnw verify"
+
+[tasks.build]
+description = "build all modules without tests"
+run = "./mvnw install -DskipTests -Dcoverage.skip=true"
+
+[tasks."lint:links"]
+description = "Lint markdown links"
+run = "lychee --include-fragments ."
+
+[tasks."lint:rest"]
+description = "All lints not covered by super linter"
+depends = ["lint:links", "lint:bom"]
+
+[tasks."lint:all"]
+description = "All lints"
+depends = ["lint:rest", "lint:super-linter"]
+
+[tasks.acceptance-test]
+description = "Run OATs acceptance tests"
+depends = "build"
+run = "oats -timeout 5m examples/"
+
+[tasks.javadoc]
+description = "Generate Javadoc"
+run = [
+  "./mvnw -B clean compile javadoc:javadoc javadoc:aggregate -P 'javadoc,!default'",
+  "rm -rf ./docs/static/api",
+  "mv ./target/reports/apidocs ./docs/static/api && echo && echo 'ls ./docs/static/api' && ls ./docs/static/api"
+]
+
+[tasks.gh-pages-dev]
+description = "Build GitHub pages for dev"
+run = "hugo server -D"
+dir = "docs"
+
+[tasks.build-gh-pages]
+description = "Build GitHub pages"
+depends = ["javadoc", "set-release-version-github-pages"]
+# For maximum backward compatibility with Hugo modules
+env = { HUGO_ENVIRONMENT = "production", HUGO_ENV = "production" }
+dir = "docs"
+run = [
+  "hugo --gc --minify --baseURL ${BASE_URL}/",
+  "echo 'ls ./public/api' && ls ./public/api"
+]

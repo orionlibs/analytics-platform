@@ -1,0 +1,35 @@
+name: Lint Argo Workflow files
+description: Lint Argo workflow files
+
+inputs:
+  path:
+    description: |
+      Path to files for linting.
+    required: true
+
+runs:
+  using: composite
+
+  steps:
+    - name: Checkout
+      env:
+        # In a composite action, these two need to be indirected via the
+        # environment, as per the GitHub actions documentation:
+        # https://docs.github.com/en/actions/learn-github-actions/contexts
+        action_repo: "${{ github.action_repository || 'grafana/shared-workflows' }}"
+        action_ref: ${{ github.action_ref }}
+      uses: actions/checkout@1af3b93b6815bc44a9784bd300feb67ff0d1eeb3 # v6.0.0
+      with:
+        repository: ${{ env.action_repo }}
+        ref: ${{ env.action_ref }}
+        path: _shared-workflows-argo-lint
+        persist-credentials: false
+
+    - name: Setup Argo
+      uses: ./_shared-workflows-argo-lint/actions/setup-argo
+
+    - name: Run
+      env:
+        WORKFLOW_PATH: ${{ inputs.path }}
+      shell: bash
+      run: argo lint --offline "${WORKFLOW_PATH}"

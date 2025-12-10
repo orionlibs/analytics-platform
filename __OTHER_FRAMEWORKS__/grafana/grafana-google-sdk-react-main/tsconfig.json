@@ -1,0 +1,16 @@
+{
+  "extends": "@grafana/tsconfig",
+  "compilerOptions": {
+    "allowJs": true,
+    "importHelpers": false,
+    "isolatedModules": true,
+    "module": "preserve",
+    "moduleDetection": "force",
+    "noEmit": true,
+    "outDir": "dist",
+    "resolveJsonModule": true,
+    "target": "es2022",
+    "verbatimModuleSyntax": true
+  },
+  "include": ["src", "./jest-setup.js"]
+}

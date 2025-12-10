@@ -1,0 +1,78 @@
+{
+  $schema: "https://docs.renovatebot.com/renovate-schema.json",
+  branchPrefix: "grafanarenovatebot/",
+  customManagers: [
+    {
+      customType: "regex",
+      fileMatch: [
+        "(?:^|/)\\.github/(?:workflows|actions)/.+\\.ya?ml$",
+        "(?:^|/)action\\.ya?ml$",
+      ],
+      matchStrings: [
+        "# renovate: datasource=(?<datasource>[a-z-.]+?) depName=(?<depName>[^\\s]+?)(?: (?:lookupName|packageName)=(?<packageName>[^\\s]+?))?(?: versioning=(?<versioning>[^\\s]+?))?(?: extractVersion=(?<extractVersion>[^\\s]+?))?\\s+[A-Za-z0-9_-]+?[_-](?:VERSION|version)\\s*:\\s*[\"']?(?<currentValue>[^@]+)(?:@(?<currentDigest>sha256:[a-f0-9]+))?[\"']?",
+      ],
+    },
+  ],
+  dependencyDashboard: false,
+  enabledManagers: ["custom.regex", "github-actions", "gomod", "npm"],
+  forkProcessing: "enabled",
+  globalExtends: [":pinDependencies", "config:best-practices"],
+  onboarding: false,
+  osvVulnerabilityAlerts: true,
+  packageRules: [
+    {
+      labels: ["update-major"],
+      matchUpdateTypes: ["major"],
+    },
+    {
+      labels: ["update-minor"],
+      matchUpdateTypes: ["minor"],
+    },
+    {
+      labels: ["update-patch"],
+      matchUpdateTypes: ["patch"],
+    },
+    {
+      labels: ["update-digest"],
+      matchUpdateTypes: ["digest"],
+    },
+    {
+      // Run the custom matcher on early Monday mornings (UTC)
+      schedule: "* 0-4 * * 1",
+    },
+    {
+      matchFileNames: [ "vale/tools/go.mod" ],
+      matchPackageNames: ["github.com/grafana/writers-toolkit/tools",],
+      enabled: false,
+      description: "This is a depdency from the same repository",
+    },
+    {
+      matchFileNames: [ "vale/tools/go.mod" ],
+      matchPackageNames: ["github.com/google/go-github",],
+      enabled: false,
+      description: "The version bumps don't get reflected in the code imports.",
+    },
+    {
+      matchPackagePatterns: ["grafana/vale"],
+      matchDatasources: ["docker"],
+      enabled: false,
+      description: "The repository publishes this image on every push.",
+    },
+     {
+      matchPackageNames: ["grafana/shared-workflows"],
+      versioning: "regex:^(?<compatibility>.*)[-/]v?(?<major>\\d+)\\.(?<minor>\\d+)\\.(?<patch>\\d+)?$",
+
+      // By default, the dependency name is the same as the package name.
+      // For Actions, this is `org/repo`. This means that we'd get all actions from `shared-workflows` in the same branch.
+      // The shared-workflows tag scheme contains the name of the action being update to as well, so we can grab it from there and set the dep name, then put this in the branch name.
+      overrideDepName: 'grafana/shared-workflows/{{ lookup (split newVersion "/") 0 }}',
+      additionalBranchPrefix: "{{depName}}",
+    },
+  ],
+  platformCommit: "enabled",
+  rebaseWhen: "behind-base-branch",
+  requireConfig: "optional",
+  vulnerabilityAlerts: {
+    enabled: true,
+  },
+}

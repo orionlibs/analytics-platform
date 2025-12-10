@@ -1,0 +1,195 @@
+name: Unit-test Sigma rule conversion
+
+on:
+  push:
+    branches:
+      - main
+    tags:
+      - v*
+  pull_request:
+  workflow_dispatch:
+
+permissions: {}
+
+jobs:
+  golangci-lint:
+    name: Run golangci-lint
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      checks: write
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@1af3b93b6815bc44a9784bd300feb67ff0d1eeb3 # v6.0.0
+        with:
+          persist-credentials: false
+
+      - name: Setup Go
+        uses: actions/setup-go@44694675825211faa026b3c33043df3e48a5fa00 # v6.0.0
+        with:
+          go-version: "1.25.4"
+          cache: false
+
+      - name: Run golangci-lint
+        uses: golangci/golangci-lint-action@0a35821d5c230e903fcfe077583637dea1b27b47 # v9.0.0
+        with:
+          args: --timeout=5m
+          install-mode: "goinstall"
+
+  convert-test:
+    name: Run unit tests for Sigma rule conversion
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      checks: write
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@1af3b93b6815bc44a9784bd300feb67ff0d1eeb3 # v6.0.0
+        with:
+          persist-credentials: false
+
+      - name: Set up Python environment
+        uses: actions/setup-python@e797f83bcb11b83ae66e0230d6156d7c80228e7c # v6.0.0
+        with:
+          python-version: "3.10"
+
+      - name: Install uv package manager
+        run: |
+          pip install --disable-pip-version-check uv
+
+      - name: Install dependencies with uv
+        run: |
+          uv sync -q --directory actions/convert
+          uv sync -q --directory actions/convert --group dev
+
+      - name: Run linter and type checker
+        run: |
+          uv run --directory actions/convert ruff check .
+          uv run --directory actions/convert mypy .
+
+      - name: Run unit tests
+        run: |
+          uv run --directory actions/convert pytest -v .
+
+  integrate-test:
+    name: Run unit tests for Sigma rule integration
+    needs: golangci-lint
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      checks: write
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@1af3b93b6815bc44a9784bd300feb67ff0d1eeb3 # v6.0.0
+        with:
+          persist-credentials: false
+
+      - name: Setup Go
+        uses: actions/setup-go@44694675825211faa026b3c33043df3e48a5fa00 # v6.0.0
+        with:
+          go-version: "1.25.4"
+          cache: false
+
+      - name: Go Install Dependencies
+        run: |
+          go get ./...
+
+      - name: Run unit tests
+        run: |
+          go test -v ./internal/integrate/...
+
+  deploy-test:
+    name: Run unit tests for Sigma rule deployment
+    needs: golangci-lint
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      checks: write
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@1af3b93b6815bc44a9784bd300feb67ff0d1eeb3 # v6.0.0
+        with:
+          persist-credentials: false
+
+      - name: Setup Go
+        uses: actions/setup-go@44694675825211faa026b3c33043df3e48a5fa00 # v6.0.0
+        with:
+          go-version: "1.25.4"
+          cache: false
+
+      - name: Go Install Dependencies
+        run: |
+          go get ./...
+
+      - name: Run unit tests
+        run: |
+          go test -v ./internal/deploy/...
+
+  querytest-test:
+    name: Run unit tests for query testing
+    needs: golangci-lint
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      checks: write
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@1af3b93b6815bc44a9784bd300feb67ff0d1eeb3 # v6.0.0
+        with:
+          persist-credentials: false
+
+      - name: Setup Go
+        uses: actions/setup-go@44694675825211faa026b3c33043df3e48a5fa00 # v6.0.0
+        with:
+          go-version: "1.25.4"
+          cache: false
+
+      - name: Go Install Dependencies
+        run: |
+          go get ./...
+
+      - name: Run unit tests
+        run: |
+          go test -v ./internal/querytest/...
+
+  scripts-test:
+    name: Run unit tests for scripts
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      checks: write
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@1af3b93b6815bc44a9784bd300feb67ff0d1eeb3 # v6.0.0
+        with:
+          persist-credentials: false
+
+      - name: Setup Node.js
+        uses: actions/setup-node@2028fbc5c25fe9cf00d9f06a71cc4710d4507903 # v6.0.0
+        with:
+          node-version: "25"
+          package-manager-cache: false
+
+      - name: Install dependencies for comment-sigma-results
+        run: |
+          cd scripts/comment-sigma-results
+          npm ci
+
+      - name: Run unit tests for comment-sigma-results
+        run: |
+          cd scripts/comment-sigma-results
+          npm test
+
+      - name: Install dependencies for identify-commits
+        run: |
+          cd scripts/identify-commits
+          npm ci
+
+      - name: Run unit tests for identify-commits
+        run: |
+          cd scripts/identify-commits
+          npm test

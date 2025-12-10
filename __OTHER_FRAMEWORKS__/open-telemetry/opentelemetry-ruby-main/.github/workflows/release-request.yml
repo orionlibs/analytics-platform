@@ -1,0 +1,46 @@
+name: Open release request
+
+on:
+  workflow_dispatch:
+    inputs:
+      gems:
+        description: Gems to release (leave blank to release all gems)
+        required: false
+        default: ""
+
+permissions:
+  contents: read
+
+jobs:
+  release-request:
+    if: ${{ github.repository == 'open-telemetry/opentelemetry-ruby' }}
+    permissions:
+      contents: write # required for pushing changes
+      pull-requests: write # required for creating release PRs
+    env:
+      ruby_version: "3.1"
+    runs-on: ubuntu-latest
+    steps:
+      - name: Install Ruby ${{ env.ruby_version }}
+        uses: ruby/setup-ruby@v1.267.0
+        with:
+          ruby-version: ${{ env.ruby_version }}
+      - name: Checkout repo
+        uses: actions/checkout@v2
+      - name: Install Toys
+        run: "gem install --no-document toys -v 0.15.5"
+      - name: Create otelbot app token
+        uses: actions/create-github-app-token@df432ceedc7162793a195dd1713ff69aefc7379e # v2.0.6
+        id: app-token
+        with:
+          app-id: ${{ vars.OTELBOT_RUBY_APP_ID }}
+          private-key: ${{ secrets.OTELBOT_RUBY_PRIVATE_KEY }}
+      - name: Open release pull request
+        env:
+          # Use an app token instead of GITHUB_TOKEN to trigger workflows
+          GITHUB_TOKEN: ${{ steps.app-token.outputs.token }}
+        run: |
+          toys release request --yes --verbose \
+            "--gems=${{ github.event.inputs.gems }}" \
+            "--release-ref=${{ github.ref }}" \
+            < /dev/null

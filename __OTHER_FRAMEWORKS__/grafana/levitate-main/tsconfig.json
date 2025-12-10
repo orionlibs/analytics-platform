@@ -1,0 +1,23 @@
+{
+  "$schema": "http://json.schemastore.org/tsconfig",
+  "compilerOptions": {
+    "module": "node16",
+    "moduleResolution": "node16",
+    "esModuleInterop": true,
+    "declaration": true,
+    "outDir": "dist",
+    "noUnusedLocals": true,
+    "target": "ES2022",
+    "types": ["vitest/globals", "./vitest.d.ts"]
+  },
+  "exclude": [
+    "./dist",
+    "./fixtures"
+  ],
+  "files": [
+    "./src/bin.ts"
+  ],
+  "include": [
+    "src/**/*"
+  ]
+}

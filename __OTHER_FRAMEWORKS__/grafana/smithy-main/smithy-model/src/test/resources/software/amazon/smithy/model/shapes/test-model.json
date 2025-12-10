@@ -1,0 +1,390 @@
+{
+    "smithy": "1.0",
+    "shapes": {
+        "ns.foo#AnotherService": {
+            "type": "service",
+            "version": "2017-01-17",
+            "traits": {
+                "smithy.api#documentation": "Hello"
+            }
+        },
+        "ns.foo#MyService": {
+            "type": "service",
+            "version": "2017-01-17",
+            "resources": [
+                {
+                    "target": "ns.foo#MyResource"
+                },
+                {
+                    "target": "ns.foo#BasicResource"
+                }
+            ]
+        },
+        "ns.foo#MyResource": {
+            "type": "resource",
+            "identifiers": {
+                "id": {
+                    "target": "ns.foo#MyResourceId"
+                }
+            },
+            "put": {
+                "target": "ns.foo#PutMyResource"
+            },
+            "read": {
+                "target": "ns.foo#GetMyResource"
+            },
+            "delete": {
+                "target": "ns.foo#DeleteMyResource"
+            },
+            "collectionOperations": [
+                {
+                    "target": "ns.foo#BatchDeleteMyResource"
+                }
+            ]
+        },
+        "ns.foo#MyResourceId": {
+            "type": "string"
+        },
+        "ns.foo#BatchDeleteMyResource": {
+            "type": "operation",
+            "input": {
+                "target": "ns.foo#BatchDeleteMyResourceInput"
+            },
+            "traits": {
+                "smithy.api#idempotent": {}
+            }
+        },
+        "ns.foo#BatchDeleteMyResourceInput": {
+            "type": "structure",
+            "members": {
+                "ids": {
+                    "target": "ns.foo#AList",
+                    "traits": {
+                        "smithy.api#required": {}
+                    }
+                }
+            }
+        },
+        "ns.foo#DeleteMyResource": {
+            "type": "operation",
+            "input": {
+                "target": "ns.foo#DeleteMyResourceInput"
+            },
+            "traits": {
+                "smithy.api#idempotent": {}
+            }
+        },
+        "ns.foo#DeleteMyResourceInput": {
+            "type": "structure",
+            "members": {
+                "id": {
+                    "target": "ns.foo#MyResourceId",
+                    "traits": {
+                        "smithy.api#required": {}
+                    }
+                }
+            }
+        },
+        "ns.foo#GetMyResource": {
+            "type": "operation",
+            "input": {
+                "target": "ns.foo#GetMyResourceInput"
+            },
+            "output": {
+                "target": "ns.foo#GetMyResourceOutput"
+            },
+            "errors": [
+                {
+                    "target": "ns.foo#ResourceNotFoundError"
+                }
+            ],
+            "traits": {
+                "smithy.api#readonly": {}
+            }
+        },
+        "ns.foo#GetMyResourceInput": {
+            "type": "structure",
+            "members": {
+                "id": {
+                    "target": "ns.foo#MyResourceId",
+                    "traits": {
+                        "smithy.api#required": {}
+                    }
+                }
+            }
+        },
+        "ns.foo#GetMyResourceOutput": {
+            "type": "structure",
+            "members": {
+                "someValue": {
+                    "target": "ns.foo#AList"
+                }
+            }
+        },
+        "ns.foo#PutMyResource": {
+            "type": "operation",
+            "input": {
+                "target": "ns.foo#PutMyResourceInput"
+            },
+            "traits": {
+                "smithy.api#idempotent": {}
+            }
+        },
+        "ns.foo#PutMyResourceInput": {
+            "type": "structure",
+            "members": {
+                "id": {
+                    "target": "ns.foo#MyResourceId",
+                    "traits": {
+                        "smithy.api#required": {}
+                    }
+                }
+            }
+        },
+        "ns.foo#ResourceNotFoundError": {
+            "type": "structure",
+            "traits": {
+                "smithy.api#error": "client"
+            }
+        },
+        "ns.foo#MyString": {
+            "type": "string",
+            "traits": {
+                "smithy.api#mediaType": "application/json",
+                "smithy.api#documentation": "docs"
+            }
+        },
+        "ns.foo#AList": {
+            "type": "list",
+            "member": {
+                "target": "ns.foo#MyString"
+            },
+            "traits": {
+                "smithy.api#documentation": "abc"
+            }
+        },
+        "ns.foo#ASet": {
+            "type": "set",
+            "member": {
+                "target": "ns.foo#MyString"
+            },
+            "traits": {
+                "smithy.api#documentation": "abc"
+            }
+        },
+        "ns.foo#Map": {
+            "type": "map",
+            "key": {
+                "target": "ns.foo#MyString"
+            },
+            "value": {
+                "target": "ns.foo#MyString"
+            },
+            "traits": {
+                "smithy.api#documentation": "abc"
+            }
+        },
+        "ns.foo#TaggedUnion": {
+            "type": "union",
+            "members": {
+                "b": {
+                    "target": "ns.foo#MyString"
+                },
+                "a": {
+                    "target": "ns.foo#MyString"
+                }
+            },
+            "traits": {
+                "smithy.api#documentation": "abc"
+            }
+        },
+        "ns.foo#Structure": {
+            "type": "structure",
+            "members": {
+                "b": {
+                    "target": "ns.foo#MyString",
+                    "traits": {
+                        "smithy.api#documentation": "docs"
+                    }
+                },
+                "a": {
+                    "target": "ns.foo#MyString",
+                    "traits": {
+                        "smithy.api#required": {}
+                    }
+                },
+                "c": {
+                    "target": "ns.shapes#String"
+                }
+            },
+            "traits": {
+                "smithy.api#documentation": "abc"
+            }
+        },
+        "ns.foo#BasicResource": {
+            "type": "resource"
+        },
+        "ns.foo#b": {
+            "type": "structure",
+            "traits": {
+                "smithy.api#trait": {}
+            }
+        },
+        "ns.foo#a": {
+            "type": "structure",
+            "traits": {
+                "smithy.api#trait": {}
+            }
+        },
+        "ns.foo#OperationNeedingAbsoluteShapeIds": {
+            "type": "operation",
+            "input": {
+                "target": "ns.shapes#Structure"
+            },
+            "output": {
+                "target": "ns.shapes#Structure"
+            },
+            "errors": [
+                {
+                    "target": "ns.shapes#ErrorStructure"
+                }
+            ],
+            "traits": {
+                "smithy.api#idempotent": {}
+            }
+        },
+        "ns.foo#ResourceNeedingAbsoluteShapeIds": {
+            "type": "resource",
+            "identifiers": {
+                "id": {
+                    "target": "ns.baz#String"
+                }
+            },
+            "read": {
+                "target": "ns.resource.needing.ids#GetResourceNeedingAbsoluteShapeIds"
+            }
+        },
+        "ns.resource.needing.ids#GetResourceNeedingAbsoluteShapeIds": {
+            "type": "operation",
+            "input": {
+                "target": "ns.resource.needing.ids#GetResourceNeedingAbsoluteShapeIdsInput"
+            },
+            "output": {
+                "target": "ns.resource.needing.ids#GetResourceNeedingAbsoluteShapeIdsOutput"
+            },
+            "traits": {
+                "smithy.api#readonly": {}
+            }
+        },
+        "ns.resource.needing.ids#GetResourceNeedingAbsoluteShapeIdsInput": {
+            "type": "structure",
+            "members": {
+                "id": {
+                    "target": "ns.baz#String",
+                    "traits": {
+                        "smithy.api#required": {}
+                    }
+                }
+            }
+        },
+        "ns.resource.needing.ids#GetResourceNeedingAbsoluteShapeIdsOutput": {
+            "type": "structure",
+            "members": {}
+        },
+        "ns.baz#String": {
+            "type": "string"
+        },
+        "ns.shapes#String": {
+            "type": "string",
+            "traits": {
+                "smithy.api#sensitive": {}
+            }
+        },
+        "ns.shapes#Byte": {
+            "type": "byte"
+        },
+        "ns.shapes#Short": {
+            "type": "short"
+        },
+        "ns.shapes#Integer": {
+            "type": "integer"
+        },
+        "ns.shapes#Float": {
+            "type": "float"
+        },
+        "ns.shapes#Double": {
+            "type": "double"
+        },
+        "ns.shapes#Long": {
+            "type": "long"
+        },
+        "ns.shapes#BigDecimal": {
+            "type": "bigDecimal"
+        },
+        "ns.shapes#BigInteger": {
+            "type": "bigInteger"
+        },
+        "ns.shapes#Blob": {
+            "type": "blob"
+        },
+        "ns.shapes#Boolean": {
+            "type": "boolean"
+        },
+        "ns.shapes#Timestamp": {
+            "type": "timestamp"
+        },
+        "ns.shapes#List": {
+            "type": "list",
+            "member": {
+                "target": "ns.shapes#Timestamp"
+            }
+        },
+        "ns.shapes#Set": {
+            "type": "set",
+            "member": {
+                "target": "ns.shapes#Long"
+            }
+        },
+        "ns.shapes#Map": {
+            "type": "map",
+            "key": {
+                "target": "ns.shapes#String"
+            },
+            "value": {
+                "target": "ns.shapes#List"
+            }
+        },
+        "ns.shapes#Structure": {
+            "type": "structure",
+            "members": {
+                "memberName": {
+                    "target": "ns.shapes#String"
+                }
+            }
+        },
+        "ns.shapes#ErrorStructure": {
+            "type": "structure",
+            "traits": {
+                "smithy.api#error": "client"
+            }
+        },
+        "ns.shapes#TaggedUnion": {
+            "type": "union",
+            "members": {
+                "foo": {
+                    "target": "ns.shapes#String"
+                },
+                "baz": {
+                    "target": "ns.shapes#Integer"
+                }
+            }
+        }
+    },
+    "metadata": {
+        "foo": "baz",
+        "bar": {
+            "b": 1,
+            "a": 2
+        }
+    }
+}

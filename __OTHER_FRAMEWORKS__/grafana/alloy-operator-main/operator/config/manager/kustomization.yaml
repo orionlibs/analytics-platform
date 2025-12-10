@@ -1,0 +1,8 @@
+resources:
+- manager.yaml
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+images:
+- name: controller
+  newName: ghcr.io/grafana/alloy-operator
+  newTag: 1.4.0@sha256:7dcfac18423eac9aaeacd08748ddde054186d7ec062b7afb380c45bd49065beb

@@ -1,0 +1,90 @@
+# yaml-language-server: $schema=https://golangci-lint.run/jsonschema/golangci.jsonschema.json
+
+version: "2"
+linters:
+  default: none
+  enable:
+    - bodyclose
+    - decorder
+    - dogsled
+    - dupword
+    - durationcheck
+    - errcheck
+    - errchkjson
+    - errname
+    - gocheckcompilerdirectives
+    - gochecknoinits
+    - goconst
+    - gocritic
+    - gocyclo
+    - goprintffuncname
+    - gosmopolitan
+    - govet
+    - grouper
+    - ineffassign
+    - interfacebloat
+    - loggercheck
+    - mirror
+    - misspell
+    - nakedret
+    - nestif
+    - nolintlint
+    - nosprintfhostport
+    - reassign
+    - rowserrcheck
+    - sqlclosecheck
+    - staticcheck
+    - testableexamples
+    - unconvert
+    - unused
+    - wastedassign
+    - whitespace
+    - zerologlint
+  settings:
+    goconst:
+      min-len: 5
+      min-occurrences: 5
+    gocritic:
+      enabled-checks:
+        - ruleguard
+        - stringXbytes
+      settings:
+        ruleguard:
+          rules: internal/rules/rules.go
+    gocyclo:
+      min-complexity: 20
+    importas:
+      alias:
+        - pkg: github.com/grafana/synthetic-monitoring-agent/pkg/pb/synthetic_monitoring
+          alias: sm
+        - pkg: github.com/prometheus/client_model/go
+          alias: dto
+      no-unaliased: true
+      no-extra-aliases: true
+    rowserrcheck:
+      packages:
+        - github.com/jmoiron/sqlx
+  exclusions:
+    generated: lax
+    presets:
+      - comments
+      - common-false-positives
+      - legacy
+      - std-error-handling
+    rules:
+      - path: (.+)\.go$
+        text: (func|method|type|var|struct field|func parameter|method parameter) [^ ]+ should be .*
+    paths:
+      - third_party$
+      - builtin$
+      - examples$
+formatters:
+  enable:
+    - gofmt
+    - goimports
+  exclusions:
+    generated: lax
+    paths:
+      - third_party$
+      - builtin$
+      - examples$

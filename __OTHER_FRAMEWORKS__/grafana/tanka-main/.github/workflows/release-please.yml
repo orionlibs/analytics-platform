@@ -1,0 +1,74 @@
+on:
+  push:
+    branches:
+      - main
+
+name: release-please
+
+jobs:
+  release-please:
+    permissions:
+      contents: write
+      pull-requests: write
+    runs-on: ubuntu-24.04
+    outputs:
+      release_created: "${{ steps.release-please.outputs.release_created }}"
+      release_tag: "${{ steps.release-please.outputs.tag_name }}"
+
+    steps:
+      - uses: actions/checkout@1af3b93b6815bc44a9784bd300feb67ff0d1eeb3 # v6.0.0
+        with:
+          # https://github.com/actions/checkout/issues/1467
+          fetch-depth: 0
+          persist-credentials: false
+
+      - uses: googleapis/release-please-action@16a9c90856f42705d54a6fda1823352bdc62cf38 # v4.4.0
+        id: release-please
+        with:
+          config-file: .release-please.json
+          manifest-file: .release-please-manifest.json
+
+  release-docker-image:
+    needs:
+      - release-please
+    if: needs.release-please.outputs.release_created
+    permissions:
+      contents: write
+      pull-requests: write
+      id-token: write
+    uses: ./.github/workflows/docker.yml
+    with:
+      tag: ${{ needs.release-please.outputs.release_tag }}
+
+  # If a release was created, also create the binaries and attach them
+  release-binaries:
+    runs-on: ubuntu-24.04
+    needs:
+      - release-please
+    if: needs.release-please.outputs.release_created
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@1af3b93b6815bc44a9784bd300feb67ff0d1eeb3 # v6.0.0
+        with:
+          # https://github.com/actions/checkout/issues/1467
+          fetch-depth: 0
+          ref: "${{ needs.release-please.outputs.release_tag }}"
+          persist-credentials: false
+
+      - uses: ./.github/actions/setup-goversion
+
+      - name: Build binaries
+        run: make cross
+
+      - name: Attach binaries
+        uses: ncipollo/release-action@b7eabc95ff50cbeeedec83973935c8f306dfcd0b # v1.20.0
+        with:
+          token: ${{ github.token }}
+          allowUpdates: true
+          tag: ${{ needs.release-please.outputs.release_tag }}
+          omitNameDuringUpdate: true
+          omitPrereleaseDuringUpdate: true
+          omitBodyDuringUpdate: true
+          omitDraftDuringUpdate: true
+          artifacts: "dist/**/*"

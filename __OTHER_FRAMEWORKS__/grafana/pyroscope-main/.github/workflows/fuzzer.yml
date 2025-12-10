@@ -1,0 +1,21 @@
+name: go/fuzz
+on:
+  workflow_dispatch: {}
+  schedule:
+    - cron: '0 0 * * 1-5' # Run every weekday at midnight
+permissions:
+  contents: read
+jobs:
+  go-fuzz-merge-single:
+    runs-on: ${{ github.repository_owner == 'grafana' && 'ubuntu-x64' || 'ubuntu-latest' }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@93cb6efe18208431cddfb8368fd83d5badbf9bfd # v5.0.1
+        with:
+          persist-credentials: 'false'
+      - name: Install Go
+        uses: actions/setup-go@4dc6199c7b1a012772edbd06daecab0f50c9053c # v6.1.0
+        with:
+          go-version: 1.24.10
+      - name: Run Fuzz_Merge_Single
+        run: go test -fuzz=Fuzz_Merge_Single --fuzztime 1h -run '^$' -v ./pkg/pprof/

@@ -1,0 +1,23 @@
+issues:
+  max-issues-per-linter: 0
+  max-same-issues: 0
+  exclude-use-default: false
+
+linters:
+  enable-all: true
+  disable:
+    - wrapcheck
+    - varnamelen
+    - exhaustruct
+    - exportloopref
+    - gochecknoinits
+    - ireturn
+
+linters-settings:
+  depguard:
+    rules:
+      prevent_accidental_imports:
+        allow:
+          - $gostd
+          - github.com/grafana/sobek
+          - go.k6.io/k6

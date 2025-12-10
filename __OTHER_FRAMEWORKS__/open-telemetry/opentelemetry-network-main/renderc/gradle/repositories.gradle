@@ -1,0 +1,16 @@
+def mavenUrl = System.getenv("MAVEN_REPOSITORY_URL")
+
+def repos = {
+  if (mavenUrl != null) {
+    maven { url mavenUrl }
+  } else {
+    mavenCentral()
+    gradlePluginPortal()
+  }
+}
+
+project.buildscript.repositories(repos)
+
+repositories(repos)
+
+ext.mavenUrl = mavenUrl

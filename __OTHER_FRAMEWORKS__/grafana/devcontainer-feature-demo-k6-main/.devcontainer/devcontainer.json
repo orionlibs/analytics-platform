@@ -1,0 +1,7 @@
+{
+  "name": "devcontainer-feature-demo-k6",
+  "image": "mcr.microsoft.com/devcontainers/base:0-alpine",
+  "features": {
+    "ghcr.io/grafana/devcontainer-features/k6:1": { "version": "0.57.0" }
+  }
+}

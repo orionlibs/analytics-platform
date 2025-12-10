@@ -1,0 +1,8 @@
+.DS_Store
+.docusaurus/
+node_modules
+build
+.image-tag
+.tag-only
+.idea
+tsconfig.tsbuildinfo

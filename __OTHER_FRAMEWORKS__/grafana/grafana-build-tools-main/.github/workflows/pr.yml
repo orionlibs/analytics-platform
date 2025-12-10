@@ -1,0 +1,87 @@
+name: "Validate pull request"
+
+on:
+  pull_request:
+    branches:
+      - main
+    paths:
+      - Dockerfile.tmpl
+      - .github/workflows/**
+      - lib/**
+      - Makefile
+      - scripts/**
+      - versions.yaml
+
+  workflow_dispatch:
+
+env:
+  TEST_TAG: grafana/${{ github.repository }}:test
+
+permissions:
+  contents: none
+  packages: none
+
+jobs:
+  validate:
+    name: Validate pull request
+    strategy:
+      matrix:
+        arch: [ x64, arm64 ]
+    runs-on: github-hosted-ubuntu-${{ matrix.arch }}-large
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          fetch-tags: true
+          persist-credentials: false
+
+      - name: Unshallow
+        run: git fetch --prune --tags --unshallow
+
+      - name: Describe the current state
+        run: git describe --tags --always
+
+      - name: Map architecture
+        id: map_arch
+        run: ./lib/map-os-arch linux "${{ matrix.arch }}" HOST >> "$GITHUB_OUTPUT"
+
+      - name: Docker meta
+        id: docker_meta
+        uses: docker/metadata-action@c1e51972afc2121e065aed6d45c65596fe445f3f # v5.8.0
+        with:
+          images: |
+            ghcr.io/${{ github.repository }}
+          tags: |
+            type=raw,value=sha-${{ github.sha }}
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@e468171a9de216ec08956ac3ada2f0791b6bd435 # v3.11.1
+
+      - name: Login to GitHub Package Registry
+        uses: docker/login-action@74a5d142397b4f367a81961eba4e8cd7edddf772 # v3.4.0
+        with:
+          registry: ghcr.io
+          username: ${{ github.repository_owner }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Generate Dockerfile
+        run: make Dockerfile
+
+      - name: Build container image and export to Docker
+        uses: docker/build-push-action@263435318d21b8e681c14492fe198d362a7d2c83 # v6.18.0
+        with:
+          context: .
+          file: ./Dockerfile
+          push: false
+          load: true
+          tags: ${{ steps.docker_meta.outputs.tags }}
+          labels: ${{ steps.docker_meta.outputs.labels }}
+          cache-from: type=gha,scope=final
+          build-args: |
+            TARGET_GOOS=${{ steps.map_arch.outputs.HOST_OS }}
+            TARGET_GOARCH=${{ steps.map_arch.outputs.HOST_ARCH }}
+
+      - name: Test container image
+        run: |
+          docker run --rm "ghcr.io/${{ github.repository }}:sha-${{ github.sha }}" image-test

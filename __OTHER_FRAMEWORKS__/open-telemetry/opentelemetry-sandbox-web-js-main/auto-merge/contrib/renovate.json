@@ -1,0 +1,44 @@
+{
+  "extends": [
+    "config:base"
+  ],
+  "packageRules": [
+    {
+      "groupName": "all patch versions",
+      "groupSlug": "all-patch",
+      "matchUpdateTypes": ["patch"],
+      "excludePackageNames": ["prettier"],
+      "schedule": ["before 3am on Monday"]
+    },
+    {
+      "matchUpdateTypes": ["minor"],
+      "dependencyDashboardApproval": true
+    },
+    {
+      "matchPackageNames": ["@opentelemetry/api"],
+      "rangeStrategy": "widen"
+    },
+    {
+      "groupName": "OTel Core experimental",
+      "matchPackageNames": [
+        "@opentelemetry/instrumentation",
+        "@opentelemetry/instrumentation-grpc",
+        "@opentelemetry/instrumentation-http",
+        "@opentelemetry/instrumentation-fetch",
+        "@opentelemetry/instrumentation-xml-http-request",
+        "@opentelemetry/exporter-metrics-otlp-grpc",
+        "@opentelemetry/sdk-node"
+      ],
+      "rangeStrategy": "bump",
+      "schedule": ["before 3am every weekday"]
+    }
+  ],
+  "ignoreDeps": ["lerna", "lerna-changelog", "@types/node"],
+  "ignorePaths": ["archive/**", "examples/**"],
+  "assignees": ["@blumamir", "@dyladan", "@legendecas", "@pichlermarc" ],
+  "schedule": [
+    "before 3am on Friday"
+  ],
+  "labels": ["dependencies"],
+  "semanticCommitType": "feat"
+}

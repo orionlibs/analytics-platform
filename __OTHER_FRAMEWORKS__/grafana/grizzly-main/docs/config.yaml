@@ -1,0 +1,88 @@
+baseURL: https://grafana.github.io/grizzly/
+languageCode: en-us
+defaultContentLanguage: en
+title: Grafana Grizzly Docs
+theme: cupper-hugo-theme
+
+params:
+  description: Manage your observability resources easily
+  homeMetaContent: Grafana Grizzly
+  dateFormat: Jan 1, 2021
+  search: true
+  logoAlt: Illustration of a Grizzly Bear Bust
+  staticDir:
+    - staticDir_override
+  showThemeSwitcher: false
+
+menu:
+  nav:
+    - name: Home
+      url: /
+      weight: 1
+    - name: What is Grizzly?
+      url: /what-is-grizzly/
+      weight: 2
+    - name: Installation
+      url: /installation/
+      weight: 3
+    - name: Setup and Config
+      url: /configuration/
+      weight: 4
+    - name: With Grafana
+      url: /grafana/
+      weight: 5
+    - name: With Prometheus
+      url: /prometheus/
+      weight: 6
+    - name: Synthetic Monitoring
+      url: /synthetic-monitoring/
+      weight: 7
+    - name: Grizzly Server
+      url: /server/
+      weight: 8
+    - name: Alternate Workflows
+      url: /workflows/
+      weight: 9
+    - name: Using Jsonnet
+      url: /jsonnet/
+      weight: 10
+    - name: Hidden Elements
+      url: /hidden-elements/
+      weight: 11
+    - name: Usage statistics
+      url: /usage-statistics/
+      weight: 12
+    - name: GitHub
+      url: https://github.com/grafana/grizzly/
+      weight: 13
+
+markup:
+  defaultMarkdownHandler: goldmark
+  goldmark:
+    extensions:
+      definitionList: true
+      footnote: true
+      linkify: true
+      strikethrough: true
+      table: true
+      taskList: true
+      typographer: true
+    parser:
+      attribute: true
+      autoHeadingID: true
+    renderer:
+      hardWraps: false
+      unsafe: true
+      xHTML: false
+  highlight:
+    codeFences: false
+    hl_Lines: ""
+    lineNoStart: 1
+    lineNos: false
+    lineNumbersInTable: true
+    noClasses: true
+    style: monokai
+    tabWidth: 4
+  tableOfContents:
+    endLevel: 6
+    startLevel: 2

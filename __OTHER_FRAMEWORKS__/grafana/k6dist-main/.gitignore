@@ -1,0 +1,5 @@
+/build
+/dist
+/recent.json
+/k6dist
+/coverage.txt

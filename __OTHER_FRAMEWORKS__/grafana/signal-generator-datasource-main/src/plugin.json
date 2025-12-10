@@ -1,0 +1,38 @@
+{
+  "type": "datasource",
+  "name": "Signal Generator",
+  "id": "grafana-signal-datasource",
+  
+  "backend": true,
+  "executable": "gpx_signal",
+  "metrics": true,
+  "category": "iot",
+
+  "info": {
+    "description": "Arbitrary waveform generator",
+    "author": {
+      "name": "Grafana Labs",
+      "url": "https://grafana.com"
+    },
+    "keywords": [
+      "signal geneator", "awg"
+    ],
+    "logos": {
+      "small": "img/signal.svg",
+      "large": "img/signal.svg"
+    },
+    "links": [
+      {
+        "name": "Website",
+        "url": "https://github.com/grafana/signal-generator-datasource"
+      }
+    ],
+    "screenshots": [],
+    "version": "%VERSION%",
+    "updated": "%TODAY%"
+  },
+  "dependencies": {
+    "grafanaVersion": ">=7.6.x",
+    "plugins": []
+  }
+}

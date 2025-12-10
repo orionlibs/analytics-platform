@@ -1,0 +1,31 @@
+[package]
+name = "traceresponse"
+version = "0.1.0"
+edition = "2021"
+license = "Apache-2.0"
+rust-version = "1.75.0"
+publish = false
+
+[[bin]] # Bin to run the http server
+name = "http-server"
+path = "src/server.rs"
+doc = false
+
+[[bin]] # Bin to run the client
+name = "http-client"
+path = "src/client.rs"
+doc = false
+
+[dependencies]
+http-body-util = { version="0.1" }
+hyper = { version = "1.4.1", features = ["full"] }
+hyper-util = {version = "0.1", features = ["full"] }
+tokio = { version = "1.0", features = ["full"] }
+opentelemetry = { workspace = true }
+opentelemetry_sdk = { workspace = true }
+opentelemetry-http = { workspace = true }
+opentelemetry-contrib = { path = "../../opentelemetry-contrib" }
+opentelemetry-stdout = { workspace = true, features = ["trace"] }
+
+[lints]
+workspace = true

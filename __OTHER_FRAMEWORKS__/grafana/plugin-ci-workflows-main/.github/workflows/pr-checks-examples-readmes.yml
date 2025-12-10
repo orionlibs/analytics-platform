@@ -1,0 +1,49 @@
+name: Check examples/base/README.md
+
+on:
+  pull_request:
+    paths:
+      - "examples/base/*/*.md"
+      - "examples/base/README.md"
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  check-readme:
+    name: Check if example/base/README.md is up-to-date
+    runs-on: ubuntu-arm64-small
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@93cb6efe18208431cddfb8368fd83d5badbf9bfd # v5.0.1
+        with:
+          persist-credentials: false
+
+      - name: Set up Go
+        uses: actions/setup-go@44694675825211faa026b3c33043df3e48a5fa00 # v6.0.0
+        with:
+          go-version: "1.24"
+
+      - name: Generate README
+        working-directory: examples/base
+        run: go run genreadme.go
+
+      - name: Check for changes
+        run: |
+          if ! git diff --exit-code examples/base/README.md; then
+            echo "❌ The generated README.md is not up-to-date!"
+            echo ""
+            echo "The examples/base/README.md file is out of sync with the individual README.md files in the subfolders."
+            echo ""
+            echo "To fix this, run the following command and commit the changes:"
+            echo "  cd examples/base && go run genreadme.go"
+            exit 1
+          else
+            echo "✅ The generated README.md is up-to-date!"
+          fi
+        shell: bash

@@ -1,0 +1,51 @@
+{
+    "smithy": "1.0",
+    "shapes": {
+        "ns.foo#Valid": {
+            "type": "operation",
+            "input": {
+                "target": "ns.foo#ValidInput"
+            }
+        },
+        "ns.foo#ValidInput": {
+            "type": "structure",
+            "members": {
+                "token": {
+                    "target": "ns.foo#String",
+                    "traits": {
+                        "smithy.api#idempotencyToken": {}
+                    }
+                }
+            }
+        },
+        "ns.foo#String": {
+            "type": "string"
+        },
+        "ns.foo#Invalid": {
+            "type": "operation",
+            "input": {
+                "target": "ns.foo#InvalidInputWithMultiple"
+            },
+            "traits": {
+                "smithy.api#readonly": {}
+            }
+        },
+        "ns.foo#InvalidInputWithMultiple": {
+            "type": "structure",
+            "members": {
+                "token": {
+                    "target": "ns.foo#String",
+                    "traits": {
+                        "smithy.api#idempotencyToken": {}
+                    }
+                },
+                "anotherToken": {
+                    "target": "ns.foo#String",
+                    "traits": {
+                        "smithy.api#idempotencyToken": {}
+                    }
+                }
+            }
+        }
+    }
+}

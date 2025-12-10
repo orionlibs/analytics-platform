@@ -1,0 +1,7 @@
+.idea/
+/tools/amGithubNotifier/amGithubNotifier
+/tools/comment-monitor/comment-monitor
+/tools/fake-webserver/fake-webserver
+/tools/scaler/scaler
+/infra/infra
+*-flags.txt

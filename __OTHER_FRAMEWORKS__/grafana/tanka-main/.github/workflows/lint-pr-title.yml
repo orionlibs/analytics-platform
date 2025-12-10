@@ -1,0 +1,25 @@
+name: Lint PR title
+
+on:
+  pull_request:
+    types:
+      - opened
+      - edited
+      - synchronize
+      - reopened
+      - ready_for_review
+    branches:
+      - main
+  merge_group:
+
+permissions:
+  contents: read
+  pull-requests: read
+
+jobs:
+  lint-pr-title:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: grafana/shared-workflows/actions/lint-pr-title@5f4c48c03125ef179c36a821d5b801fc876e672c # lint-pr-title/v1.2.1
+        env:
+          GITHUB_TOKEN: ${{ github.token }}

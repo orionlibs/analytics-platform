@@ -1,0 +1,43 @@
+name: build-prophet-wasmstan
+
+on:
+  push:
+    branches: ["main"]
+  pull_request:
+
+env:
+  CARGO_TERM_COLOR: always
+
+permissions: {}
+
+jobs:
+  build:
+    name: Prophet WASMStan component
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@1af3b93b6815bc44a9784bd300feb67ff0d1eeb3 # v6.0.0
+        with:
+          persist-credentials: false
+      - uses: dtolnay/rust-toolchain@0b1efabc08b657293548b77fb76cc02d26091c7e
+        with:
+          toolchain: stable
+      - uses: taiki-e/install-action@1ee706eb04986370fc60419ba172594c51067f29 # v2.62.58
+        with:
+          tool: cargo-binstall,just,ripgrep,wasmtime
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - name: Install deps
+        run: just components/install-deps
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - uses: actions/setup-node@2028fbc5c25fe9cf00d9f06a71cc4710d4507903 # v6.0.0
+      - name: Run node test
+        run: just components/test
+      - uses: actions/upload-artifact@330a01c490aca151604b8cf639adc76d48f6c5d4 # v5.0.0
+        with:
+          name: prophet-wasmstan.wasm
+          path: components/cpp/prophet-wasmstan/prophet-wasmstan.wasm
+      - name: Copy prophet-wasmstan.wasm to augurs
+        run: just copy-component-wasm
+      - name: Ensure no diffs
+        run: git diff --exit-code -- crates/augurs-prophet/prophet-wasmstan.wasm

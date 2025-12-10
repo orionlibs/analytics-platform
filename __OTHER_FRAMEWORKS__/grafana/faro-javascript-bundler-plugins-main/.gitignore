@@ -1,0 +1,12 @@
+node_modules
+dist
+src/index.js.map
+src/index.js
+src/index.d.ts
+yalc.lock
+.yalc
+.npmrc
+lerna-debug.log
+.DS_Store
+.env.*
+.idea

@@ -1,0 +1,69 @@
+services:
+  grafana:
+    container_name: 'grafana-pyroscope-app'
+    build:
+      context: ./.config
+      args:
+        grafana_image: ${GRAFANA_IMAGE:-grafana-enterprise}
+        grafana_version: ${GRAFANA_VERSION:-12.1.3}
+    ports:
+      - ${GRAFANA_PORT:-3000}:3000/tcp
+    volumes:
+      - ./dist:/var/lib/grafana/plugins/grafana-pyroscope-app
+      - ./samples/provisioning:/etc/grafana/provisioning
+      - ./samples/dashboards:/var/lib/grafana/dashboards
+    environment:
+      GF_INSTALL_PLUGINS: grafana-llm-app
+      OPENAI_API_KEY: $OPENAI_API_KEY
+      OPENAI_ORGANIZATION_ID: $OPENAI_ORGANIZATION_ID
+
+  qdrant:
+    image: qdrant/qdrant@sha256:0fb8897412abc81d1c0430a899b9a81eb8328aa634e7242d1bc804c1fe8fe863
+    volumes:
+      - qdrant-storage:/qdrant/storage
+
+  pyroscope:
+    container_name: 'pyroscope'
+    image: grafana/pyroscope:weekly-f129-6d0f4264a@sha256:89f1108d5534e3de0a54d72e4eb36c11d300a16029b1bc289886694ef307349a
+    ports:
+      - 4100:4100/tcp
+    volumes:
+      - ./samples/pyroscope:/etc/pyroscope
+    environment:
+      GITHUB_CLIENT_ID: $GITHUB_CLIENT_ID
+      GITHUB_CLIENT_SECRET: $GITHUB_CLIENT_SECRET
+      GITHUB_SESSION_SECRET: $GITHUB_SESSION_SECRET
+
+  rideshare:
+    build:
+      context: ./samples/rideshare
+    ports:
+      - 5000
+    environment:
+      - PYROSCOPE_SERVER_ADDRESS=http://pyroscope:4100
+      # Set this to 1 to turn on debug logging.
+      - DEBUG=0
+    deploy:
+      mode: replicated
+      replicas: 5
+    depends_on:
+      - pyroscope
+
+  rideshare-load-generator:
+    build:
+      context: ./samples/rideshare
+      dockerfile: Dockerfile.load-generator
+    environment:
+      - HOST_PREFIX=pyroscope-app-plugin_rideshare
+      # This should be the same as the rideshare replica count.
+      - REPLICAS=5
+      # Set this to 1 to turn on debug logging.
+      - DEBUG=0
+    depends_on:
+      - rideshare
+      - pyroscope
+    logging:
+      driver: none
+
+volumes:
+  qdrant-storage:

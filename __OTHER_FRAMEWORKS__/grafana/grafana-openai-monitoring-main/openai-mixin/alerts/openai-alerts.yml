@@ -1,0 +1,57 @@
+groups:
+  - name: OpenAI_API_Alerts
+    rules:
+      - alert: HighCompletionTokensUsage
+        expr: sum by (model) (openai_completionTokens) > 10000
+        for: 5m
+        labels:
+          severity: critical
+        annotations:
+          summary: High completion tokens usage.
+          description: |
+            High completion tokens usage for {{ $labels.model }} model.
+            Current value: {{ $value }}
+          
+      - alert: HighPromptTokensUsage
+        expr: sum by (model) (openai_promptTokens) > 5000
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: High prompt tokens usage.
+          description: |
+            High prompt tokens usage for {{ $labels.model }} model.
+            Current value: {{ $value }}
+            
+      - alert: HighTotalTokensUsage
+        expr: sum by (model) (openai_totalTokens) > 15000
+        for: 5m
+        labels:
+          severity: critical
+        annotations:
+          summary: High total tokens usage.
+          description: |
+            High total tokens usage for {{ $labels.model }} model.
+            Current value: {{ $value }}
+            
+      - alert: LongRequestDuration
+        expr: max by (model) (openai_requestDuration) > 2
+        for: 2m
+        labels:
+          severity: warning
+        annotations:
+          summary: Long request duration.
+          description: |
+            Long request duration for {{ $labels.model }} model.
+            Current value: {{ $value }} seconds
+            
+      - alert: HighUsageCost
+        expr: sum by (model) (openai_usageCost) > 100
+        for: 5m
+        labels:
+          severity: critical
+        annotations:
+          summary: High usage cost.
+          description: |
+            High usage cost for {{ $labels.model }} model.
+            Current value: {{ $value }}

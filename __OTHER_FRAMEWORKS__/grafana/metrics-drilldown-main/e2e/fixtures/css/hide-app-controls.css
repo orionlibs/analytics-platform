@@ -1,0 +1,11 @@
+.main-view > header {
+  display: none;
+}
+
+[data-testid='app-controls'] {
+  display: none;
+}
+
+[aria-label='Native Histogram Support'][role='status'] {
+  display: none;
+}

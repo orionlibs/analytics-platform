@@ -1,0 +1,821 @@
+package types
+
+import (
+	"bytes"
+	"errors"
+	"math"
+	"sort"
+	"strconv"
+	"strings"
+	"time"
+
+	"github.com/go-graphite/carbonapi/expr/consolidations"
+	"github.com/go-graphite/carbonapi/expr/tags"
+	"github.com/go-graphite/carbonapi/expr/types/config"
+	pbv2 "github.com/go-graphite/protocol/carbonapi_v2_pb"
+	pb "github.com/go-graphite/protocol/carbonapi_v3_pb"
+	pickle "github.com/lomik/og-rek"
+)
+
+var (
+	// ErrWildcardNotAllowed is an eval error returned when a wildcard/glob argument is found where a single series is required.
+	ErrWildcardNotAllowed = errors.New("found wildcard where series expected")
+	// ErrTooManyArguments is an eval error returned when too many arguments are provided.
+	ErrTooManyArguments = errors.New("too many arguments")
+)
+
+// MetricData contains necessary data to represent parsed metric (ready to be send out or drawn)
+type MetricData struct {
+	pb.FetchResponse
+
+	GraphOptions
+
+	ValuesPerPoint    int
+	aggregatedValues  []float64
+	Tags              map[string]string
+	AggregateFunction func([]float64) float64 `json:"-"`
+}
+
+func appendInt2(b []byte, n int64) []byte {
+	if n > 9 {
+		return strconv.AppendInt(b, n, 10)
+	}
+	b = append(b, '0')
+	return strconv.AppendInt(b, n, 10)
+}
+
+// MarshalCSV marshals metric data to CSV
+func MarshalCSV(results []*MetricData) []byte {
+	if len(results) == 0 {
+		return []byte("[]")
+	}
+	n := len(results) * (len(results[0].Name) + len(results[0].PathExpression) + 128*len(results[0].Values) + 128)
+	b := make([]byte, 0, n)
+
+	for _, r := range results {
+
+		step := r.StepTime
+		t := r.StartTime
+		for _, v := range r.Values {
+			b = append(b, '"')
+			b = append(b, r.Name...)
+			b = append(b, `",`...)
+			tm := time.Unix(t, 0).UTC()
+			b = strconv.AppendInt(b, int64(tm.Year()), 10)
+			b = append(b, '-')
+			b = appendInt2(b, int64(tm.Month()))
+			b = append(b, '-')
+			b = appendInt2(b, int64(tm.Day()))
+			b = append(b, ' ')
+			b = appendInt2(b, int64(tm.Hour()))
+			b = append(b, ':')
+			b = appendInt2(b, int64(tm.Minute()))
+			b = append(b, ':')
+			b = appendInt2(b, int64(tm.Second()))
+			b = append(b, ',')
+			if !math.IsNaN(v) {
+				b = strconv.AppendFloat(b, v, 'f', -1, 64)
+			}
+			b = append(b, '\n')
+			t += step
+		}
+	}
+	return b
+}
+
+// ConsolidateJSON consolidates values to maxDataPoints size
+func ConsolidateJSON(maxDataPoints int64, results []*MetricData) {
+	if len(results) == 0 {
+		return
+	}
+	startTime := results[0].StartTime
+	endTime := results[0].StopTime
+	for _, r := range results {
+		t := r.StartTime
+		if startTime > t {
+			startTime = t
+		}
+		t = r.StopTime
+		if endTime < t {
+			endTime = t
+		}
+	}
+
+	timeRange := endTime - startTime
+
+	if timeRange <= 0 {
+		return
+	}
+
+	for _, r := range results {
+		numberOfDataPoints := math.Floor(float64(timeRange) / float64(r.StepTime))
+		if numberOfDataPoints > float64(maxDataPoints) {
+			valuesPerPoint := math.Ceil(numberOfDataPoints / float64(maxDataPoints))
+			r.SetValuesPerPoint(int(valuesPerPoint))
+		}
+	}
+}
+
+// MarshalJSON marshals metric data to JSON
+func MarshalJSON(results []*MetricData, timestampMultiplier int64, noNullPoints bool) []byte {
+	if len(results) == 0 {
+		return []byte("[]")
+	}
+	n := len(results) * (len(results[0].Name) + len(results[0].PathExpression) + 128*len(results[0].Values) + 128)
+
+	b := make([]byte, 0, n)
+	b = append(b, '[')
+
+	var topComma bool
+	for _, r := range results {
+		if r == nil {
+			continue
+		}
+
+		if topComma {
+			b = append(b, ',')
+		}
+		topComma = true
+
+		b = append(b, `{"target":`...)
+		b = strconv.AppendQuoteToASCII(b, r.Name)
+		b = append(b, `,"datapoints":[`...)
+
+		var innerComma bool
+		t := r.AggregatedStartTime() * timestampMultiplier
+		for _, v := range r.AggregatedValues() {
+			if noNullPoints && math.IsNaN(v) {
+				t += r.AggregatedTimeStep() * timestampMultiplier
+			} else {
+				if innerComma {
+					b = append(b, ',')
+				}
+				innerComma = true
+
+				b = append(b, '[')
+
+				if math.IsNaN(v) || math.IsInf(v, 1) || math.IsInf(v, -1) {
+					b = append(b, "null"...)
+				} else {
+					b = strconv.AppendFloat(b, v, 'f', -1, 64)
+				}
+
+				b = append(b, ',')
+
+				b = strconv.AppendInt(b, t, 10)
+
+				b = append(b, ']')
+
+				t += r.AggregatedTimeStep() * timestampMultiplier
+			}
+		}
+
+		b = append(b, `],"tags":{`...)
+		notFirstTag := false
+		responseTags := make([]string, 0, len(r.Tags))
+		for tag := range r.Tags {
+			responseTags = append(responseTags, tag)
+		}
+		sort.Strings(responseTags)
+		for _, tag := range responseTags {
+			v := r.Tags[tag]
+			if notFirstTag {
+				b = append(b, ',')
+			}
+			b = strconv.AppendQuoteToASCII(b, tag)
+			b = append(b, ':')
+			b = strconv.AppendQuoteToASCII(b, v)
+			notFirstTag = true
+		}
+
+		b = append(b, `}}`...)
+	}
+
+	b = append(b, ']')
+
+	return b
+}
+
+// MarshalPickle marshals metric data to pickle format
+func MarshalPickle(results []*MetricData) []byte {
+
+	var p []map[string]interface{}
+
+	for _, r := range results {
+		values := make([]interface{}, len(r.Values))
+		for i, v := range r.Values {
+			if math.IsNaN(v) {
+				values[i] = pickle.None{}
+			} else {
+				values[i] = v
+			}
+
+		}
+		p = append(p, map[string]interface{}{
+			"name":              r.Name,
+			"pathExpression":    r.PathExpression,
+			"consolidationFunc": r.ConsolidationFunc,
+			"start":             r.StartTime,
+			"end":               r.StopTime,
+			"step":              r.StepTime,
+			"xFilesFactor":      r.XFilesFactor,
+			"values":            values,
+		})
+	}
+
+	var buf bytes.Buffer
+
+	penc := pickle.NewEncoder(&buf)
+	_ = penc.Encode(p)
+
+	return buf.Bytes()
+}
+
+// MarshalProtobufV3 marshals metric data to protobuf
+func MarshalProtobufV2(results []*MetricData) ([]byte, error) {
+	response := pbv2.MultiFetchResponse{}
+	for _, metric := range results {
+		fmv3 := metric.FetchResponse
+		v := make([]float64, len(fmv3.Values))
+		isAbsent := make([]bool, len(fmv3.Values))
+		for i := range fmv3.Values {
+			if math.IsNaN(fmv3.Values[i]) {
+				v[i] = 0
+				isAbsent[i] = true
+			} else {
+				v[i] = fmv3.Values[i]
+			}
+		}
+		fm := pbv2.FetchResponse{
+			Name:      fmv3.Name,
+			StartTime: int32(fmv3.StartTime),
+			StopTime:  int32(fmv3.StopTime),
+			StepTime:  int32(fmv3.StepTime),
+			Values:    v,
+			IsAbsent:  isAbsent,
+		}
+		response.Metrics = append(response.Metrics, fm)
+	}
+	b, err := response.Marshal()
+	if err != nil {
+		return nil, err
+	}
+
+	return b, nil
+}
+
+// MarshalProtobufV3 marshals metric data to protobuf
+func MarshalProtobufV3(results []*MetricData) ([]byte, error) {
+	response := pb.MultiFetchResponse{}
+	for _, metric := range results {
+		response.Metrics = append(response.Metrics, metric.FetchResponse)
+	}
+	b, err := response.Marshal()
+	if err != nil {
+		return nil, err
+	}
+
+	return b, nil
+}
+
+// MarshalRaw marshals metric data to graphite's internal format, called 'raw'
+func MarshalRaw(results []*MetricData) []byte {
+	if len(results) == 0 {
+		return []byte{}
+	}
+	n := len(results) * (len(results[0].Name) + len(results[0].PathExpression) + 128*len(results[0].Values) + 128)
+	b := make([]byte, 0, n)
+
+	for _, r := range results {
+
+		b = append(b, r.Name...)
+
+		b = append(b, ',')
+		b = strconv.AppendInt(b, r.StartTime, 10)
+		b = append(b, ',')
+		b = strconv.AppendInt(b, r.StopTime, 10)
+		b = append(b, ',')
+		b = strconv.AppendInt(b, r.StepTime, 10)
+		b = append(b, '|')
+
+		var comma bool
+		for _, v := range r.Values {
+			if comma {
+				b = append(b, ',')
+			}
+			comma = true
+			if math.IsNaN(v) {
+				b = append(b, "None"...)
+			} else {
+				b = strconv.AppendFloat(b, v, 'f', -1, 64)
+			}
+		}
+
+		b = append(b, '\n')
+	}
+	return b
+}
+
+// SetValuesPerPoint sets value per point coefficient.
+func (r *MetricData) SetValuesPerPoint(v int) {
+	r.ValuesPerPoint = v
+	r.aggregatedValues = nil
+}
+
+// AggregatedTimeStep aggregates time step
+func (r *MetricData) AggregatedTimeStep() int64 {
+	if r.ValuesPerPoint == 1 || r.ValuesPerPoint == 0 {
+		return r.StepTime
+	}
+
+	return r.StepTime * int64(r.ValuesPerPoint)
+}
+
+// AggregatedStartTime returns the start time of the aggregated series.
+// This can be different from the original start time if NudgeStartTimeOnAggregation
+// or UseBucketsHighestTimestampOnAggregation are enabled.
+func (r *MetricData) AggregatedStartTime() int64 {
+	start := r.StartTime + r.nudgePointsCount()*r.StepTime
+	if config.Config.UseBucketsHighestTimestampOnAggregation {
+		return start + r.AggregatedTimeStep() - r.StepTime
+	}
+	return start
+}
+
+// nudgePointsCount returns the number of points to discard at the beginning of
+// the series when aggregating. This is done if NudgeStartTimeOnAggregation is
+// enabled, and has the purpose of assigning timestamps of a series to buckets
+// consistently across different time ranges. To simplify the aggregation
+// logic, we discard points at the beginning of the series so that a bucket
+// starts right at the beginning. This function calculates how many points to
+// discard.
+func (r *MetricData) nudgePointsCount() int64 {
+	if !config.Config.NudgeStartTimeOnAggregation {
+		return 0
+	}
+
+	if len(r.Values) <= 2*r.ValuesPerPoint {
+		// There would be less than 2 points after aggregation, removing one would be too impactful.
+		return 0
+	}
+
+	// Suppose r.StartTime=4, r.StepTime=3 and aggTimeStep=6.
+	// - ts:                       00 01 02 03 04 05 06 07 08 09 10 11 12 13 14 15 16 ...
+	// - original buckets:         -- -- --|        |        |        |        |     |   ...
+	// - aggregated buckets:       -- -- --|                 |                 |         ...
+
+	// We start counting our aggTimeStep buckets at absolute time r.StepTime.
+	// Notice the following:
+	// - ts:                       00 01 02 03 04 05 06 07 08 09 10 11 12 13 14 15 16 ...
+	// - bucket #:                  -  -  -  1  1  1  1  1  1  2  2  2  2  2  2  3  3 ...
+	// - (ts-step) % aggTimeStep:   -  -  -  0  1  2  3  4  5  0  1  2  3  4  5  0  1 ...
+
+	// Given a timestamp 'ts', we can calculate how far it is from the beginning
+	// of the nearest bucket to the right by doing:
+	// * aggTimeStep - ((ts-r.StepTime) % aggTimeStep)
+	// Using this, we calculate the 'distance' from r.StartTime to the
+	// nearest bucket to the right. If this distance is less than aggTimeStep,
+	// then r.StartTime is not the beginning of a bucket. We need to discard
+	// dist / r.StepTime points (which could be zero if dist < r.StepTime).
+	aggTimeStep := r.AggregatedTimeStep()
+	dist := aggTimeStep - ((r.StartTime - r.StepTime) % aggTimeStep)
+	if dist < aggTimeStep {
+		return dist / r.StepTime
+	}
+	return 0
+}
+
+// GetAggregateFunction returns MetricData.AggregateFunction and set it, if it's not yet
+func (r *MetricData) GetAggregateFunction() func([]float64) float64 {
+	if r.AggregateFunction == nil {
+		var ok bool
+		if r.AggregateFunction, ok = consolidations.ConsolidationToFunc[strings.ToLower(r.ConsolidationFunc)]; !ok {
+			// if consolidation function is not known, we should fall back to average
+			r.AggregateFunction = consolidations.AvgValue
+		}
+	}
+
+	return r.AggregateFunction
+}
+
+// AggregatedValues aggregates values (with cache)
+func (r *MetricData) AggregatedValues() []float64 {
+	if r.aggregatedValues == nil {
+		r.AggregateValues()
+	}
+	return r.aggregatedValues
+}
+
+// AggregateValues aggregates values
+func (r *MetricData) AggregateValues() {
+	if r.ValuesPerPoint == 1 || r.ValuesPerPoint == 0 {
+		r.aggregatedValues = make([]float64, len(r.Values))
+		copy(r.aggregatedValues, r.Values)
+		return
+	}
+	aggFunc := r.GetAggregateFunction()
+
+	n := len(r.Values)/r.ValuesPerPoint + 1
+	aggV := make([]float64, 0, n)
+
+	nudgeCount := r.nudgePointsCount()
+	v := r.Values[nudgeCount:]
+
+	for len(v) >= r.ValuesPerPoint {
+		val := aggFunc(v[:r.ValuesPerPoint])
+		aggV = append(aggV, val)
+		v = v[r.ValuesPerPoint:]
+	}
+
+	if len(v) > 0 {
+		val := aggFunc(v)
+		aggV = append(aggV, val)
+	}
+
+	r.aggregatedValues = aggV
+}
+
+// Copy returns the copy of r. If includeValues set to true, it copies values as well.
+func (r *MetricData) Copy(includeValues bool) *MetricData {
+	var values, aggregatedValues []float64
+	values = make([]float64, 0)
+	appliedFunctions := make([]string, 0)
+	aggregatedValues = nil
+
+	if includeValues {
+		values = make([]float64, len(r.Values))
+		copy(values, r.Values)
+
+		if r.aggregatedValues != nil {
+			aggregatedValues = make([]float64, len(r.aggregatedValues))
+			copy(aggregatedValues, r.aggregatedValues)
+		}
+
+		appliedFunctions = make([]string, len(r.AppliedFunctions))
+		copy(appliedFunctions, r.AppliedFunctions)
+	}
+
+	tags := make(map[string]string)
+	for k, v := range r.Tags {
+		tags[k] = v
+	}
+
+	return &MetricData{
+		FetchResponse: pb.FetchResponse{
+			Name:                    r.Name,
+			PathExpression:          r.PathExpression,
+			ConsolidationFunc:       r.ConsolidationFunc,
+			StartTime:               r.StartTime,
+			StopTime:                r.StopTime,
+			StepTime:                r.StepTime,
+			XFilesFactor:            r.XFilesFactor,
+			HighPrecisionTimestamps: r.HighPrecisionTimestamps,
+			Values:                  values,
+			AppliedFunctions:        appliedFunctions,
+			RequestStartTime:        r.RequestStartTime,
+			RequestStopTime:         r.RequestStopTime,
+		},
+		GraphOptions:      r.GraphOptions,
+		ValuesPerPoint:    r.ValuesPerPoint,
+		aggregatedValues:  aggregatedValues,
+		Tags:              tags,
+		AggregateFunction: r.AggregateFunction,
+	}
+}
+
+func CopyLink(tags map[string]string) map[string]string {
+	newTags := make(map[string]string)
+	for k, v := range tags {
+		newTags[k] = v
+	}
+	return newTags
+}
+
+// CopyLink returns the copy of MetricData, Values not copied and link from parent. Tags map are copied
+func (r *MetricData) CopyLink() *MetricData {
+	tags := CopyLink(r.Tags)
+
+	return &MetricData{
+		FetchResponse: pb.FetchResponse{
+			Name:                    r.Name,
+			PathExpression:          r.PathExpression,
+			ConsolidationFunc:       r.ConsolidationFunc,
+			StartTime:               r.StartTime,
+			StopTime:                r.StopTime,
+			StepTime:                r.StepTime,
+			XFilesFactor:            r.XFilesFactor,
+			HighPrecisionTimestamps: r.HighPrecisionTimestamps,
+			Values:                  r.Values,
+			AppliedFunctions:        r.AppliedFunctions,
+			RequestStartTime:        r.RequestStartTime,
+			RequestStopTime:         r.RequestStopTime,
+		},
+		GraphOptions:      r.GraphOptions,
+		ValuesPerPoint:    r.ValuesPerPoint,
+		aggregatedValues:  r.aggregatedValues,
+		Tags:              tags,
+		AggregateFunction: r.AggregateFunction,
+	}
+}
+
+// CopyLinkTags returns the copy of MetricData, Values not copied and link from parent. Tags map set by rereference without copy (so, DON'T change them for prevent naming bugs)
+func (r *MetricData) CopyLinkTags() *MetricData {
+	return &MetricData{
+		FetchResponse: pb.FetchResponse{
+			Name:                    r.Name,
+			PathExpression:          r.PathExpression,
+			ConsolidationFunc:       r.ConsolidationFunc,
+			StartTime:               r.StartTime,
+			StopTime:                r.StopTime,
+			StepTime:                r.StepTime,
+			XFilesFactor:            r.XFilesFactor,
+			HighPrecisionTimestamps: r.HighPrecisionTimestamps,
+			Values:                  r.Values,
+			AppliedFunctions:        r.AppliedFunctions,
+			RequestStartTime:        r.RequestStartTime,
+			RequestStopTime:         r.RequestStopTime,
+		},
+		GraphOptions:      r.GraphOptions,
+		ValuesPerPoint:    r.ValuesPerPoint,
+		aggregatedValues:  r.aggregatedValues,
+		Tags:              r.Tags,
+		AggregateFunction: r.AggregateFunction,
+	}
+}
+
+// CopyName returns the copy of MetricData, Values not copied and link from parent. If name set, Name and Name tag changed
+func (r *MetricData) CopyName(name string) *MetricData {
+	res := r.CopyLink()
+	res.Name = name
+	res.Tags["name"] = name
+
+	return res
+}
+
+// CopyNameWithDefault returns the copy of MetricData, Values not copied and link from parent. Name is changed, Tags will be reset.
+// If Name tag not set, it will be set with default value.
+// Use this function in aggregate function (like sumSeries)
+func (r *MetricData) CopyNameWithDefault(name, defaultName string) *MetricData {
+	if name == "" {
+		name = defaultName
+	}
+
+	tags := tags.ExtractTags(ExtractName(name))
+	if _, exist := tags["name"]; !exist {
+		tags["name"] = defaultName
+	}
+
+	return &MetricData{
+		FetchResponse: pb.FetchResponse{
+			Name:                    name,
+			PathExpression:          r.PathExpression,
+			ConsolidationFunc:       r.ConsolidationFunc,
+			StartTime:               r.StartTime,
+			StopTime:                r.StopTime,
+			StepTime:                r.StepTime,
+			XFilesFactor:            r.XFilesFactor,
+			HighPrecisionTimestamps: r.HighPrecisionTimestamps,
+			Values:                  r.Values,
+			AppliedFunctions:        r.AppliedFunctions,
+			RequestStartTime:        r.RequestStartTime,
+			RequestStopTime:         r.RequestStopTime,
+		},
+		GraphOptions:      r.GraphOptions,
+		ValuesPerPoint:    r.ValuesPerPoint,
+		aggregatedValues:  r.aggregatedValues,
+		Tags:              tags,
+		AggregateFunction: r.AggregateFunction,
+	}
+}
+
+// CopyTag returns the copy of MetricData, Values not copied and link from parent. If name set, Name and Name tag changed, Tags will be reset.
+// WARNING: can provide inconsistence beetween name and tags, if incorectly used
+func (r *MetricData) CopyTag(name string, tags map[string]string) *MetricData {
+	if name == "" {
+		return r.CopyLink()
+	}
+
+	return &MetricData{
+		FetchResponse: pb.FetchResponse{
+			Name:                    name,
+			PathExpression:          r.PathExpression,
+			ConsolidationFunc:       r.ConsolidationFunc,
+			StartTime:               r.StartTime,
+			StopTime:                r.StopTime,
+			StepTime:                r.StepTime,
+			XFilesFactor:            r.XFilesFactor,
+			HighPrecisionTimestamps: r.HighPrecisionTimestamps,
+			Values:                  r.Values,
+			AppliedFunctions:        r.AppliedFunctions,
+			RequestStartTime:        r.RequestStartTime,
+			RequestStopTime:         r.RequestStopTime,
+		},
+		GraphOptions:      r.GraphOptions,
+		ValuesPerPoint:    r.ValuesPerPoint,
+		aggregatedValues:  r.aggregatedValues,
+		Tags:              tags,
+		AggregateFunction: r.AggregateFunction,
+	}
+}
+
+// CopyNameArg returns the copy of MetricData, Values not copied and link from parent. Name is changed, tags extracted from seriesByTag args, if extractTags is true
+// For use in functions like aggregate
+func (r *MetricData) CopyNameArg(name, defaultName string, defaultTags map[string]string, extractTags bool) *MetricData {
+	if name == "" {
+		return r.CopyLink()
+	}
+
+	var tagsExtracted map[string]string
+	nameStiped := ExtractName(name)
+	if strings.HasPrefix(nameStiped, "seriesByTag(") {
+		if extractTags {
+			// from aggregation functions with seriesByTag
+			tagsExtracted = tags.ExtractSeriesByTags(nameStiped, defaultName)
+		} else {
+			tagsExtracted = defaultTags
+		}
+	} else {
+		tagsExtracted = tags.ExtractTags(nameStiped)
+	}
+
+	return &MetricData{
+		FetchResponse: pb.FetchResponse{
+			Name:                    name,
+			PathExpression:          r.PathExpression,
+			ConsolidationFunc:       r.ConsolidationFunc,
+			StartTime:               r.StartTime,
+			StopTime:                r.StopTime,
+			StepTime:                r.StepTime,
+			XFilesFactor:            r.XFilesFactor,
+			HighPrecisionTimestamps: r.HighPrecisionTimestamps,
+			Values:                  r.Values,
+			AppliedFunctions:        r.AppliedFunctions,
+			RequestStartTime:        r.RequestStartTime,
+			RequestStopTime:         r.RequestStopTime,
+		},
+		GraphOptions:      r.GraphOptions,
+		ValuesPerPoint:    r.ValuesPerPoint,
+		aggregatedValues:  r.aggregatedValues,
+		Tags:              tagsExtracted,
+		AggregateFunction: r.AggregateFunction,
+	}
+}
+
+// CopyName returns the copy of MetricData, Values not copied and link from parent. If name set, Name and Name tag changed, Tags wil be reset
+func (r *MetricData) CopyNameWithVal(name string) *MetricData {
+	if name == "" {
+		return r.Copy(true)
+	}
+
+	values := make([]float64, len(r.Values))
+	copy(values, r.Values)
+
+	tags := tags.ExtractTags(ExtractName(name))
+
+	return &MetricData{
+		FetchResponse: pb.FetchResponse{
+			Name:                    name,
+			PathExpression:          r.PathExpression,
+			ConsolidationFunc:       r.ConsolidationFunc,
+			StartTime:               r.StartTime,
+			StopTime:                r.StopTime,
+			StepTime:                r.StepTime,
+			XFilesFactor:            r.XFilesFactor,
+			HighPrecisionTimestamps: r.HighPrecisionTimestamps,
+			Values:                  values,
+			AppliedFunctions:        r.AppliedFunctions,
+			RequestStartTime:        r.RequestStartTime,
+			RequestStopTime:         r.RequestStopTime,
+		},
+		GraphOptions:      r.GraphOptions,
+		ValuesPerPoint:    r.ValuesPerPoint,
+		aggregatedValues:  r.aggregatedValues,
+		Tags:              tags,
+		AggregateFunction: r.AggregateFunction,
+	}
+}
+
+// SetConsolidationFunc set ConsolidationFunc
+func (r *MetricData) SetConsolidationFunc(f string) *MetricData {
+	r.ConsolidationFunc = f
+	return r
+}
+
+// SetXFilesFactor set XFilesFactor
+func (r *MetricData) SetXFilesFactor(x float32) *MetricData {
+	r.XFilesFactor = x
+	return r
+}
+
+// AppendStopTime append to StopTime for simulate broken time series
+func (r *MetricData) AppendStopTime(step int64) *MetricData {
+	r.StopTime += step
+	return r
+}
+
+// FixStopTime fix broken StopTime (less than need for values)
+func (r *MetricData) FixStopTime() *MetricData {
+	stop := r.StartTime + int64(len(r.Values))*r.StepTime
+	if r.StopTime < stop {
+		r.StopTime = stop
+	}
+	return r
+}
+
+// SetNameTag set name tag
+func (r *MetricData) SetNameTag(name string) *MetricData {
+	r.Tags["name"] = name
+	return r
+}
+
+// FixNameTag for safe name tag for future use without metric.ExtractMetric
+func (r *MetricData) FixNameTag() *MetricData {
+	r.Tags["name"] = ExtractName(r.Tags["name"])
+	return r
+}
+
+// SetTag allow to set custom tag (for tests)
+func (r *MetricData) SetTag(key, value string) *MetricData {
+	r.Tags[key] = value
+	return r
+}
+
+// SetTag allow to set tags
+func (r *MetricData) SetTags(tags map[string]string) *MetricData {
+	r.Tags = tags
+	return r
+}
+
+// SetPathExpression set path expression
+func (r *MetricData) SetPathExpression(path string) *MetricData {
+	r.PathExpression = path
+	return r
+}
+
+// RecalcStopTime recalc StopTime with StartTime and Values length
+func (r *MetricData) RecalcStopTime() *MetricData {
+	stop := r.StartTime + int64(len(r.Values))*r.StepTime
+	if r.StopTime != stop {
+		r.StopTime = stop
+	}
+	return r
+}
+
+// CopyMetricDataSlice returns the slice of metrics that should be changed later.
+// It allows to avoid a changing of source data, e.g. by AlignMetrics
+func CopyMetricDataSlice(args []*MetricData) (newData []*MetricData) {
+	newData = make([]*MetricData, len(args))
+	for i, m := range args {
+		newData[i] = m.Copy(true)
+	}
+	return newData
+}
+
+// CopyMetricDataSliceLink returns the copies slice of metrics, Values not copied and link from parent.
+func CopyMetricDataSliceLink(args []*MetricData) (newData []*MetricData) {
+	newData = make([]*MetricData, len(args))
+	for i, m := range args {
+		newData[i] = m.CopyLink()
+	}
+	return newData
+}
+
+// CopyMetricDataSliceWithName returns the copies slice of metrics with name overwrite, Values not copied and link from parent. Tags will be reset
+func CopyMetricDataSliceWithName(args []*MetricData, name string) (newData []*MetricData) {
+	newData = make([]*MetricData, len(args))
+	for i, m := range args {
+		newData[i] = m.CopyName(name)
+	}
+	return newData
+}
+
+// CopyMetricDataSliceWithTags returns the copies slice of metrics with name overwrite, Values not copied and link from parent.
+func CopyMetricDataSliceWithTags(args []*MetricData, name string, tags map[string]string) (newData []*MetricData) {
+	newData = make([]*MetricData, len(args))
+	for i, m := range args {
+		newData[i] = m.CopyTag(name, tags)
+	}
+	return newData
+}
+
+// MakeMetricData creates new metrics data with given metric timeseries
+func MakeMetricData(name string, values []float64, step, start int64) *MetricData {
+	tags := tags.ExtractTags(ExtractName(name))
+	return makeMetricDataWithTags(name, values, step, start, tags).FixNameTag()
+}
+
+// MakeMetricDataWithTags creates new metrics data with given metric Time Series (with tags)
+func makeMetricDataWithTags(name string, values []float64, step, start int64, tags map[string]string) *MetricData {
+	stop := start + int64(len(values))*step
+
+	return &MetricData{
+		FetchResponse: pb.FetchResponse{
+			Name:      name,
+			Values:    values,
+			StartTime: start,
+			StepTime:  step,
+			StopTime:  stop,
+		},
+		Tags: tags,
+	}
+}

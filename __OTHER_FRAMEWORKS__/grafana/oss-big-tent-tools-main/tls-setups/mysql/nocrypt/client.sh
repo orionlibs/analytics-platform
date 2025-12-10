@@ -1,0 +1,1 @@
+MYSQL_PWD=password mysql -hlocalhost --protocol=tcp -ujohn -Ddb --ssl-mode=DISABLED

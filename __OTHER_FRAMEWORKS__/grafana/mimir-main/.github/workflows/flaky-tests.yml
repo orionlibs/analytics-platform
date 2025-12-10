@@ -1,0 +1,59 @@
+name: Flaky Tests Detection
+
+on:
+  schedule:
+    - cron: "0 2 * * 1" # Run every Monday at 2 AM
+  workflow_dispatch:
+    inputs:
+      skip-posting-issues:
+        description: 'Skip creating/updating GitHub issues (preview mode)'
+        required: false
+        default: 'true'
+        type: boolean
+
+permissions:
+  contents: read
+  issues: write
+  id-token: write
+
+jobs:
+  analyze-flaky-tests:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@1af3b93b6815bc44a9784bd300feb67ff0d1eeb3 # v6
+        with:
+          fetch-depth: '0' # we need all commits so that the git history check returns valid commits
+
+      - name: Retrieve Secrets from Vault
+        id: get-secrets
+        uses: grafana/shared-workflows/actions/get-vault-secrets@a37de51f3d713a30a9e4b21bcdfbd38170020593 # get-vault-secrets/v1.3.0
+        with:
+          repo_secrets: |
+            LOKI_URL=flaky-tests-bot:loki-url
+            LOKI_USERNAME=flaky-tests-bot:loki-username
+            LOKI_PASSWORD=flaky-tests-bot:loki-password
+            APP_ID=mimir-github-bot:app_id
+            PRIVATE_KEY=mimir-github-bot:private_key
+
+      - name: Generate GitHub App Token
+        id: github-token
+        uses: actions/create-github-app-token@7e473efe3cb98aa54f8d4bac15400b15fad77d94 # v2
+        with:
+          app-id: ${{ env.APP_ID }}
+          private-key: ${{ env.PRIVATE_KEY }}
+          owner: ${{ github.repository_owner }}
+
+      - name: Run Flaky Tests Analysis
+        uses: grafana/shared-workflows/actions/go-flaky-tests@8b88213bca76e86f9f59b43038cc5d7545452436
+        with:
+          loki-url: ${{ env.LOKI_URL }}
+          loki-username: ${{ env.LOKI_USERNAME }}
+          loki-password: ${{ env.LOKI_PASSWORD }}
+          repository: ${{ github.repository }}
+          time-range: "7d"
+          top-k: "3"
+          skip-posting-issues: ${{ github.event_name == 'workflow_dispatch' && inputs.skip-posting-issues || 'false' }}
+          ignored-tests: "TestOurUpstreamTestCasesAreInSyncWithUpstream" # TestOurUpstreamTestCasesAreInSyncWithUpstream is supposed to block upstream mimir-prometheus updates, so it's also expected to fail.
+        env:
+          GITHUB_TOKEN: ${{ steps.github-token.outputs.token }}

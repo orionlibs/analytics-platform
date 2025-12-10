@@ -1,0 +1,46 @@
+version: "2"
+
+run:
+  concurrency: 8
+  issues-exit-code: 1
+  tests: true
+
+linters:
+  enable:
+    - errorlint
+    - forbidigo
+    - gocritic
+    - gosec
+    - goconst
+    - misspell
+    - revive
+    - unconvert
+    - unparam
+  settings:
+    revive:
+      rules:
+        - name: exported
+          disabled: true
+    gocritic:
+      disabled-checks:
+        - ifElseChain
+    gosec:
+      excludes:
+        - G404 # use of weak random number generator
+
+  exclusions:
+    warn-unused: true
+    presets:
+      - comments
+      - common-false-positives
+      - legacy
+      - std-error-handling
+    rules:
+      - path: _test\.go
+        linters:
+          - unparam
+
+formatters:
+  enable:
+    - gofmt
+    - goimports

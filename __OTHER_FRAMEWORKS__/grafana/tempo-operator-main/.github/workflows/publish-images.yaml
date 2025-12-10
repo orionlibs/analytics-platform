@@ -1,0 +1,21 @@
+name: "Publish operator"
+
+permissions: {}
+
+on:
+  push:
+    branches: [main]
+    # will run only on main, for tag branches we run it as part of the release process.
+    tags-ignore: ["v*"]
+
+  workflow_dispatch:
+
+jobs:
+  publish-images:
+    uses: ./.github/workflows/reusable-publish-images.yaml
+    permissions:
+      packages: write # push container image
+    with:
+      publish_bundle: false
+      version_tag: ${{ github.ref }}
+      push: ${{ github.event_name != 'pull_request' }}

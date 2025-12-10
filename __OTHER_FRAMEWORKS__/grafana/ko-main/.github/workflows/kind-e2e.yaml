@@ -1,0 +1,114 @@
+name: KinD e2e tests
+
+on:
+  workflow_dispatch:  # Allow manual runs.
+  pull_request:
+    branches: ['main']
+
+jobs:
+  e2e-tests:
+    name: e2e tests
+    runs-on: ubuntu-latest
+    env:
+      # https://github.com/google/go-containerregistry/pull/125 allows insecure registry for
+      # '*.local' hostnames. This works both for `ko` and our own tag-to-digest resolution logic,
+      # thus allowing us to test without bypassing tag-to-digest resolution.
+      REGISTRY_NAME: registry.local
+      REGISTRY_PORT: 5000
+      KO_DOCKER_REPO: registry.local:5000/ko
+
+    steps:
+    - uses: actions/setup-go@v2
+      with:
+        go-version: 1.17.x
+    - uses: actions/checkout@v2
+
+    - name: Install ko
+      run: go install ./
+
+    - name: Configure KinD Cluster
+      run: |
+        # KinD configuration.
+        cat > kind.yaml <<EOF
+        apiVersion: kind.x-k8s.io/v1alpha4
+        kind: Cluster
+
+        # Configure registry for KinD.
+        containerdConfigPatches:
+        - |-
+          [plugins."io.containerd.grpc.v1.cri".registry.mirrors."$REGISTRY_NAME:$REGISTRY_PORT"]
+            endpoint = ["http://$REGISTRY_NAME:$REGISTRY_PORT"]
+        EOF
+
+    - uses: helm/kind-action@v1.2.0
+      with:
+        cluster_name: kind
+        config: kind.yaml
+
+    - name: Setup local registry
+      run: |
+        # Run a registry.
+        docker run -d --restart=always \
+          -p $REGISTRY_PORT:$REGISTRY_PORT --name $REGISTRY_NAME registry:2
+
+        # Connect the registry to the KinD network.
+        docker network connect "kind" $REGISTRY_NAME
+
+        # Make the $REGISTRY_NAME -> 127.0.0.1, to tell `ko` to publish to
+        # local reigstry, even when pushing $REGISTRY_NAME:$REGISTRY_PORT/some/image
+        sudo echo "127.0.0.1 $REGISTRY_NAME" | sudo tee -a /etc/hosts
+
+    - name: Wait for ready nodes
+      run: |
+        kubectl wait --timeout=2m --for=condition=Ready nodes --all
+
+    - name: Install Cosign
+      uses: sigstore/cosign-installer@main
+      with:
+        cosign-release: 'v1.3.1'
+
+    - name: Run Smoke Test
+      run: |
+        # Test with kind load
+        KO_DOCKER_REPO=kind.local ko apply --platform=all -f ./test
+        kubectl wait --timeout=10s --for=condition=Ready pod/kodata
+        kubectl delete pod kodata
+
+        # Test with registry
+        ko apply --platform=all -f ./test
+        kubectl wait --timeout=60s --for=condition=Ready pod/kodata
+        kubectl delete pod kodata
+
+
+    - name: Check SBOM
+      run: |
+        set -o pipefail
+
+        IMAGE=$(ko build ./test)
+        SBOM=$(cosign download sbom ${IMAGE})
+        KO_DEPS=$(ko deps ${IMAGE})
+
+        echo '::group:: SBOM'
+        echo "${SBOM}"
+        echo '::endgroup::'
+
+        echo '::group:: ko deps'
+        echo "${KO_DEPS}"
+        echo '::endgroup::'
+
+        if [ "${SBOM}" != "${KO_DEPS}" ] ; then
+          echo Wanted SBOM and 'ko deps' to match, got differences!
+          exit 1
+        fi
+
+    - name: Collect logs
+      if: ${{ always() }}
+      run: |
+        mkdir -p /tmp/logs
+        kind export logs /tmp/logs
+    - name: Upload artifacts
+      if: ${{ always() }}
+      uses: actions/upload-artifact@v2
+      with:
+        name: logs
+        path: /tmp/logs

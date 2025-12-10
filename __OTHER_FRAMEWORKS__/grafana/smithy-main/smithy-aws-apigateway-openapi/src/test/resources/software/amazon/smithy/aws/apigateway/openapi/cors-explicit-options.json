@@ -1,0 +1,72 @@
+{
+    "smithy": "1.0",
+    "shapes": {
+        "example.smithy#MyService": {
+            "type": "service",
+            "version": "2006-03-01",
+            "operations": [
+                {
+                    "target": "example.smithy#Foo"
+                },
+                {
+                    "target": "example.smithy#FooOptions"
+                }
+            ],
+            "traits": {
+                "aws.protocols#restJson1": {},
+                "aws.auth#sigv4": {
+                    "name": "myservice"
+                },
+                "smithy.api#cors": {
+                    "origin": "https://foo.com"
+                }
+            }
+        },
+        "example.smithy#Foo": {
+            "type": "operation",
+            "traits": {
+                "smithy.api#http": {
+                    "uri": "/foo",
+                    "method": "PUT",
+                    "code": 201
+                },
+                "aws.apigateway#integration": {
+                    "type": "aws_proxy",
+                    "credentials": "arn:aws:iam::123456789012:role/Foo",
+                    "uri": "arn:aws:apigateway:us-west-2:lambda:path/2015-03-31/functions/arn:aws:lambda:us-west-2:123456789012:function:bar/invocations",
+                    "httpMethod": "POST"
+                }
+            }
+        },
+        "example.smithy#FooOptions": {
+            "type": "operation",
+            "output": {
+                "target": "example.smithy#FooOptionsOutput"
+            },
+            "traits": {
+                "smithy.api#http": {
+                    "uri": "/foo",
+                    "method": "OPTIONS",
+                    "code": 200
+                },
+                "aws.apigateway#integration": {
+                    "type": "aws",
+                    "credentials": "arn:aws:iam::123456789012:role/FooOptions",
+                    "uri": "arn:aws:apigateway:us-west-2:lambda:path/2015-03-31/functions/arn:aws:lambda:us-west-2:123456789012:function:baz/invocations",
+                    "httpMethod": "POST"
+                }
+            }
+        },
+        "example.smithy#FooOptionsOutput": {
+            "type": "structure",
+            "members": {
+                "hd": {
+                    "target": "smithy.api#String",
+                    "traits": {
+                        "smithy.api#httpHeader": "X-Hd"
+                    }
+                }
+            }
+        }
+    }
+}

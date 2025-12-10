@@ -1,0 +1,100 @@
+{
+    "smithy": "1.0",
+    "shapes": {
+        "smithy.example#Service": {
+            "type": "service",
+            "version": "2018-03-17",
+            "resources": [
+                {
+                    "target": "smithy.example#Resource1"
+                }
+            ],
+            "operations": [
+                {
+                    "target": "smithy.example#Operation1"
+                },
+                {
+                    "target": "smithy.example#Operation2"
+                },
+                {
+                    "target": "smithy.example#Operation3"
+                }
+            ],
+            "traits": {
+                "aws.api#controlPlane": {}
+            }
+        },
+        "smithy.example#Operation1": {
+            "type": "operation",
+            "traits": {
+                "aws.api#dataPlane": {}
+            }
+        },
+        "smithy.example#Operation2": {
+            "type": "operation",
+            "traits": {
+                "aws.api#controlPlane": {}
+            }
+        },
+        "smithy.example#Operation3": {
+            "type": "operation"
+        },
+        "smithy.example#Resource1": {
+            "type": "resource",
+            "resources": [
+                {
+                    "target": "smithy.example#Resource2"
+                }
+            ],
+            "operations": [
+                {
+                    "target": "smithy.example#Operation4"
+                },
+                {
+                    "target": "smithy.example#Operation5"
+                },
+                {
+                    "target": "smithy.example#Operation6"
+                }
+            ]
+        },
+        "smithy.example#Operation4": {
+            "type": "operation",
+            "traits": {
+                "aws.api#dataPlane": {}
+            }
+        },
+        "smithy.example#Operation5": {
+            "type": "operation",
+            "traits": {
+                "aws.api#controlPlane": {}
+            }
+        },
+        "smithy.example#Operation6": {
+            "type": "operation"
+        },
+        "smithy.example#Resource2": {
+            "type": "resource",
+            "operations": [
+                {
+                    "target": "smithy.example#Operation7"
+                },
+                {
+                    "target": "smithy.example#Operation8"
+                }
+            ],
+            "traits": {
+                "aws.api#dataPlane": {}
+            }
+        },
+        "smithy.example#Operation7": {
+            "type": "operation",
+            "traits": {
+                "aws.api#controlPlane": {}
+            }
+        },
+        "smithy.example#Operation8": {
+            "type": "operation"
+        }
+    }
+}

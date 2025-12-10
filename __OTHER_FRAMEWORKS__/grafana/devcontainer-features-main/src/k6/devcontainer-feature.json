@@ -1,0 +1,33 @@
+{
+  "name": "k6",
+  "id": "k6",
+  "version": "1.1.3",
+  "description": "This feature installs the k6 CLI tool, which can be used to run load tests defined in JavaScript files.",
+  "documentationURL": "https://github.com/grafana/devcontainer-features/tree/main/src/k6",
+  "options": {
+    "version": {
+      "type": "string",
+      "proposals": ["latest", "1.0.0"],
+      "default": "latest",
+      "description": "The k6 version to install."
+    },
+    "with": {
+      "type": "string",
+      "default": "",
+      "description": "Comma separated list of extensions to include in the custom k6 build."
+    },
+    "xk6-version": {
+      "type": "string",
+      "proposals": ["latest", "1.0.0"],
+      "default": "latest",
+      "description": "The xk6 version to use for a custom k6 build."
+    },
+    "go-version": {
+      "type": "string",
+      "proposals": ["latest", "1.24.4"],
+      "default": "latest",
+      "description": "Go version to use for custom k6 builds. Only used if 'with' is set."
+    }
+  },
+  "installsAfter": ["ghcr.io/devcontainers/features/go"]
+}

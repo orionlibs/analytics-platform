@@ -1,0 +1,65 @@
+{
+  "author": "Grafana Labs",
+  "license": "Apache-2.0",
+  "private": true,
+  "name": "grafana-scenes",
+  "version": "0.15.0",
+  "description": "Grafana framework for building dynamic dashboards",
+  "keywords": [
+    "typescript"
+  ],
+  "sideEffects": false,
+  "repository": {
+    "type": "git",
+    "url": "http://github.com/grafana/scenes.git"
+  },
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "module": "dist/esm/index.js",
+  "publishConfig": {
+    "access": "public"
+  },
+  "files": [
+    "dist",
+    "./README.md",
+    "./CHANGELOG.md",
+    "LICENSE"
+  ],
+  "scripts": {
+    "precommit": "yarn run lint-staged",
+    "prepare": "husky install",
+    "packages:publish": "lerna exec --no-private -- npm publish",
+    "docs": "yarn workspace website run start --port 8080",
+    "docs:build": "yarn turbo build --filter=website",
+    "docs:build:dev": "yarn turbo build:dev --filter=website",
+    "build": "yarn turbo build --filter=!website",
+    "test:scenes": "yarn workspace @grafana/scenes test --watch",
+    "test:scenes-react": "yarn workspace @grafana/scenes-react test --watch",
+    "dev": "yarn turbo dev --filter=!website",
+    "test": "yarn turbo test --filter=!website",
+    "lint": "yarn turbo lint --filter=!website",
+    "typecheck": "yarn turbo typecheck --filter=!website",
+    "prettier:check": "prettier --check --list-different=false --log-level=warn \"**/*.{ts,tsx,scss,md,mdx,json,js}\"",
+    "prettier:write": "prettier --list-different \"**/*.{js,ts,tsx,scss,md,mdx,json}\" --write",
+    "i18n-extract": "yarn workspace @grafana/scenes run i18n-extract"
+  },
+  "resolutions": {
+    "@types/react": "18.2.74",
+    "@rollup/plugin-eslint/eslint": "^9.28.0"
+  },
+  "packageManager": "yarn@4.1.1",
+  "workspaces": [
+    "packages/*",
+    "docusaurus/website"
+  ],
+  "devDependencies": {
+    "@auto-it/omit-commits": "^11.0.7",
+    "@auto-it/released": "^11.0.7",
+    "@testing-library/react": "^14.1.2",
+    "auto": "^11.0.7",
+    "lerna": "^9.0.0",
+    "lint-staged": "^13.2.0",
+    "prettier": "2.5.1",
+    "turbo": "^2.5.8"
+  }
+}

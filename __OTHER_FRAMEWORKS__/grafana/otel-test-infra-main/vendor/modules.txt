@@ -1,0 +1,31 @@
+# github.com/chzyer/readline v1.5.1
+## explicit; go 1.15
+# github.com/davecgh/go-spew v1.1.0
+## explicit
+github.com/davecgh/go-spew/spew
+# github.com/google/pprof v0.0.0-20230728192033-2ba5b33183c6
+## explicit; go 1.19
+# github.com/ianlancetaylor/demangle v0.0.0-20230524184225-eabc099b10ab
+## explicit; go 1.13
+# github.com/mariomac/guara v0.0.0-20230621100729-42bd7716e524
+## explicit; go 1.18
+github.com/mariomac/guara/pkg/test
+# github.com/pmezard/go-difflib v1.0.0
+## explicit
+github.com/pmezard/go-difflib/difflib
+# github.com/stretchr/testify v1.7.1
+## explicit; go 1.13
+github.com/stretchr/testify/assert
+github.com/stretchr/testify/require
+# golang.org/x/exp v0.0.0-20230725093048-515e97ebf090
+## explicit; go 1.20
+golang.org/x/exp/constraints
+golang.org/x/exp/slices
+golang.org/x/exp/slog
+golang.org/x/exp/slog/internal
+golang.org/x/exp/slog/internal/buffer
+# golang.org/x/sys v0.10.0
+## explicit; go 1.17
+# gopkg.in/yaml.v3 v3.0.0-20200313102051-9f266ea9e77c
+## explicit
+gopkg.in/yaml.v3

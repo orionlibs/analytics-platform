@@ -1,0 +1,505 @@
+name: zizmor (reusable)
+
+on:
+  workflow_call:
+    inputs:
+      min-severity:
+        description: "Only show results at or above this severity [possible values: unknown, informational, low, medium, high]"
+        required: false
+        type: string
+        default: "low"
+
+      min-confidence:
+        description: "Only show results at or above this confidence level [possible values: unknown, low, medium, high]"
+        required: false
+        type: string
+        default: "low"
+
+      fail-severity:
+        description: "Fail the build if any result is at or above this severity [possible values: never, any, informational, low, medium, high]"
+        required: false
+        type: string
+        default: "high"
+
+      runs-on:
+        description: "The runner to use for jobs"
+        required: false
+        type: string
+        default: "ubuntu-latest"
+
+      github-token:
+        description: Use a different token to the default
+        required: false
+        type: string
+        default: ${{ github.token }}
+
+      always-use-default-config:
+        description: |
+          Whether to always use the default configuration. When `false`,
+          `.zizmor.yml` or `.github/zizmor.yml` will be used, if present.
+        required: false
+        type: boolean
+        default: false
+
+      extra-args:
+        description: Extra arguments to pass to Zizmor
+        required: false
+        type: string
+        default: ""
+
+permissions: {}
+
+jobs:
+  # The default config file is in `.github/zizmor.yml`. When we're called by a
+  # remote repository, this file won't be available - in reusable workflows the
+  # workflow's repo isn't checked out. In order to make something like:
+  #
+  # ```yaml
+  # uses: grafana/shared-workflows/.github/workflows/reusable-zizmor.yml@<SHA>`
+  # ```
+  #
+  # work, we need to figure out the reference we were called at, and then fetch
+  # the file from there. This `job-workflow-ref` job does the first part of
+  # that. The way to do that is a little bit indirect. You can ask GitHub's OIDC
+  # endpoint for a token, and fetch the info out of the `job_workflow_ref`claim.
+  # This runs in a separate job because the main job doesn't need `id-token:
+  # write` permissons, and this one doesn't need anything but that. We can keep
+  # the permissions as minimal as possible this way.
+  job-workflow-ref:
+    permissions:
+      id-token: write
+
+    runs-on: ${{ inputs.runs-on }}
+
+    outputs:
+      owner: ${{ steps.get-job-workflow-ref.outputs.owner }}
+      repo: ${{ steps.get-job-workflow-ref.outputs.repo }}
+      sha: ${{ steps.get-job-workflow-ref.outputs.sha }}
+
+    steps:
+      - name: Harden the runner (Audit all outbound calls)
+        uses: step-security/harden-runner@95d9a5deda9de15063e7595e9719c11c38c90ae2 # v2.13.2
+        with:
+          egress-policy: audit
+
+      - id: setup-node
+        name: Setup node.js
+        uses: actions/setup-node@2028fbc5c25fe9cf00d9f06a71cc4710d4507903 # v6.0.0
+        with:
+          node-version: "22.x"
+
+      - id: install-jose
+        name: Install `jose` library for JWT verification
+        env:
+          # Keep this updated in a simpler way than needing a full package.json.
+          # renovate: datasource=npm depName=jose
+          JOSE_VERSION: 6.1.2
+        run: npm install "jose@${JOSE_VERSION}"
+
+      - id: get-job-workflow-ref
+        name: Fetch the job_workflow_ref of this run
+        uses: actions/github-script@ed597411d8f924073f98dfc5c65a23a2325f34cd # v8.0.0
+        with:
+          script: |
+            const { jwtVerify, createRemoteJWKSet } = require('jose');
+
+            async function retrieveIdToken(audience) {
+              // Perform an explicit check to see if we can get the ID token or
+              // not, so we can show a better error.
+              const runtimeUrl = process.env['ACTIONS_ID_TOKEN_REQUEST_URL']
+              if (!runtimeUrl) {
+                throw new Error(
+                  "We're unable to look up the version of the Zizmor workflow being called, so we can't fetch the `grafana` default configuration. Zizmor's own default will be used. Is the `id-token: write` permission set? If so, is this a run from a fork? Unfortunately we're unable to do this lookup for pull requests from forks currently."
+                )
+              }
+
+              core.debug(`Attempting to retrieve ID token with audience: ${audience}...`);
+
+              const idToken = await core.getIDToken(audience);
+              if (idToken === undefined) {
+                throw new Error('Failed to retrieve ID token');
+              }
+
+              core.debug('ID token retrieved successfully.');
+              return idToken;
+            }
+
+            async function verifyToken(idToken, audience) {
+              const JWKS = createRemoteJWKSet(
+                new URL('https://token.actions.githubusercontent.com/.well-known/jwks')
+              );
+
+              return await jwtVerify(
+                idToken,
+                JWKS,
+                {
+                  issuer: 'https://token.actions.githubusercontent.com',
+                  audience: audience,
+                }
+              );
+            }
+
+            function extractWorkflowRef(payload) {
+              const { job_workflow_ref } = payload;
+              if (job_workflow_ref === undefined) {
+                throw new Error(`Claim 'job_workflow_ref' not found in ID token payload.\n\n${JSON.stringify(payload, null, 2)}`);
+              }
+
+              core.debug(`Found job_workflow_ref claim: ${job_workflow_ref}`);
+              return job_workflow_ref;
+            }
+
+            function parseWorkflowRef(job_workflow_ref) {
+              // Format: owner/repo/.github/workflows/workflow.yml@ref
+              const regex = /^(?<owner>[^/]+)\/(?<repo>[^/]+)\/.+@(?<ref>.+)$/;
+              const match = job_workflow_ref.match(regex);
+
+              if (!match || !match.groups) {
+                throw new Error(`Failed to parse owner, repo and ref from \`job_workflow_ref\` claim \`${job_workflow_ref}\``);
+              }
+
+              const { owner, repo, ref } = match.groups;
+
+              return { owner, repo, ref };
+            }
+
+            /**
+             * Derefence the input ref to a SHA. This is because we cache the
+             * file, and refs can be updated to point to other objects, so they
+             * aren't suitable cache keys.
+             */
+            async function getRefSha(owner, repo, ref) {
+              if (!ref.startsWith('refs/')) {
+                return ref;
+              }
+
+              core.debug(`Getting SHA for ref: ${ref} in ${owner}/${repo}`);
+
+              // Remove `refs/` from the start, as the API expects a reference
+              // without it.
+              ref = ref.substring(5);
+
+              try {
+                const response = await github.rest.git.getRef({
+                  owner,
+                  repo,
+                  ref,
+                });
+
+                const sha = response.data.object.sha;
+                core.debug(`Found SHA: ${sha} for ref: ${ref}`);
+
+                return sha;
+              } catch (error) {
+                throw new Error(`Failed to resolve ref ${ref} to a SHA: ${error.message}`);
+              }
+            }
+
+            const AUDIENCE = 'zizmor-job-workflow-ref';
+
+            try {
+              const idToken = await retrieveIdToken(AUDIENCE);
+
+              const { payload } = await verifyToken(idToken, AUDIENCE);
+
+              const job_workflow_ref = extractWorkflowRef(payload);
+
+              const { owner, repo, ref } = parseWorkflowRef(job_workflow_ref);
+              const sha = await getRefSha(owner, repo, ref);
+
+              console.log(`This run is: owner: \`${owner}\`, repo: \`${repo}\`, ref: \`${ref}\`, sha: ${sha}`);
+
+              core.setOutput('owner', owner);
+              core.setOutput('repo', repo);
+              core.setOutput('sha', sha);
+            } catch (error) {
+              // On errors, we log an error messge, but we don't fail. It's
+              // better to run with the default config than not run at all.
+              core.error(`Script failed: ${error.message}`);
+
+              if (error.stack) {
+                console.error(`Stack trace: ${error.stack}`);
+              }
+            }
+
+  analysis:
+    needs: job-workflow-ref
+
+    name: Generate and upload zizmor results 🌈
+
+    runs-on: ${{ inputs.runs-on }}
+
+    permissions:
+      actions: read
+      contents: read
+
+      # comment with the results
+      pull-requests: write
+      # upload the results to code-scanning dashboard.
+      security-events: write
+
+    env:
+      MIN_SEVERITY: ${{ inputs.min-severity }}
+      MIN_CONFIDENCE: ${{ inputs.min-confidence }}
+      # renovate: datasource=pypi depName=zizmor
+      ZIZMOR_VERSION: 1.17.0
+      GH_TOKEN: ${{ inputs.github-token || github.token }}
+      ZIZMOR_EXTRA_ARGS: ${{ inputs.extra-args }}
+      DEFAULT_ZIZMOR_CONFIG_DOWNLOADED: ${{ needs.job-workflow-ref.outputs.sha }}
+
+    steps:
+      - name: Harden the runner (Audit all outbound calls)
+        if: ${{ ! github.event.repository.private }}
+        uses: step-security/harden-runner@95d9a5deda9de15063e7595e9719c11c38c90ae2 # v2.13.2
+        with:
+          egress-policy: audit
+
+      - name: Checkout code
+        uses: actions/checkout@1af3b93b6815bc44a9784bd300feb67ff0d1eeb3 # v6.0.0
+        with:
+          persist-credentials: false
+
+      - name: Restore config from cache
+        id: cache-config
+        uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0
+        if: env.DEFAULT_ZIZMOR_CONFIG_DOWNLOADED
+        with:
+          path: ${{ runner.temp }}/zizmor.yml
+          key: zizmor-config-${{ needs.job-workflow-ref.outputs.repo }}-${{ needs.job-workflow-ref.outputs.sha }}
+
+      - name: Fetch Zizmor Config
+        id: fetch-config
+        if: steps.cache-config.outputs.cache-hit != 'true' && env.DEFAULT_ZIZMOR_CONFIG_DOWNLOADED
+        uses: actions/github-script@ed597411d8f924073f98dfc5c65a23a2325f34cd # v8.0.0
+        env:
+          OWNER: ${{ needs.job-workflow-ref.outputs.owner }}
+          REPO: ${{ needs.job-workflow-ref.outputs.repo }}
+          SHA: ${{ needs.job-workflow-ref.outputs.sha }}
+        with:
+          script: |
+            const fs = require('fs').promises;
+            const path = require('path');
+
+            const owner = process.env.OWNER;
+            const repo = process.env.REPO;
+            const sha = process.env.SHA;
+
+            if (!owner || !repo || !sha) {
+              core.warning('Missing owner, repo or sha. Did the job-workflow-ref step run OK?');
+
+              return;
+            }
+
+            console.log(`Fetching config from ${owner}/${repo}@${sha}`);
+
+            try {
+              const response = await github.rest.repos.getContent({
+                owner,
+                repo,
+                path: '.github/zizmor.yml',
+                ref: sha
+              });
+
+              // File exists, decode content from base64
+              if (response.status !== 200 || response.data.content === undefined) {
+                throw new Error(`received unexpected response: ${response.status}`);
+              }
+
+              const contentBase64 = response.data.content;
+              const configContent = Buffer.from(contentBase64, 'base64').toString('utf8');
+
+              console.log('Config file successfully fetched from GitHub. Contents:');
+              console.log(configContent);
+
+              const destinationPath = path.join(process.env.RUNNER_TEMP, 'zizmor.yml');
+              await fs.writeFile(destinationPath, configContent);
+            } catch (err) {
+              // Don't fail the workflow on errors - we just won't have a
+              // default config.
+
+              if ('status' in err && err.status === 404) {
+                core.warning('Config file not found in repository');
+                return;
+              }
+
+              core.error(`Error fetching config: ${err.message}`);
+              if (err.stack) {
+                core.error(`Stack trace: ${err.stack}`);
+              }
+
+              return;
+            }
+
+      - name: Set up Zizmor configuration
+        id: setup-config
+        env:
+          FORCE_DEFAULT_CONFIG: ${{ inputs.always-use-default-config && 'true' || '' }}
+        shell: sh
+        run: |
+          if [ -z "${FORCE_DEFAULT_CONFIG}" ]; then
+            echo "Checking for user-provided zizmor configuration..."
+            if [ -f "zizmor.yml" ]; then
+              # No action needed, zizmor will find it
+              echo "Using zizmor.yml found in repository root."
+              exit 0
+            fi
+
+            if [ -f ".github/zizmor.yml" ]; then
+              # No action needed, zizmor will find it
+              echo "Using .github/zizmor.yml found in repository."
+              exit 0
+            fi
+
+            echo "No user-provided zizmor.yml found in root or .github/. Using default zizmor config."
+          else
+            echo "always-use-default-config is set. Using default config."
+          fi
+
+          ZIZMOR_CONFIG_PATH="${{ runner.temp }}/zizmor.yml"
+          if [ -n "${DEFAULT_ZIZMOR_CONFIG_DOWNLOADED}" ]; then
+            echo "zizmor-config=${ZIZMOR_CONFIG_PATH}" | tee -a "${GITHUB_OUTPUT}"
+          fi
+
+      - name: Setup UV
+        uses: astral-sh/setup-uv@1e862dfacbd1d6d858c55d9b792c756523627244 # v7.1.4
+        with:
+          enable-cache: true
+          activate-environment: true
+          cache-suffix: ${{ env.ZIZMOR_VERSION }}
+          cache-dependency-glob: ""
+
+      - name: Zizmor cache
+        uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4
+        with:
+          path: ${{ runner.temp }}/.cache/zizmor
+          key: zizmor-${{ runner.os }}-${{ runner.arch }}
+
+      - name: Run zizmor
+        env:
+          ZIZMOR_CONFIG_PATH: ${{ steps.setup-config.outputs.zizmor-config }}
+          ZIZMOR_CACHE_DIR: ${{ runner.temp }}/.cache/zizmor
+        shell: sh
+        run: >-
+          uvx zizmor@"${ZIZMOR_VERSION}"
+          --format sarif
+          --min-severity "${MIN_SEVERITY}"
+          --min-confidence "${MIN_CONFIDENCE}"
+          --cache-dir "${ZIZMOR_CACHE_DIR}"
+          ${ZIZMOR_CONFIG_PATH:+--config "${ZIZMOR_CONFIG_PATH}"}
+          ${RUNNER_DEBUG:+"--verbose"}
+          ${ZIZMOR_EXTRA_ARGS:+${ZIZMOR_EXTRA_ARGS}}
+          .
+          > results.sarif
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@330a01c490aca151604b8cf639adc76d48f6c5d4 # v5.0.0
+        with:
+          name: SARIF file
+          path: results.sarif
+          retention-days: 5
+
+      - name: Upload to code-scanning
+        uses: github/codeql-action/upload-sarif@fdbfb4d2750291e159f0156def62b853c2798ca2 # v4.31.5
+        continue-on-error: true
+        with:
+          sarif_file: results.sarif
+          category: zizmor
+
+      - name: Run zizmor with plain output
+        if: always()
+        id: zizmor-plain
+        shell: bash
+        env:
+          ZIZMOR_CONFIG_PATH: ${{ steps.setup-config.outputs.zizmor-config }}
+          ZIZMOR_CACHE_DIR: ${{ runner.temp }}/.cache/zizmor
+        run: |
+          set -o pipefail
+
+          echo "zizmor-results<<EOF" >> "${GITHUB_OUTPUT}"
+          # don't fail the build if zizmor fails - we want to capture the output
+          # and the exit code
+          set +e
+          uvx zizmor@"${ZIZMOR_VERSION}" \
+            --format plain \
+            --min-severity "${MIN_SEVERITY}" \
+            --min-confidence "${MIN_CONFIDENCE}" \
+            --cache-dir "${ZIZMOR_CACHE_DIR}" \
+            ${RUNNER_DEBUG:+"--verbose"} \
+            ${ZIZMOR_CONFIG_PATH:+--config "${ZIZMOR_CONFIG_PATH}"} \
+            ${ZIZMOR_EXTRA_ARGS:+${ZIZMOR_EXTRA_ARGS}} \
+            . \
+            | tee -a "${GITHUB_OUTPUT}"
+          zizmor_exit_code=$?
+          set -e
+          echo "EOF" >> "${GITHUB_OUTPUT}"
+
+          # Error 1 is a failure of zizmor itself
+          if [ "${zizmor_exit_code}" -eq 1 ]; then
+            echo "zizmor itself failed - check the above output. failing the workflow."
+            exit 1
+          fi
+
+          echo "zizmor-exit-code=${zizmor_exit_code}" | tee -a "${GITHUB_OUTPUT}"
+
+      - name: Remove zizmor config
+        env:
+          ZIZMOR_CONFIG_PATH: ${{ steps.setup-config.outputs.zizmor-config }}
+        if: steps.setup-config.outputs.zizmor-config
+        run: rm "${ZIZMOR_CONFIG_PATH}"
+
+      - name: Hide any previous comments
+        if: ${{ !cancelled() && github.event.pull_request.head.repo.full_name == github.repository }}
+        id: hide-comments
+        uses: int128/hide-comment-action@3580fff2b9b7c0e16466686530622f0eed93132a # v1.47.0
+        with:
+          ends-with: "<!-- comment-action/${{ github.workflow }}/${{ github.job }} -->"
+
+      - name: Comment with zizmor results
+        if: steps.zizmor-plain.outputs.zizmor-exit-code != 0 && github.event.pull_request.head.repo.full_name == github.repository
+        uses: int128/comment-action@2e7e2d8e385ee24454ea30ef135d5c5867011410 # v1.46.0
+        with:
+          post: |
+            :cry: zizmor failed with exit code ${{ steps.zizmor-plain.outputs.zizmor-exit-code }}.
+
+            <details>
+            <summary>Expand for full output</summary>
+
+            ```
+            ${{ steps.zizmor-plain.outputs.zizmor-results }}
+            ```
+            </details>
+            ${{ steps.hide-comments.outputs.ends-with }}
+
+      - name: Fail the build
+        if: inputs.fail-severity != 'never' && steps.zizmor-plain.outputs.zizmor-exit-code != 0
+        shell: sh
+        env:
+          FAIL_LEVEL: ${{ inputs.fail-severity }}
+          EXIT_CODE: ${{ steps.zizmor-plain.outputs.zizmor-exit-code }}
+        run: |
+          case "${FAIL_LEVEL}" in
+            any)
+              FAIL_EXIT_CODE=10
+              ;;
+            informational)
+              FAIL_EXIT_CODE=11
+              ;;
+            low)
+              FAIL_EXIT_CODE=12
+              ;;
+            medium)
+              FAIL_EXIT_CODE=13
+              ;;
+            high)
+              FAIL_EXIT_CODE=14
+              ;;
+            *)
+              echo "Unknown fail level: ${FAIL_LEVEL}"
+              exit 1
+              ;;
+          esac
+
+          if [ "${EXIT_CODE}" -ge "${FAIL_EXIT_CODE}" ]; then
+            echo "Failing the build due to findings at or above ${FAIL_LEVEL} severity."
+            exit 1
+          fi

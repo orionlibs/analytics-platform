@@ -1,0 +1,64 @@
+[package]
+name = "weaver_forge"
+version.workspace = true
+authors.workspace = true
+repository.workspace = true
+license.workspace = true
+publish.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+
+[lints]
+workspace = true
+
+[dependencies]
+weaver_diff = { path = "../weaver_diff" }
+weaver_common = { path = "../weaver_common" }
+weaver_resolver = { path = "../weaver_resolver" }
+weaver_resolved_schema = { path = "../weaver_resolved_schema" }
+weaver_semconv = { path = "../weaver_semconv" }
+
+minijinja = { version = "2.12.0", features = [
+    "loader",
+    "custom_syntax",
+    "debug",
+    "json",
+    "urlencode",
+    "macros",
+] }
+minijinja-contrib = { version = "2.12.0", features = ["pycompat"] }
+convert_case = "0.8.0"
+jaq-core = "2.2.1"
+jaq-std = "2.1.2"
+jaq-json = { version = "1.1.3", features = ["serde_json"] }
+indexmap = "2.11.4"
+regex = "1.11.3"
+markdown = "=1.0.0"
+textwrap = "0.16.2"
+
+itertools.workspace = true
+thiserror.workspace = true
+serde.workspace = true
+serde_yaml.workspace = true
+serde_json.workspace = true
+rayon.workspace = true
+walkdir.workspace = true
+globset.workspace = true
+miette.workspace = true
+include_dir.workspace = true
+schemars.workspace = true
+dirs.workspace = true
+log.workspace = true
+
+[dev-dependencies]
+opentelemetry.workspace = true
+opentelemetry_sdk = { version = "0.31.0", features = [
+    "trace",
+    "metrics",
+    "logs",
+] }
+opentelemetry-stdout = { version = "0.31.0", features = [
+    "trace",
+    "metrics",
+    "logs",
+] }

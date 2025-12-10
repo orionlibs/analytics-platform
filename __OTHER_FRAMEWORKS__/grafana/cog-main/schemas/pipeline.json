@@ -1,0 +1,545 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://raw.githubusercontent.com/grafana/cog/main/schemas/pipeline.json",
+  "$ref": "#/$defs/CodegenPipeline",
+  "$defs": {
+    "AstSchemaMeta": {
+      "properties": {
+        "kind": {
+          "type": "string"
+        },
+        "variant": {
+          "type": "string"
+        },
+        "identifier": {
+          "type": "string"
+        }
+      },
+      "additionalProperties": false,
+      "type": "object"
+    },
+    "CodegenCueInput": {
+      "properties": {
+        "allowed_objects": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array",
+          "description": "AllowedObjects is a list of object names that will be allowed when\nparsing the input schema.\nNote: if AllowedObjects is empty, no filter is applied."
+        },
+        "transformations": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array",
+          "description": "Transforms holds a list of paths to files containing compiler passes\nto apply to the input."
+        },
+        "metadata": {
+          "$ref": "#/$defs/AstSchemaMeta",
+          "description": "Metadata to add to the schema, this can be used to set Kind and Variant"
+        },
+        "entrypoint": {
+          "type": "string",
+          "description": "Entrypoint refers to a directory containing CUE files."
+        },
+        "forced_envelope": {
+          "type": "string",
+          "description": "ForcedEnvelope decorates the parsed cue Value with an envelope whose\nname is given. This is useful for dataqueries for example, where the\nschema doesn't define any suitable top-level object."
+        },
+        "package": {
+          "type": "string",
+          "description": "Package name to use for the input schema. If empty, it will be guessed\nfrom the entrypoint."
+        },
+        "cue_imports": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array",
+          "description": "CueImports allows importing additional libraries.\nFormat: [path]:[import]. Example: '../grafana/common-library:github.com/grafana/grafana/packages/grafana-schema/src/common"
+        }
+      },
+      "additionalProperties": false,
+      "type": "object"
+    },
+    "CodegenInput": {
+      "properties": {
+        "if": {
+          "type": "string"
+        },
+        "jsonschema": {
+          "$ref": "#/$defs/CodegenJSONSchemaInput"
+        },
+        "openapi": {
+          "$ref": "#/$defs/CodegenOpenAPIInput"
+        },
+        "kind_registry": {
+          "$ref": "#/$defs/CodegenKindRegistryInput"
+        },
+        "kindsys_core": {
+          "$ref": "#/$defs/CodegenCueInput"
+        },
+        "kindsys_composable": {
+          "$ref": "#/$defs/CodegenCueInput"
+        },
+        "cue": {
+          "$ref": "#/$defs/CodegenCueInput"
+        }
+      },
+      "additionalProperties": false,
+      "type": "object"
+    },
+    "CodegenJSONSchemaInput": {
+      "properties": {
+        "allowed_objects": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array",
+          "description": "AllowedObjects is a list of object names that will be allowed when\nparsing the input schema.\nNote: if AllowedObjects is empty, no filter is applied."
+        },
+        "transformations": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array",
+          "description": "Transforms holds a list of paths to files containing compiler passes\nto apply to the input."
+        },
+        "metadata": {
+          "$ref": "#/$defs/AstSchemaMeta",
+          "description": "Metadata to add to the schema, this can be used to set Kind and Variant"
+        },
+        "path": {
+          "type": "string",
+          "description": "Path to a JSONSchema file."
+        },
+        "url": {
+          "type": "string",
+          "description": "URL to a JSONSchema file."
+        },
+        "package": {
+          "type": "string",
+          "description": "Package name to use for the input schema. If empty, it will be guessed\nfrom the input file name."
+        }
+      },
+      "additionalProperties": false,
+      "type": "object"
+    },
+    "CodegenKindRegistryInput": {
+      "properties": {
+        "allowed_objects": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array",
+          "description": "AllowedObjects is a list of object names that will be allowed when\nparsing the input schema.\nNote: if AllowedObjects is empty, no filter is applied."
+        },
+        "transformations": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array",
+          "description": "Transforms holds a list of paths to files containing compiler passes\nto apply to the input."
+        },
+        "metadata": {
+          "$ref": "#/$defs/AstSchemaMeta",
+          "description": "Metadata to add to the schema, this can be used to set Kind and Variant"
+        },
+        "path": {
+          "type": "string"
+        },
+        "version": {
+          "type": "string"
+        }
+      },
+      "additionalProperties": false,
+      "type": "object"
+    },
+    "CodegenOpenAPIInput": {
+      "properties": {
+        "allowed_objects": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array",
+          "description": "AllowedObjects is a list of object names that will be allowed when\nparsing the input schema.\nNote: if AllowedObjects is empty, no filter is applied."
+        },
+        "transformations": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array",
+          "description": "Transforms holds a list of paths to files containing compiler passes\nto apply to the input."
+        },
+        "metadata": {
+          "$ref": "#/$defs/AstSchemaMeta",
+          "description": "Metadata to add to the schema, this can be used to set Kind and Variant"
+        },
+        "path": {
+          "type": "string",
+          "description": "Path to an OpenAPI file."
+        },
+        "url": {
+          "type": "string",
+          "description": "URL to an OpenAPI file."
+        },
+        "package": {
+          "type": "string",
+          "description": "Package name to use for the input schema. If empty, it will be guessed\nfrom the input file name."
+        },
+        "no_validate": {
+          "type": "boolean",
+          "description": "NoValidate disables validation of the OpenAPI spec."
+        }
+      },
+      "additionalProperties": false,
+      "type": "object"
+    },
+    "CodegenOutput": {
+      "properties": {
+        "directory": {
+          "type": "string"
+        },
+        "types": {
+          "type": "boolean"
+        },
+        "builders": {
+          "type": "boolean"
+        },
+        "converters": {
+          "type": "boolean"
+        },
+        "api_reference": {
+          "type": "boolean"
+        },
+        "languages": {
+          "items": {
+            "$ref": "#/$defs/CodegenOutputLanguage"
+          },
+          "type": "array"
+        },
+        "repository_templates": {
+          "type": "string",
+          "description": "RepositoryTemplates is the path to a directory containing\n\"repository-level templates\".\nThese templates are used to add arbitrary files to the repository, such as CI pipelines.\n\nTemplates in that directory are expected to be organized by language:\n```\nrepository_templates\n├── go\n│   └── .github\n│   \t   └── workflows\n│   \t       └── go-ci.yaml\n└── typescript\n    └── .github\n    \t   └── workflows\n    \t       └── typescript-ci.yaml\n```"
+        },
+        "templates_data": {
+          "additionalProperties": {
+            "type": "string"
+          },
+          "type": "object",
+          "description": "TemplatesData holds data that will be injected into package and\nrepository templates when rendering them."
+        },
+        "output_options": {
+          "$ref": "#/$defs/CodegenOutputOptions",
+          "description": "OutputOptions configures the output of the file"
+        }
+      },
+      "additionalProperties": false,
+      "type": "object"
+    },
+    "CodegenOutputLanguage": {
+      "properties": {
+        "go": {
+          "$ref": "#/$defs/GolangConfig"
+        },
+        "java": {
+          "$ref": "#/$defs/JavaConfig"
+        },
+        "jsonschema": {
+          "$ref": "#/$defs/JsonschemaConfig"
+        },
+        "openapi": {
+          "$ref": "#/$defs/OpenapiConfig"
+        },
+        "php": {
+          "$ref": "#/$defs/PhpConfig"
+        },
+        "python": {
+          "$ref": "#/$defs/PythonConfig"
+        },
+        "typescript": {
+          "$ref": "#/$defs/TypescriptConfig"
+        }
+      },
+      "additionalProperties": false,
+      "type": "object"
+    },
+    "CodegenOutputOptions": {
+      "properties": {
+        "replace_extension": {
+          "additionalProperties": {
+            "type": "string"
+          },
+          "type": "object",
+          "description": "ReplaceExtension updates file extensions to the new one"
+        }
+      },
+      "additionalProperties": false,
+      "type": "object"
+    },
+    "CodegenPipeline": {
+      "properties": {
+        "debug": {
+          "type": "boolean"
+        },
+        "inputs": {
+          "items": {
+            "$ref": "#/$defs/CodegenInput"
+          },
+          "type": "array"
+        },
+        "transformations": {
+          "$ref": "#/$defs/CodegenTransforms"
+        },
+        "output": {
+          "$ref": "#/$defs/CodegenOutput"
+        },
+        "parameters": {
+          "additionalProperties": {
+            "type": "string"
+          },
+          "type": "object"
+        }
+      },
+      "additionalProperties": false,
+      "type": "object"
+    },
+    "CodegenTransforms": {
+      "properties": {
+        "schemas": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array",
+          "description": "CommonPassesFiles holds a list of paths to files containing compiler\npasses to apply to all the schemas.\nNote: these compiler passes are applied *before* language-specific passes."
+        },
+        "builders": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array",
+          "description": "VeneersDirectories holds a list of paths to directories containing\nveneers to apply to all the builders."
+        }
+      },
+      "additionalProperties": false,
+      "type": "object"
+    },
+    "GolangConfig": {
+      "properties": {
+        "generate_json_marshaller": {
+          "type": "boolean",
+          "description": "GenerateJSONMarshaller controls the generation of `MarshalJSON()` and\n`UnmarshalJSON()` methods on types."
+        },
+        "generate_strict_unmarshaller": {
+          "type": "boolean",
+          "description": "GenerateStrictUnmarshaller controls the generation of\n`UnmarshalJSONStrict()` methods on types."
+        },
+        "generate_equal": {
+          "type": "boolean",
+          "description": "GenerateEqual controls the generation of `Equal()` methods on types."
+        },
+        "generate_validate": {
+          "type": "boolean",
+          "description": "GenerateValidate controls the generation of `Validate()` methods on types."
+        },
+        "skip_runtime": {
+          "type": "boolean",
+          "description": "SkipRuntime disables runtime-related code generation when enabled.\nNote: builders can NOT be generated with this flag turned on, as they\nrely on the runtime to function."
+        },
+        "skip_post_formatting": {
+          "type": "boolean",
+          "description": "SkipPostFormatting disables formatting of Go files done with go imports\nafter code generation."
+        },
+        "overrides_templates": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array",
+          "description": "OverridesTemplatesDirectories holds a list of directories containing templates\ndefining blocks used to override parts of builders/types/...."
+        },
+        "extra_files_templates": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array",
+          "description": "ExtraFilesTemplatesDirectories holds a list of directories containing\ntemplates describing files to be added to the generated output."
+        },
+        "package_root": {
+          "type": "string",
+          "description": "Root path for imports.\nEx: github.com/grafana/cog/generated"
+        },
+        "any_as_interface": {
+          "type": "boolean",
+          "description": "AnyAsInterface instructs this jenny to emit `interface{}` instead of `any`."
+        }
+      },
+      "additionalProperties": false,
+      "type": "object"
+    },
+    "JavaConfig": {
+      "properties": {
+        "package_path": {
+          "type": "string"
+        },
+        "overrides_templates": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array",
+          "description": "OverridesTemplatesDirectories holds a list of directories containing templates\ndefining blocks used to override parts of builders/types/...."
+        },
+        "extra_files_templates": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array",
+          "description": "ExtraFilesTemplatesDirectories holds a list of directories containing\ntemplates describing files to be added to the generated output."
+        },
+        "skip_runtime": {
+          "type": "boolean",
+          "description": "SkipRuntime disables runtime-related code generation when enabled.\nNote: builders can NOT be generated with this flag turned on, as they\nrely on the runtime to function."
+        },
+        "generate_json_marshaller": {
+          "type": "boolean",
+          "description": "GenerateJSONMarshaller controls the generation of `MarshalJSON()` and\n`UnmarshalJSON()` methods on types."
+        },
+        "builder_factories_class_map": {
+          "additionalProperties": {
+            "type": "string"
+          },
+          "type": "object",
+          "description": "BuilderFactoriesClassMap allows to choose the name of the class that\nwill be generated to hold \"builder factories\".\nBy default, this class name is equal to the package name in which\nfactories are defined.\nBuilderFactoriesClassMap associates these package names with a class\nname."
+        }
+      },
+      "additionalProperties": false,
+      "type": "object"
+    },
+    "JsonschemaConfig": {
+      "properties": {
+        "compact": {
+          "type": "boolean",
+          "description": "Compact controls whether the generated JSON should be pretty printed or\nnot."
+        }
+      },
+      "additionalProperties": false,
+      "type": "object"
+    },
+    "OpenapiConfig": {
+      "properties": {
+        "compact": {
+          "type": "boolean",
+          "description": "Compact controls whether the generated JSON should be pretty printed or\nnot."
+        }
+      },
+      "additionalProperties": false,
+      "type": "object"
+    },
+    "PhpConfig": {
+      "properties": {
+        "namespace_root": {
+          "type": "string"
+        },
+        "generate_json_marshaller": {
+          "type": "boolean",
+          "description": "GenerateJSONMarshaller controls the generation of `fromArray()` and\n`jsonSerialize()` methods on types."
+        },
+        "overrides_templates": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array",
+          "description": "OverridesTemplatesDirectories holds a list of directories containing templates\ndefining blocks used to override parts of builders/types/...."
+        },
+        "extra_files_templates": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array",
+          "description": "ExtraFilesTemplatesDirectories holds a list of directories containing\ntemplates describing files to be added to the generated output."
+        },
+        "builder_factories_class_map": {
+          "additionalProperties": {
+            "type": "string"
+          },
+          "type": "object",
+          "description": "BuilderFactoriesClassMap allows to choose the name of the class that\nwill be generated to hold \"builder factories\".\nBy default, this class name is equal to the package name in which\nfactories are defined.\nBuilderFactoriesClassMap associates these package names with a class\nname."
+        }
+      },
+      "additionalProperties": false,
+      "type": "object"
+    },
+    "PythonConfig": {
+      "properties": {
+        "path_prefix": {
+          "type": "string"
+        },
+        "generate_json_marshaller": {
+          "type": "boolean",
+          "description": "GenerateJSONMarshaller controls the generation of `to_json()` and\n`from_json()` methods on types."
+        },
+        "skip_runtime": {
+          "type": "boolean",
+          "description": "SkipRuntime disables runtime-related code generation when enabled.\nNote: builders can NOT be generated with this flag turned on, as they\nrely on the runtime to function."
+        },
+        "overrides_templates": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array",
+          "description": "OverridesTemplatesDirectories holds a list of directories containing templates\ndefining blocks used to override parts of builders/types/...."
+        },
+        "extra_files_templates": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array",
+          "description": "ExtraFilesTemplatesDirectories holds a list of directories containing\ntemplates describing files to be added to the generated output."
+        }
+      },
+      "additionalProperties": false,
+      "type": "object"
+    },
+    "TypescriptConfig": {
+      "properties": {
+        "path_prefix": {
+          "type": "string",
+          "description": "PathPrefix holds an optional prefix for all Typescript file paths generated.\nIf left undefined, `src` is used as a default prefix."
+        },
+        "skip_runtime": {
+          "type": "boolean",
+          "description": "SkipRuntime disables runtime-related code generation when enabled.\nNote: builders can NOT be generated with this flag turned on, as they\nrely on the runtime to function."
+        },
+        "skip_index": {
+          "type": "boolean",
+          "description": "SkipIndex disables the generation of `index.ts` files."
+        },
+        "overrides_templates": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array",
+          "description": "OverridesTemplatesDirectories holds a list of directories containing templates\ndefining blocks used to override parts of builders/types/...."
+        },
+        "extra_files_templates": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array",
+          "description": "ExtraFilesTemplatesDirectories holds a list of directories containing\ntemplates describing files to be added to the generated output."
+        },
+        "packages_import_map": {
+          "additionalProperties": {
+            "type": "string"
+          },
+          "type": "object",
+          "description": "PackagesImportMap associates package names to their import path."
+        },
+        "enums_as_union_types": {
+          "type": "boolean",
+          "description": "EnumsAsUnionTypes generates enums as a union of values instead of using\nan actual `enum` declaration.\nIf EnumsAsUnionTypes is false, an enum will be generated as:\n```ts\nenum Direction {\n  Up = \"up\",\n  Down = \"down\",\n  Left = \"left\",\n  Right = \"right\",\n}\n```\nIf EnumsAsUnionTypes is true, the same enum will be generated as:\n```ts\ntype Direction = \"up\" | \"down\" | \"left\" | \"right\";\n```"
+        }
+      },
+      "additionalProperties": false,
+      "type": "object"
+    }
+  }
+}

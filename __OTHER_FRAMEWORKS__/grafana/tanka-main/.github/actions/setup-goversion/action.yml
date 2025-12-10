@@ -1,0 +1,11 @@
+name: setup-goversion
+runs:
+  using: composite
+  steps:
+    - id: goversion
+      run: |
+        cat Dockerfile | awk '/^FROM golang:.* AS build$/ {v=$2;split(v,a,":"); split(a[2],b,"@")}; END {printf("version=%s", b[1])}' >> $GITHUB_OUTPUT
+      shell: bash
+    - uses: actions/setup-go@4dc6199c7b1a012772edbd06daecab0f50c9053c # v6.1.0
+      with:
+        go-version: "${{steps.goversion.outputs.version}}"

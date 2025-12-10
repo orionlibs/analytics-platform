@@ -1,0 +1,25 @@
+# Use Alpine as base image
+FROM alpine:3.22@sha256:4b7ce07002c69e8f3d704a9c5d6fd3053be500b7f1c69fc0d80990c2ad8dd412
+
+# Install Kerberos packages
+RUN apk update && \
+    apk add krb5-server
+
+# Set the default entrypoint
+ENTRYPOINT ["/opt/krb5/bin/start.sh"]
+
+# Copy the Kerberos configuration file
+COPY krb5.conf /etc/krb5.conf
+
+# Copy the Kerberos ACL configuration file
+COPY kadm5.acl /var/lib/krb5kdc/kadm5.acl
+
+# Copy the initialization script (it creates the Kerberos database, etc)
+COPY krb5kdc-init.sh /opt/krb5/bin/krb5kdc-init.sh
+
+# Copy the start script (it starts the Kerberos services)
+COPY start.sh /opt/krb5/bin/start.sh
+
+# Make the start script executable
+RUN chmod 744 /opt/krb5/bin/start.sh && \
+    /bin/sh /opt/krb5/bin/krb5kdc-init.sh \

@@ -1,0 +1,53 @@
+# Dependencies
+node_modules
+
+# Build output
+dist
+build
+
+# Errors
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Cache
+.eslintcache
+.nx
+
+# IDE
+.vscode
+
+# Misc
+.DS_Store
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+.env
+
+# Generated files
+.docusaurus
+.cache-loader
+docusaurus/website/scripts/plugin.schema.json
+*.bak
+
+# Allow vscode config inside templates
+!packages/create-plugin/templates/*/.vscode
+
+# Ignore nx cloud env file. Can be used locally for setting a different NX_CLOUD_ACCESS_TOKEN
+nx-cloud.env
+
+# End to End tests
+playwright-report/
+packages/plugin-e2e/test-results/
+packages/plugin-e2e/playwright/.cache/
+packages/plugin-e2e/playwright/.auth
+playwright/.cache/
+playwright/.auth
+
+# Used in CI to pass built packages to the next job
+packed-artifacts/
+.mise.toml
+
+# Don't commit local claude settings
+.claude/settings.local.json

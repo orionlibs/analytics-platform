@@ -1,0 +1,14 @@
+name: Plugins - Docs - Test
+description: Check whether docs can be successfully built.
+
+runs:
+  using: composite
+  steps:
+    - name: Test docs
+      run: |
+        if [ -d docs/sources ]; then
+          ${{ github.action_path }}/script.sh
+        else
+          echo "❌ Docs do not exist."
+        fi
+      shell: bash

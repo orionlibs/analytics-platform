@@ -1,0 +1,12 @@
+.venv/
+.env/
+
+.idea/
+/target/
+**/*.rs.bk
+.cache
+.DS_Store
+
+flamegraph.svg
+perf.data
+perf.data.*

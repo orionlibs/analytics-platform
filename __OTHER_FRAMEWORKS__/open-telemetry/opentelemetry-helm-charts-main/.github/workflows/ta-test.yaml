@@ -1,0 +1,32 @@
+name: Test Target Allocator Chart
+
+on:
+  pull_request:
+    paths:
+    - 'charts/opentelemetry-target-allocator/**'
+    branches:
+      - main
+
+permissions:
+  contents: read
+
+jobs:
+  ta-test:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
+        with:
+          fetch-depth: 0
+      - name: Setup
+        uses: ./.github/actions/setup
+        with:
+          create-kind-cluster: "true"
+
+      - name: Run chart-testing (install)
+        run: ct install --charts charts/opentelemetry-target-allocator
+
+      - name: Run consistent-hashing install test
+        run: |
+          kubectl apply -f ./charts/opentelemetry-target-allocator/examples/consistent-hashing/rendered
+          kubectl rollout status deployment example-opentelemetry-target-allocator-ta --timeout=30s

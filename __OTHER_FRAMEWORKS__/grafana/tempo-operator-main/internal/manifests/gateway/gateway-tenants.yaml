@@ -1,0 +1,42 @@
+tenants:
+{{- if $opt := . -}}
+{{- if or (eq $opt.Tenants.Mode "static") (eq $opt.Tenants.Mode "openshift")  -}}
+{{- range $spec := $opt.Tenants.Authentication }}
+- name: {{ $spec.TenantName }}
+  id: {{ $spec.TenantID }}
+{{- if eq $opt.Tenants.Mode "openshift" }}
+  openshift:
+    serviceAccount: {{ $opt.ServiceAccount }}
+    redirectURL: {{ $spec.RedirectURL }}
+    cookieSecret: {{ $spec.OpenShiftCookieSecret }}
+  opa:
+    url: {{ $opt.OPAUrl }}
+    withAccessToken: true
+{{- end -}}
+{{- if $spec.OIDC }}
+  oidc:
+    {{ if $spec.OIDCSecret.ClientID -}}
+    clientID: {{ $spec.OIDCSecret.ClientID }}
+    {{- end -}}
+    {{ if $spec.OIDCSecret.ClientSecret }}
+    clientSecret: {{ $spec.OIDCSecret.ClientSecret }}
+    {{- end -}}
+    {{ if $spec.OIDCSecret.IssuerCAPath }}
+    issuerCAPath: {{ $spec.OIDCSecret.IssuerCAPath }}
+    {{- end -}}
+    {{ if $spec.OIDC.IssuerURL }}
+    issuerURL: {{ $spec.OIDC.IssuerURL }}
+    {{- end -}}
+    {{ if $spec.OIDC.RedirectURL }}
+    redirectURL: {{ $spec.OIDC.RedirectURL }}
+    {{- end -}}
+    {{ if $spec.OIDC.UsernameClaim }}
+    usernameClaim: {{ $spec.OIDC.UsernameClaim }}
+    {{- end -}}
+    {{ if $spec.OIDC.GroupClaim }}
+    groupClaim: {{ $spec.OIDC.GroupClaim }}
+    {{- end }}
+{{- end -}}
+{{- end -}}
+{{- end -}}
+{{- end -}}

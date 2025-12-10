@@ -1,0 +1,17 @@
+CHANGELOG.md
+README.md
+dist/
+node_modules/
+package.json
+./.gitignore
+.config/
+.eslintignore
+.prettierignore
+.husky/
+project-words.txt
+yarn.lock
+.gitignore
+.nvmrc
+**/*.svg
+**/*.river
+**/*.sh

@@ -1,0 +1,124 @@
+AWSTemplateFormatVersion: 2010-09-09
+Description: Asserts OTEL Collector IAM Stack
+Parameters:
+  AssertsEnvironment:
+    Type: String
+    Description: The installation environment name
+Resources:
+  AssertsOTELECSExecutionRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: !Sub "AssertsOTELECSExecutionRole-${AssertsEnvironment}"
+      Tags:
+        - Key: Vendor
+          Value: Asserts
+        - Key: "asserts:component"
+          Value: "AWS Exporter"
+      AssumeRolePolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: ecs-tasks.amazonaws.com
+            Action:
+              - sts:AssumeRole
+      ManagedPolicyArns:
+        - "arn:aws:iam::aws:policy/AmazonEC2ContainerRegistryReadOnly"
+        - "arn:aws:iam::aws:policy/service-role/AmazonECSTaskExecutionRolePolicy"
+      Policies:
+        - PolicyName: !Sub "AssertsOTELECSExecutionSecretsReadPolicy-${AssertsEnvironment}"
+          PolicyDocument: !Sub >
+            {
+              "Version": "2012-10-17",
+              "Statement": [
+                {
+                  "Effect": "Allow",
+                  "Action": [
+                    "secretsmanager:GetSecretValue",
+                    "kms:Decrypt",
+                    "secretsmanager:DescribeSecret"
+                  ],
+                  "Resource": [
+                    "arn:aws:secretsmanager:${AWS::Region}:${AWS::AccountId}:secret:AssertsApiServerCredentials-${AssertsEnvironment}*"
+                  ]
+                },
+                {
+                  "Sid": "VisualEditor1",
+                  "Effect": "Allow",
+                  "Action": "secretsmanager:ListSecrets",
+                  "Resource": [
+                    "arn:aws:secretsmanager:${AWS::Region}:${AWS::AccountId}:secret:AssertsApiServerCredentials-${AssertsEnvironment}*"
+                  ]
+                }
+              ]
+            }
+        - PolicyName: !Sub "AssertsLogGroupReadWritePolicy-${AssertsEnvironment}"
+          PolicyDocument: !Sub >
+            {
+              "Version": "2012-10-17",
+              "Statement": [
+                {
+                  "Effect": "Allow",
+                  "Action": [
+                    "logs:CreateLogStream",
+                    "logs:PutLogEvents"
+                  ],
+                  "Resource": "arn:aws:logs:${AWS::Region}:${AWS::AccountId}:log-group:asserts-otel-collector-${AssertsEnvironment}:*"
+                }
+              ]
+            }
+  AssertsOTELECSTaskRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: !Sub "AssertsOTELECSTaskRole-${AssertsEnvironment}"
+      Tags:
+        - Key: Vendor
+          Value: Asserts
+        - Key: "asserts:component"
+          Value: "AWS Exporter"
+      AssumeRolePolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: ecs-tasks.amazonaws.com
+            Action:
+              - sts:AssumeRole
+      ManagedPolicyArns:
+        - "arn:aws:iam::aws:policy/AWSXrayWriteOnlyAccess"
+      Policies:
+        - PolicyName: !Sub "AssertsOTELECSTaskSecretsReadPolicy-${AssertsEnvironment}"
+          PolicyDocument: !Sub >
+            {
+              "Version": "2012-10-17",
+              "Statement": [
+                {
+                  "Effect": "Allow",
+                  "Action": [
+                    "secretsmanager:GetSecretValue",
+                    "kms:Decrypt",
+                    "secretsmanager:DescribeSecret"
+                  ],
+                  "Resource": [
+                    "arn:aws:secretsmanager:${AWS::Region}:${AWS::AccountId}:secret:AssertsApiServerCredentials-${AssertsEnvironment}*"
+                  ]
+                },
+                {
+                  "Effect": "Allow",
+                  "Action": "secretsmanager:ListSecrets",
+                  "Resource": [
+                    "arn:aws:secretsmanager:${AWS::Region}:${AWS::AccountId}:secret:AssertsApiServerCredentials-${AssertsEnvironment}*"
+                  ]
+                }
+              ]
+            }
+        - PolicyName: !Sub "AssertsOTELCollectorECSRolePolicy-${AssertsEnvironment}"
+          PolicyDocument:
+            Version: 2012-10-17
+            Statement:
+              - Effect: Allow
+                Resource: "*"
+                Action:
+                  - ec2:DescribeSubnets
+                  - ecs:DescribeTasks
+                  - ecs:DescribeTaskDefinition

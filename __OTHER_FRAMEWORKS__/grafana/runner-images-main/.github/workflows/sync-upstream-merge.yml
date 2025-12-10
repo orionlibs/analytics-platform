@@ -1,0 +1,114 @@
+name: Sync with Upstream (merge)
+
+on:
+  pull_request_review:
+    types: [edited, submitted]
+
+permissions:
+  contents: write
+  pull-requests: write
+  id-token: write
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    if: >
+      startsWith(github.event.pull_request.head.ref, 'sync-upstream-') &&
+      github.event.review.state == 'approved' &&
+      github.event.review.body == 'bot merge'
+    steps:
+      - name: Retrieve secrets
+        uses: grafana/shared-workflows/actions/get-vault-secrets@28361cdb22223e5f1e34358c86c20908e7248760 # get-vault-secrets-v1.1.0
+        with:
+          repo_secrets: |
+            APP_ID=app:id
+            APP_PRIVATE_KEY=app:private-key
+
+      - name: Generate a token
+        id: generate-token
+        uses: actions/create-github-app-token@5d869da34e18e7287c1daad50e0b8ea0f506ce69 # v1.11.0
+        with:
+          app-id: ${{ env.APP_ID }}
+          private-key: ${{ env.APP_PRIVATE_KEY }}
+
+      - name: Checkout the repository
+        uses: actions/checkout@692973e3d937129bcbf40652eb9f2f61becf3332 # v4.1.7
+        with:
+          fetch-depth: 0
+          ref: ${{ github.event.pull_request.head.ref }}
+          token: ${{ steps.generate-token.outputs.token }}
+          persist-credentials: true # This is required to push to the repository
+
+      - name: Configure Git
+        run: |
+          git config --local user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git config --local user.name "github-actions[bot]"
+
+      - name: Extract upstream SHA and prepare clean merge
+        id: extract-sha
+        env:
+          HEAD_REF: ${{ github.event.pull_request.head.ref }}
+        run: |
+          # Extract the short SHA from the branch name (sync-upstream-abc1234 -> abc1234)
+          SHORT_SHA="${HEAD_REF#sync-upstream-}"
+          
+          # Add upstream remote to get the latest info
+          git remote add upstream https://github.com/actions/runner-images.git || true
+          git fetch upstream
+          
+          # Get the full SHA from the short SHA
+          UPSTREAM_SHA="$(git rev-parse "$SHORT_SHA")"
+          echo "upstream-sha=$UPSTREAM_SHA" >> $GITHUB_OUTPUT
+          
+          # Find the merge base between our branch and main to identify changes
+          MERGE_BASE="$(git merge-base origin/main HEAD)"
+          echo "merge-base=$MERGE_BASE" >> $GITHUB_OUTPUT
+          
+          # Get the tree state of the current branch (this includes all fixes)
+          CURRENT_TREE="$(git rev-parse HEAD^{tree})"
+          echo "current-tree=$CURRENT_TREE" >> $GITHUB_OUTPUT
+          
+          # Reset to main and create a clean merge
+          git reset --hard origin/main
+          
+          # Create a merge commit with the correct message and the current tree state
+          MERGE_COMMIT=$(git commit-tree "$CURRENT_TREE" -p HEAD -p "$UPSTREAM_SHA" -m "Merge commit '$UPSTREAM_SHA' from actions/runner-images")
+          echo "merge-commit=$MERGE_COMMIT" >> $GITHUB_OUTPUT
+          
+          # Update the branch to point to our new clean merge commit
+          git reset --hard "$MERGE_COMMIT"
+
+      - name: Push cleaned branch
+        env:
+          HEAD_REF: ${{ github.event.pull_request.head.ref }}
+        run: |
+          git push --force-with-lease origin HEAD:"$HEAD_REF"
+
+      - name: Merge PR to main
+        id: merge-pr
+        env:
+          GH_TOKEN: ${{ steps.generate-token.outputs.token }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          REPOSITORY: ${{ github.repository }}
+        run: |
+          if ! output=$(gh pr merge $PR_NUMBER --merge --delete-branch --repo $REPOSITORY); then
+            echo "output=$output" >> $GITHUB_OUTPUT
+            exit 1
+          fi
+
+      - name: Comment error on failure
+        if: ${{ failure() }}
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          MERGE_OUTPUT: ${{ steps.merge-pr.outputs.output }}
+          REPOSITORY: ${{ github.repository }}
+        run: |
+          gh pr comment $PR_NUMBER \
+          --repo $REPOSITORY \
+          --body 'Failed to merge PR to main.
+
+          Output:
+          ```
+          '"$MERGE_OUTPUT"'
+          ```'

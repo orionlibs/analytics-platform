@@ -1,0 +1,38 @@
+name: "build-and-push"
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+
+permissions:
+  contents: read
+  id-token: write
+
+jobs:
+  build-and-push:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4
+        with:
+          persist-credentials: false
+
+      - name: Generate Tags
+        run: |
+          bash scripts/generate-tags.sh > .tag
+          echo "DOCKER_TAG=$(cat .tag)" >> $GITHUB_ENV
+
+      - name: Build And Push
+        uses: grafana/shared-workflows/actions/push-to-gar-docker@fa48192dac470ae356b3f7007229f3ac28c48a25 # main
+        with:
+          # Don't push from forks
+          push: ${{ github.ref_name == 'main' || github.event.pull_request.head.repo.full_name == github.repository }}
+          # If we are building main, push to prod and add the 'latest' tag.
+          tags: |-
+            ${{ env.DOCKER_TAG }}
+            type=raw,value=latest,enable=${{ github.ref_name == 'main' }}
+          context: "."
+          image_name: "influx2cortex"
+          environment: "${{ github.ref_name == 'main' && 'prod' || 'dev' }}"

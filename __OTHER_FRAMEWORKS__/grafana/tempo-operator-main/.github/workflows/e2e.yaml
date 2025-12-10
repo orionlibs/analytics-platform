@@ -1,0 +1,125 @@
+name: "End-to-end tests"
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.head_ref || github.run_id }}
+  cancel-in-progress: true
+
+permissions: {}
+
+jobs:
+  e2e-tests:
+    name: End-to-end tests ${{ matrix.name }}
+    runs-on: ubuntu-22.04
+    strategy:
+      matrix:
+        # The e2e tests are run on the lowest and highest supported k8s version.
+        # All Kubernetes version in between expose the same APIs, hence the operator
+        # should be compatible with them.
+        include:
+          - name: min
+            kube-version: "1.25"
+          - name: max
+            kube-version: "1.32"
+
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v5
+      with:
+        persist-credentials: false
+
+    - name: Set up Go
+      uses: actions/setup-go@v6
+      with:
+        go-version-file: go.mod
+
+    - name: Install chainsaw
+      run: |
+        set -e
+        make chainsaw
+
+    - name: "run tests"
+      env:
+        KUBE_VERSION: ${{ matrix.kube-version }}
+      run: make prepare-e2e e2e test-operator-metrics KUBE_VERSION=$KUBE_VERSION
+
+
+  upgrade-tests:
+    name: Upgrade tests ${{ matrix.name }}
+    runs-on: ubuntu-22.04
+    strategy:
+      matrix:
+        include:
+          - name: max
+            kube-version: "1.30"
+
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v5
+      with:
+        fetch-depth: 0
+        persist-credentials: false
+
+    - name: Set up Go
+      uses: actions/setup-go@v6
+      with:
+        go-version-file: go.mod
+
+    - name: Start kind
+      run: kind create cluster --config kind-${{ matrix.kube-version }}.yaml --wait 5m
+
+    - name: Start a local container registry with TLS
+      run: |
+        # install mkcert
+        curl -JLO "https://dl.filippo.io/mkcert/latest?for=linux/amd64"
+        chmod +x mkcert-v*-linux-amd64
+        sudo cp mkcert-v*-linux-amd64 /usr/local/bin/mkcert
+
+        # create and install root CA in system store
+        sudo mkcert -install
+        sudo systemctl restart docker
+
+        # copy root CA in kind's system store
+        sudo docker cp $(sudo mkcert -CAROOT)/rootCA.pem kind-control-plane:/usr/local/share/ca-certificates/mkcert.crt
+        docker exec kind-control-plane update-ca-certificates
+        docker exec kind-control-plane systemctl restart containerd
+
+        # generate cert for registry
+        mkdir -p /tmp/localregistry/certs
+        sudo mkcert -cert-file /tmp/localregistry/certs/tls.crt -key-file /tmp/localregistry/certs/tls.key localregistry
+
+        # make registry reachable
+        echo $(dig +short $(hostname) | head -n1) localregistry | sudo tee -a /etc/hosts
+
+        # start registry
+        docker run -d \
+          --restart=always \
+          --name registry \
+          -v /tmp/localregistry/certs:/certs \
+          -e REGISTRY_HTTP_TLS_CERTIFICATE=/certs/tls.crt \
+          -e REGISTRY_HTTP_TLS_KEY=/certs/tls.key \
+          -p 5000:5000 \
+          registry:2
+
+    - name: Install chainsaw, OLM and minio
+      run: |
+        set -e
+        make chainsaw olm-install
+
+    - name: Build and push operator and bundle image to local container registry
+      run: |
+        make opm
+        export LATEST_VERSION=v$(curl -sS "https://operatorhub.io/api/operator?packageName=tempo-operator" | jq -r .operator.version)
+        export BUNDLE_IMGS=ghcr.io/grafana/tempo-operator/tempo-operator-bundle:${LATEST_VERSION},${IMG_PREFIX}/tempo-operator-bundle:v${OPERATOR_VERSION}
+        make bundle docker-build docker-push bundle-build bundle-push catalog-build catalog-push
+      env:
+        IMG_PREFIX: localregistry:5000
+        OPERATOR_VERSION: 100.0.0
+
+    - name: Run tests
+      run: make e2e-upgrade

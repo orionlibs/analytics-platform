@@ -1,0 +1,12 @@
+go 1.24.6
+
+use (
+	./lib/go/csvframer
+	./lib/go/framesql
+	./lib/go/gframer
+	./lib/go/jsonframer
+	./lib/go/macros
+	./lib/go/transformations
+	./lib/go/utils
+	./lib/go/xmlframer
+)

@@ -1,0 +1,192 @@
+name: Update Registry
+
+on:
+  workflow_call:
+    inputs:
+      module:
+        description: 'The module name to update (e.g., github.com/grafana/xk6-sql)'
+        required: true
+        type: string
+      version:
+        description: 'The version to add (e.g., v1.0.6)'
+        required: true
+        type: string
+      auto_merge:
+        description: 'Enable auto-merge for trusted sources'
+        required: false
+        default: true
+        type: boolean
+    secrets:
+      app_id:
+        description: 'GitHub App ID for registry updater'
+        required: true
+      app_pem:
+        description: 'GitHub App private key (PEM) for registry updater'
+        required: true
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  update-registry:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Generate GitHub App Token
+        id: app-token
+        uses: actions/create-github-app-token@v2.1.4
+        with:
+          app-id: ${{ secrets.app_id }}
+          private-key: ${{ secrets.app_pem }}
+          repositories: k6-extension-registry
+
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          repository: ${{ github.repository_owner }}/k6-extension-registry
+          token: ${{ steps.app-token.outputs.token }}
+
+      - name: Extract inputs
+        id: inputs
+        env:
+          INPUT_MODULE: ${{ inputs.module }}
+          INPUT_VERSION: ${{ inputs.version }}
+          INPUT_AUTO_MERGE: ${{ inputs.auto_merge }}
+          GITHUB_REPOSITORY: ${{ github.repository }}
+        run: |
+          echo "module=${INPUT_MODULE}" >> $GITHUB_OUTPUT
+          echo "version=${INPUT_VERSION}" >> $GITHUB_OUTPUT
+          echo "repository_url=https://github.com/${GITHUB_REPOSITORY}" >> $GITHUB_OUTPUT
+          echo "release_url=https://github.com/${GITHUB_REPOSITORY}/releases/tag/${INPUT_VERSION}" >> $GITHUB_OUTPUT
+          echo "auto_merge=${INPUT_AUTO_MERGE}" >> $GITHUB_OUTPUT
+
+      - name: Validate release exists
+        env:
+          GH_TOKEN: ${{ steps.app-token.outputs.token }}
+        run: |
+          VERSION="${{ steps.inputs.outputs.version }}"
+          REPOSITORY="${{ github.repository }}"
+          
+          echo "Checking if release $VERSION exists at $REPOSITORY..."
+          
+          # Check if release exists using GitHub CLI
+          if ! gh release view "$VERSION" --repo "$REPOSITORY" >/dev/null 2>&1; then
+            echo "❌ Release $VERSION does not exist at $REPOSITORY"
+            echo "Please ensure the release exists before updating the registry."
+            exit 1
+          fi
+
+      - name: Install yq
+        run: |
+          YQ_VERSION="v4.44.3"
+          wget -qO /usr/local/bin/yq "https://github.com/mikefarah/yq/releases/download/${YQ_VERSION}/yq_linux_amd64"
+          sudo chmod +x /usr/local/bin/yq
+          yq --version
+
+      - name: Validate source repository
+        id: validate-source
+        run: |
+          ORGANIZATION="${{ github.repository_owner }}"
+          REPOSITORY_URL="${{ steps.inputs.outputs.repository_url }}"
+          MODULE="${{ steps.inputs.outputs.module }}"
+
+          echo "Repository URL: $REPOSITORY_URL"
+          echo "Module: $MODULE"
+          echo "Organization: $ORGANIZATION"
+
+          TRUSTED="false"
+          AUTOMERGE="false"
+          WARNINGS=""
+
+          # Validate repository URL is from the same organization
+          if [[ "$REPOSITORY_URL" =~ ^https://github\.com/${ORGANIZATION}/ ]]; then
+            echo "✅ Repository URL is from ${ORGANIZATION} organization"
+            TRUSTED="true"
+          fi
+
+          echo "trusted=$TRUSTED" >> $GITHUB_OUTPUT
+
+          # enable auto-merge for trusted source
+          if [[ "$TRUSTED" == "true" && "${{ steps.inputs.outputs.auto_merge }}" == "true" ]]; then
+            AUTOMERGE="true"
+            echo "🚀 Auto-merge will be enabled"
+          else
+            echo "🔒 Auto-merge disabled - manual review required"
+          fi
+          echo "auto_merge=$AUTOMERGE" >> $GITHUB_OUTPUT
+
+          # Check if module path matches repository
+          if [[ "$MODULE" != "github.com/${{ github.repository }}" ]]; then
+            WARNINGS="⚠️  Module path ($MODULE) does not match repository path (${{ github.repository }})"
+          fi
+
+          if [[ -n "$WARNINGS" ]]; then
+            echo "$WARNINGS"
+            echo "warnings=$WARNINGS" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Update registry with new version
+        id: update-registry
+        run: |
+          ./register-version.sh \
+            --module "${{ steps.inputs.outputs.module }}" \
+            --version "${{ steps.inputs.outputs.version }}"
+
+      - name: Check for registry changes
+        id: check-changes
+        run: |
+          # Check if there are any changes to the registry.yaml file
+          ## git diff return 0 (success if there are no differences)
+          if git diff --quiet registry.yaml; then
+            echo "No changes detected in registry.yaml"
+            echo "registry-changed=false" >> $GITHUB_OUTPUT
+          else
+            echo "registry-changed=true" >> $GITHUB_OUTPUT
+            echo "Changes detected in registry.yaml"
+            git diff registry.yaml
+          fi
+
+      - name: Create Pull Request
+        if: steps.check-changes.outputs.registry-changed == 'true'
+        id: create-pr
+        uses: peter-evans/create-pull-request@271a8d0340265f705b14b6d32b9829c1cb33d45e # v7.0.8
+        with:
+          token: ${{ steps.app-token.outputs.token }}
+          title: 'Add ${{ steps.inputs.outputs.version }} to ${{ steps.inputs.outputs.module }}'
+          body: |
+            Automatically adds version to the k6 extension registry.
+            
+            **Module:** ${{ steps.inputs.outputs.module }}
+            **Version:** ${{ steps.inputs.outputs.version }}
+            ${{ steps.inputs.outputs.repository_url && format('**Repository:** {0}', steps.inputs.outputs.repository_url) || '' }}
+            ${{ steps.inputs.outputs.release_url && format('**Release:** {0}', steps.inputs.outputs.release_url) || '' }}
+            
+            ${{ steps.validate-source.outputs.warnings && format('{0}', steps.validate-source.outputs.warnings) || '' }}
+
+            This PR was created automatically via the registry update workflow.
+          branch: add-version-${{ steps.inputs.outputs.module }}-${{ steps.inputs.outputs.version }}
+          commit-message: 'Add ${{ steps.inputs.outputs.version }} for ${{ steps.inputs.outputs.module }}'
+          labels: |
+            automated
+            ${{ steps.validate-source.outputs.trusted == 'true' && steps.inputs.outputs.auto_merge == 'true' && 'auto-merge-enabled' || 'manual-review-required' }}
+
+      - name: auto-merge
+        if: |
+          steps.check-changes.outputs.registry-changed == 'true' && 
+          steps.create-pr.outputs.pull-request-number &&
+          steps.validate-source.outputs.trusted == 'true' &&
+          steps.validate-source.outputs.auto_merge == 'true'
+        env:
+          GH_TOKEN: ${{ steps.app-token.outputs.token }}
+        run: |
+          echo "🚀 Enabling auto-merge for trusted source..."
+          echo "PR Number: ${{ steps.create-pr.outputs.pull-request-number }}"
+          echo "Module: ${{ steps.inputs.outputs.module }}"
+          echo "Version: ${{ steps.inputs.outputs.version }}"
+          
+          # Enable auto-merge with squash strategy
+          gh pr merge ${{ steps.create-pr.outputs.pull-request-number }} \
+            --auto \
+            --squash \
+            --subject "Add ${{ steps.inputs.outputs.version }} to ${{ steps.inputs.outputs.module }}" \
+            --body "Auto-merged registry update from trusted source"

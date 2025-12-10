@@ -1,0 +1,68 @@
+{
+  "$schema": "https://mintlify.com/schema.json",
+  "name": "mcp-golang",
+  "logo": {
+    "dark": "/logo/mcp-golang-dark.svg",
+    "light": "/logo/mcp-golang-light.svg"
+  },
+  "feedback": {
+    "suggestEdit": true,
+    "thumbsRating": true
+  },
+  "favicon": "/images/favicon.svg",
+  "colors": {
+    "primary": "#00ADD8",
+    "light": "#00ADD8",
+    "dark": "#00ADD8",
+    "anchors": {
+      "from": "#00ADD8",
+      "to": "#00ADD8"
+    }
+  },
+  "topbarCtaButton": {
+    "name": "Github Repo",
+    "url": "https://github.com/metoro-io/mcp-golang"
+  },
+  "anchors": [
+    {
+      "name": "Github",
+      "icon": "github",
+      "url": "https://github.com/metoro-io/mcp-golang"
+    },
+    {
+      "name": "Discord Community",
+      "icon": "discord",
+      "url": "https://discord.gg/33saRwE3pT"
+    }
+  ],
+  "navigation": [
+    {
+      "group": "Get Started",
+      "pages": [
+        "introduction",
+        "quickstart",
+        "contributing",
+        "architecture"
+      ]
+    },
+    {
+      "group": "Usage Guide",
+      "pages": [
+        "client",
+        "tools"
+      ]
+    },
+    {
+      "group": "Protocol Features",
+      "pages": [
+        "change-notifications",
+        "pagination"
+      ]
+    }
+  ],
+  "footerSocials": {
+    "x": "https://x.com/metoro_ai",
+    "github": "https://github.com/metoro-io/mcp-golang",
+    "website": "https://https://metoro.io/"
+  }
+}

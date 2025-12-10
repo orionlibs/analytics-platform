@@ -1,0 +1,40 @@
+name: Build
+
+on:
+  pull_request:
+    types:
+      - edited
+      - opened
+      - ready_for_review
+      - synchronize
+
+  push:
+    branches:
+      - main
+    paths:
+      - go.mod
+      - go.sum
+      - "**/*.go"
+      - Dockerfile
+      - .github/workflows/build.yml
+  merge_group:
+  workflow_call:
+    inputs:
+      tag:
+        type: string
+        required: true
+
+jobs:
+  build-multiarch:
+    permissions:
+      contents: read
+      id-token: write
+    uses: grafana/shared-workflows/.github/workflows/docker-build-push-multiarch.yml@9fe4bf92f218b4fd2b5d17d1a5e59088cf22c22a # main
+    with:
+      platforms: linux/amd64,linux/arm64
+      tags: |
+        type=ref,event=branch,enable={{is_default_branch}}
+        type=semver,pattern={{version}},value=${{ inputs.tag }},enable=${{ inputs.tag != '' }}
+      push: ${{ github.event_name == 'push' || github.event_name == 'workflow_call' }}
+      registries: dockerhub
+      runner-type: github

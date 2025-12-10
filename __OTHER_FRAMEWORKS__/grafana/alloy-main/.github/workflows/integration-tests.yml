@@ -1,0 +1,27 @@
+name: Integration Tests
+on:
+  # Run tests on main just so the module and build cache can be saved and used
+  # in PRs. This speeds up the time it takes to test PRs dramatically.
+  # (More information on https://docs.github.com/en/enterprise-server@3.6/actions/using-workflows/caching-dependencies-to-speed-up-workflows)
+  push:
+    branches:
+      - main
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  run_tests:
+    runs-on: github-hosted-ubuntu-x64-large
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
+      with:
+        persist-credentials: false
+    - name: Setup Go
+      uses: actions/setup-go@d35c59abb061a4a6fb18e82ac0862c26744d6ab5 # v5.5.0
+      with:
+        go-version-file: go.mod
+    - name: Run tests
+      run: make integration-test

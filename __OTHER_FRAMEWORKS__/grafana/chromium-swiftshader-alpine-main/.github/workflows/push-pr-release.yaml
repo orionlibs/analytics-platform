@@ -1,0 +1,55 @@
+name: Build
+
+on:
+  pull_request: {}
+  push:
+    branches:
+      - main
+
+permissions:
+  contents: none
+  packages: none
+
+jobs:
+  build-contianer:
+    permissions:
+      contents: read
+      packages: write
+    name: Build container
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@1af3b93b6815bc44a9784bd300feb67ff0d1eeb3 # v6
+        with:
+          persist-credentials: false
+
+      - name: Gather versions
+        id: repo
+        run: |-
+          alpine_version_full="$(grep -e "ALPINE_VERSION=" Dockerfile | cut -d '=' -f 2)"
+          alpine_version="${alpine_version_full%@*}"
+          chromium_version="$(grep -e "CHROMIUM_VERSION=" Dockerfile | cut -d '=' -f 2)"
+          echo "alpine_version_full=$alpine_version_full" >> "$GITHUB_OUTPUT"
+          echo "alpine_version=$alpine_version" >> "$GITHUB_OUTPUT"
+          echo "chromium_version=$chromium_version" >> "$GITHUB_OUTPUT"
+
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@c7c53464625b32c7a7e944ae62b3e17d2b600130 # v3
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@e468171a9de216ec08956ac3ada2f0791b6bd435 # v3
+
+      - name: Log into ghcr.io
+        if: github.event_name == 'push'
+        uses: docker/login-action@5e57cd118135c172c3672efd75eb46360885c0ef # v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build and push
+        uses: docker/build-push-action@263435318d21b8e681c14492fe198d362a7d2c83 # v6
+        with:
+          push: ${{ github.event_name == 'push' }}
+          platforms: linux/amd64,linux/arm64
+          tags: |-
+            ghcr.io/${{ github.repository }}:${{ steps.repo.outputs.chromium_version }}-${{ steps.repo.outputs.alpine_version }}

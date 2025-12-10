@@ -1,0 +1,118 @@
+name: "Techdocs: Rewrite relative links"
+description: Rewrite links inside techdocs pointing to outside resources
+
+inputs:
+  default-branch:
+    description: |
+      Default branch name of the repository
+    required: true
+  repo-url:
+    description: |
+      Full URL to the GitHub repository
+    required: true
+  working-directory:
+    description: |
+      Directory containing the `mkdocs.yml` file
+    required: true
+  dry-run:
+    description: |
+      Execute link rewriting without updating the underlying files
+    required: false
+    default: "false"
+  checkout-action-repository-path:
+    description: |
+      Path where the action checks out its own code. If you disable the
+      checkout, make sure to set this to where a previous checkout has been
+      made to.
+    default: _action
+    required: false
+  checkout-action-repository:
+    description: |
+      By default this action checks out its own code. If you want to skip this,
+      set to false.
+    required: false
+    default: "true"
+  debug:
+    description: |
+      Log output on debug level
+    required: false
+    default: "false"
+  verbose:
+    description: |
+      Log output on info level
+    required: false
+    default: "false"
+
+runs:
+  using: composite
+
+  steps:
+    - id: workflow-ref
+      name: Determine workflow ref
+      env:
+        WORKFLOW_REF: ${{ github.workflow_ref }}
+        HEAD_REF: ${{ github.head_ref }}
+      if: ${{ inputs.checkout-action-repository == 'true' }}
+      shell: bash
+      run: |
+        ref=$(echo "${WORKFLOW_REF}" | awk '{split($0,a,"@");printf "%s",a[2]}')
+        # pull request refs cannot be checked out, so we need to fall back:
+        if [[ "${ref}" =~ ^refs/pull/ ]]; then
+          printf "ref=${HEAD_REF}" >> $GITHUB_OUTPUT
+        else
+          printf "ref=%s" $ref >> $GITHUB_OUTPUT
+        fi
+
+    - name: Checkout
+      if: ${{ inputs.checkout-action-repository == 'true' }}
+      env:
+        # In a composite action, these two need to be indirected via the
+        # environment, as per the GitHub actions documentation:
+        # https://docs.github.com/en/actions/learn-github-actions/contexts.
+        # These seem not to be available when using a local action, though, and
+        # so we need to fall back:
+        action_repo: ${{ github.action_repository || 'grafana/shared-workflows' }}
+        action_ref: ${{ github.action_ref || 'main' }}
+      uses: actions/checkout@1af3b93b6815bc44a9784bd300feb67ff0d1eeb3 # v6.0.0
+      with:
+        repository: ${{ env.action_repo }}
+        ref: ${{ env.action_ref }}
+        path: ${{ inputs.checkout-action-repository-path }}
+        persist-credentials: false
+
+    - name: Setup go
+      uses: actions/setup-go@4dc6199c7b1a012772edbd06daecab0f50c9053c # v6.1.0
+      with:
+        check-latest: true
+        cache-dependency-path: |
+          ${{ inputs.checkout-action-repository-path }}/actions/techdocs-rewrite-relative-links/go.sum
+        go-version-file: "${{ inputs.checkout-action-repository-path }}/actions/techdocs-rewrite-relative-links/go.mod"
+
+    - name: Run
+      id: run
+      env:
+        WORKING_DIR: ${{ inputs.working-directory }}
+        CHECKOUT_PATH: ${{ inputs.checkout-action-repository-path }}
+        DEFAULT_BRANCH: ${{ inputs.default-branch }}
+        REPO_URL: ${{ inputs.repo-url }}
+        # Safely handle boolean flags
+        DRY_RUN_FLAG: ${{ inputs.dry-run == 'true' && '--dry-run' || '' }}
+        DEBUG_FLAG: ${{ inputs.debug == 'true' && '--debug' || '' }}
+        VERBOSE_FLAG: ${{ inputs.verbose == 'true' && '--verbose' || '' }}
+      shell: bash
+      run: |
+        root_dir=$(realpath "${WORKING_DIR}")
+        cd "${CHECKOUT_PATH}"/actions/techdocs-rewrite-relative-links
+        go run . \
+        --root-dir="${root_dir}" \
+        --default-branch="${DEFAULT_BRANCH}" \
+        --repo-url="${REPO_URL}" \
+        ${DRY_RUN_FLAG} ${DEBUG_FLAG} ${VERBOSE_FLAG}
+
+    - name: Cleanup
+      env:
+        CHECKOUT_PATH: ${{ inputs.checkout-action-repository-path }}
+      if: ${{ !cancelled() && inputs.checkout-action-repository == 'true' }}
+      shell: bash
+      run: |
+        rm -rf "${CHECKOUT_PATH}"

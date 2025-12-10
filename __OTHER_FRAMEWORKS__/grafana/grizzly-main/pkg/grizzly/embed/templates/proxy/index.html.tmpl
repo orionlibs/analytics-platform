@@ -1,0 +1,79 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset=utf-8>
+    <title>Grizzly</title>
+    <link rel="stylesheet" href="/grizzly/assets/style.css"/>
+    <link rel="icon" href="/grizzly/assets/favicon.ico">
+</head>
+<body dir="ltr">
+{{ template "proxy/header.html.tmpl" . }}
+
+<main>
+    <div>
+        {{ if ne (len .ParseErrors) 0 }}
+        <h1>Errors</h1>
+
+        {{ range .ParseErrors }}
+          {{ if not (IsWarning .) }}
+            <li>
+                <code>{{ . }}</code>
+            </li>
+          {{ end }}
+        {{ end }}
+        {{ end }}
+
+        <h1>Dashboards</h1>
+
+        <ul>
+            {{ range (.Resources.OfKind "Dashboard").AsList }}
+                <li>
+                    <a href="/grizzly/{{ .Kind }}/{{ .Name }}">{{ .Spec.title }}</a>
+                </li>
+            {{ else }}
+                <li>No dashboards.</li>
+            {{ end }}
+        </ul>
+
+        <h1>Datasources</h1>
+
+        <ul>
+            {{ range (.Resources.OfKind "Datasource").AsList }}
+                <li>
+                    <a href="/grizzly/{{ .Kind }}/{{ .Name }}">{{ .Spec.name }}</a>
+                </li>
+            {{ else }}
+                <li>No datasources.</li>
+            {{ end }}
+        </ul>
+
+        <h1>Alert rule groups</h1>
+
+        <ul>
+            {{ range (.Resources.OfKind "AlertRuleGroup").AsList }}
+                <li>
+                    {{ .Spec.title }}
+                    <ul>
+                        {{ range .Spec.rules }}
+                            <li><a href="/grizzly/AlertRuleGroup/{{ .uid }}">{{ .title }}</a></li>
+                        {{ end }}
+                    </ul>
+                </li>
+            {{ end }}
+        </ul>
+
+        <h1>Alert notification templates</h1>
+
+        <ul>
+            {{ range (.Resources.OfKind "AlertNotificationTemplate").AsList }}
+                <li>
+                    <a href="/grizzly/{{ .Kind }}/{{ .Name }}">{{ .Spec.name }}</a>
+                </li>
+            {{ else }}
+                <li>No notification templates.</li>
+            {{ end }}
+        </ul>
+    </div>
+</main>
+</body>
+</html>

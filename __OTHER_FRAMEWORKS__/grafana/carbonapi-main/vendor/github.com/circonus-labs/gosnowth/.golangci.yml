@@ -1,0 +1,24 @@
+run:
+    timeout: 10m
+    skip-dirs:
+        - pkg/pb
+    skip-files:
+        - internal/api/static.go
+    modules-download-mode: readonly
+linters-settings:
+    golint:
+        min-confidence: 0
+linters:
+    fast: true
+    enable-all: true
+    disable:
+      - dupl
+      - funlen
+      - gocognit
+      - goconst
+      - gomnd
+      - ifshort
+      - nosnakecase
+      - scopelint
+      - tagliatelle
+      - testpackage

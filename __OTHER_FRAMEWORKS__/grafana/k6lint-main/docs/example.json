@@ -1,0 +1,57 @@
+{
+  "checks": [
+    {
+      "details": "found `github.com/grafana/xk6-sql` as go module",
+      "id": "module",
+      "passed": true
+    },
+    {
+      "details": "no `replace` directive in the `go.mod` file",
+      "id": "replace",
+      "passed": true
+    },
+    {
+      "details": "found `README.md` as README file",
+      "id": "readme",
+      "passed": true
+    },
+    {
+      "details": "found `LICENSE` as `Apache-2.0` license",
+      "id": "license",
+      "passed": true
+    },
+    {
+      "details": "found git worktree",
+      "id": "git",
+      "passed": true
+    },
+    {
+      "details": "found `13` versions, the latest is `v1.0.0`",
+      "id": "versions",
+      "passed": true
+    },
+    {
+      "details": "can be built with the latest k6 version",
+      "id": "build",
+      "passed": true
+    },
+    {
+      "details": "`smoke.test.ts` successfully run with k6",
+      "id": "smoke",
+      "passed": true
+    },
+    {
+      "details": "found `examples` as examples directory",
+      "id": "examples",
+      "passed": true
+    },
+    {
+      "details": "found `index.d.ts` file",
+      "id": "types",
+      "passed": true
+    }
+  ],
+  "grade": "A",
+  "level": 100,
+  "timestamp": 1731604019
+}

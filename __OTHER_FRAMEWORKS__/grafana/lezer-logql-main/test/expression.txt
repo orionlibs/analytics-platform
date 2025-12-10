@@ -1,0 +1,657 @@
+# Simple log query
+
+{job="loki"}
+
+==>
+
+LogQL(Expr(LogExpr(Selector(Matchers(Matcher(Identifier,Eq, String))))))
+
+# Simple log query with back-ticks
+
+{job=`loki`}
+
+==>
+
+LogQL(Expr(LogExpr(Selector(Matchers(Matcher(Identifier,Eq, String))))))
+
+# Simple log query with regex matcher
+
+{name =~ "mysql.+"}
+
+==>
+
+LogQL(Expr(LogExpr(Selector(Matchers(Matcher(Identifier, Re, String))))))
+
+# Log query with regex matcher and equal matcher
+
+{name =~ "mysql.+", job=`loki`}
+
+==>
+
+LogQL(Expr(LogExpr(Selector(Matchers(Matchers(Matcher(Identifier, Re, String)), Matcher(Identifier, Eq, String))))))
+
+# Log query with regex matcher and back-ticks
+
+{name !~ `mysql-\d+`}
+
+==>
+
+LogQL(Expr(LogExpr(Selector(Matchers(Matcher(Identifier, Nre, String))))))
+
+# Log query with 2 label-value pairs
+
+{job="loki", instance="loki"}
+
+==>
+
+LogQL(Expr(LogExpr(Selector(Matchers(Matchers(Matcher(Identifier, Eq, String)), Matcher(Identifier, Eq, String))))))
+
+# Log query with 2 label-value pairs and back-ticks
+
+{job="loki", instance=`loki`}
+
+==>
+
+LogQL(Expr(LogExpr(Selector(Matchers(Matchers(Matcher(Identifier, Eq, String)), Matcher(Identifier, Eq, String))))))
+
+
+# Log query with 2 label-value pairs and no space
+
+{job="loki",instance="loki"}
+
+==>
+
+LogQL(Expr(LogExpr(Selector(Matchers(Matchers(Matcher(Identifier, Eq, String)), Matcher(Identifier, Eq, String))))))
+
+# Log query with 5 label-value pairs
+
+{job="loki", instance="loki", a="a", b="b", c="c"}
+
+==>
+
+LogQL(Expr(LogExpr(Selector(Matchers(Matchers(Matchers(Matchers(Matchers(Matcher(Identifier, Eq, String)), Matcher(Identifier, Eq, String)), Matcher(Identifier, Eq, String)), Matcher(Identifier, Eq, String)), Matcher(Identifier, Eq, String))))))
+
+# Log query with pipe exact filter expression
+
+{job="loki"} |= "hello"
+
+==>
+
+LogQL(Expr(LogExpr(Selector(Matchers(Matcher(Identifier,Eq,String))),PipelineExpr(PipelineStage(LineFilters(LineFilter(Filter(PipeExact),String)))))))
+
+# Log query with pipe exact line filter expression and back-ticks
+
+{job="loki"} |= `hello`
+
+==>
+
+LogQL(Expr(LogExpr(Selector(Matchers(Matcher(Identifier,Eq,String))),PipelineExpr(PipelineStage(LineFilters(LineFilter(Filter(PipeExact),String)))))))
+
+# Log query with pipe exact filter and unclosed quotes
+
+{job="loki"} |= "line
+
+==>
+
+LogQL(Expr(LogExpr(Selector(Matchers(Matcher(Identifier, Eq, String))), PipelineExpr(PipelineStage(LineFilters(LineFilter(Filter(PipeExact), ⚠, ⚠(Identifier))))))))
+
+# Log query with pipe exact filter and unclosed back-ticks
+
+{job="loki"} |= `line
+
+==>
+
+LogQL(Expr(LogExpr(Selector(Matchers(Matcher(Identifier, Eq, String))), PipelineExpr(PipelineStage(LineFilters(LineFilter(Filter(PipeExact), ⚠, ⚠(Identifier))))))))
+# Log query with pipe exact filter expression and escaped quotes
+
+{job="loki"} |= "hello\"quotes\""
+
+==>
+
+LogQL(Expr(LogExpr(Selector(Matchers(Matcher(Identifier,Eq,String))),PipelineExpr(PipelineStage(LineFilters(LineFilter(Filter(PipeExact),String)))))))
+
+# Log query with pipe exact line filter expression and back-ticks and quotes
+
+{job="loki"} |= `hello"quotes"`
+
+==>
+
+LogQL(Expr(LogExpr(Selector(Matchers(Matcher(Identifier,Eq,String))),PipelineExpr(PipelineStage(LineFilters(LineFilter(Filter(PipeExact),String)))))))
+
+# Log query with pipe match line filter
+
+{job="loki"} |~ `error=\w+`
+
+==>
+
+LogQL(Expr(LogExpr(Selector(Matchers(Matcher(Identifier,Eq,String))),PipelineExpr(PipelineStage(LineFilters(LineFilter(Filter(PipeMatch),String)))))))
+
+# Log query with regex not equal line filter
+
+{job="loki"} !~ "hello"
+
+==>
+
+LogQL(Expr(LogExpr(Selector(Matchers(Matcher(Identifier,Eq,String))),PipelineExpr(PipelineStage(LineFilters(LineFilter(Filter(Nre),String)))))))
+
+# Log query with regex not equal line filter 
+
+{job="loki"} !~ "hello"
+
+==>
+
+LogQL(Expr(LogExpr(Selector(Matchers(Matcher(Identifier,Eq,String))),PipelineExpr(PipelineStage(LineFilters(LineFilter(Filter(Nre),String)))))))
+
+# Log query with multiple line filters
+
+{job="mysql"} |= "error" !~ "test"
+
+==>
+
+LogQL(Expr(LogExpr(Selector(Matchers(Matcher(Identifier, Eq, String))), PipelineExpr(PipelineStage(LineFilters(LineFilters(LineFilter(Filter(PipeExact), String)), LineFilter(Filter(Nre), String)))))))
+
+# Log query with pipe match pattern line filter
+
+{job="loki"} |> "hello"
+
+==>
+
+LogQL(Expr(LogExpr(Selector(Matchers(Matcher(Identifier, Eq, String))), PipelineExpr(PipelineStage(LineFilters(LineFilter(Filter(PipePattern), String)))))))
+
+# Log query with pipe not match pattern line filter
+
+{job="loki"} !> "hello"
+
+==>
+
+LogQL(Expr(LogExpr(Selector(Matchers(Matcher(Identifier, Eq, String))), PipelineExpr(PipelineStage(LineFilters(LineFilter(Filter(Npa), String)))))))
+
+# Log query with logfmt parser
+
+{job="loki"} | logfmt
+
+==>
+
+LogQL(Expr(LogExpr(Selector(Matchers(Matcher(Identifier, Eq, String))), PipelineExpr(PipelineStage(Pipe, LogfmtParser(Logfmt))))))
+
+# Log query with logfmt parser and a flag
+
+{job="loki"} | logfmt --strict
+
+==>
+
+LogQL(Expr(LogExpr(Selector(Matchers(Matcher(Identifier, Eq, String))), PipelineExpr(PipelineStage(Pipe, LogfmtParser(Logfmt, LogfmtParserFlags(ParserFlag)))))))
+
+# Log query with logfmt parser and flags
+
+{job="loki"} | logfmt --strict --keep-empty
+
+==>
+
+LogQL(Expr(LogExpr(Selector(Matchers(Matcher(Identifier, Eq, String))), PipelineExpr(PipelineStage(Pipe, LogfmtParser(Logfmt, LogfmtParserFlags(LogfmtParserFlags(ParserFlag), ParserFlag)))))))
+
+# Log query with logfmt parser, flags, and labels argument
+
+{job="loki"} | logfmt --strict --keep-empty label="value", label2
+
+==>
+
+LogQL(Expr(LogExpr(Selector(Matchers(Matcher(Identifier, Eq, String))), PipelineExpr(PipelineStage(Pipe, LogfmtExpressionParser(Logfmt, LogfmtParserFlags(LogfmtParserFlags(ParserFlag), ParserFlag), LabelExtractionExpressionList(LabelExtractionExpressionList(LabelExtractionExpression(Identifier, Eq, String)), LabelExtractionExpression(Identifier))))))))
+
+# Log query with regexp parser
+
+{job="loki"} | regexp "regexp"
+
+==>
+
+LogQL(Expr(LogExpr(Selector(Matchers(Matcher(Identifier, Eq, String))), PipelineExpr(PipelineStage(Pipe, LabelParser(Regexp,String))))))
+
+# Complex log query with complex regexp parser
+
+{job="mysql"} | regexp "(?P<method>\\w+) (?P<path>[\\w|/]+) \\((?P<status>\\d+?)\\) (?P<duration>.*)"
+
+==>
+
+LogQL(Expr(LogExpr(Selector(Matchers(Matcher(Identifier, Eq, String))), PipelineExpr(PipelineStage(Pipe, LabelParser(Regexp, String))))))
+
+# Log query with regexp parser without string
+
+{job="loki"} | regexp
+
+==>
+
+LogQL(Expr(LogExpr(Selector(Matchers(Matcher(Identifier, Eq, String))), PipelineExpr(PipelineStage(Pipe, LabelParser(Regexp,⚠))))))
+
+# Log query with line format
+
+{job="loki"} | line_format "{{.status_code}}"
+
+==>
+
+LogQL(Expr(LogExpr(Selector(Matchers(Matcher(Identifier, Eq, String))), PipelineExpr(PipelineStage(Pipe, LineFormatExpr(LineFormat, String))))))
+
+# Complex log query with line format
+
+{job="mysql"} |= "error" | json | line_format "{{.err}}"
+
+==>
+
+LogQL(Expr(LogExpr(Selector(Matchers(Matcher(Identifier, Eq, String))), PipelineExpr(PipelineExpr(PipelineExpr(PipelineStage(LineFilters(LineFilter(Filter(PipeExact), String)))), PipelineStage(Pipe, LabelParser(Json))), PipelineStage(Pipe, LineFormatExpr(LineFormat, String))))))
+
+# Complex log query with line format and error filtering
+
+{job="mysql"} | json | line_format "{{.message}}" |= "error"
+
+==>
+
+LogQL(Expr(LogExpr(Selector(Matchers(Matcher(Identifier, Eq, String))), PipelineExpr(PipelineExpr(PipelineExpr(PipelineStage(Pipe, LabelParser(Json))), PipelineStage(Pipe, LineFormatExpr(LineFormat, String))), PipelineStage(LineFilters(LineFilter(Filter(PipeExact), String)))))))
+
+# Log query with complex line format
+
+{container="frontend"} | logfmt | line_format "{{.ip}} {{.status}} {{div .duration 1000}}"
+
+==>
+
+LogQL(Expr(LogExpr(Selector(Matchers(Matcher(Identifier, Eq, String))), PipelineExpr(PipelineExpr(PipelineStage(Pipe, LogfmtParser(Logfmt))), PipelineStage(Pipe, LineFormatExpr(LineFormat, String))))))
+
+# Log query with multiple label formats
+
+{container="frontend"} | logfmt | label_format foo=bar | label_format foo="new", bar=`baz`
+
+==>
+
+LogQL(Expr(LogExpr(Selector(Matchers(Matcher(Identifier, Eq, String))), PipelineExpr(PipelineExpr(PipelineExpr(PipelineStage(Pipe, LogfmtParser(Logfmt))), PipelineStage(Pipe, LabelFormatExpr(LabelFormat, LabelsFormat(LabelFormatMatcher(Identifier, Eq, Identifier))))), PipelineStage(Pipe, LabelFormatExpr(LabelFormat, LabelsFormat(LabelsFormat(LabelFormatMatcher(Identifier, Eq, String)), LabelFormatMatcher(Identifier, Eq, String))))))))
+
+# Log query with duration and bytes
+
+{job="mysql"} | logfmt | duration > 1m and bytes_consumed > 20MB
+
+==>
+
+LogQL(Expr(LogExpr(Selector(Matchers(Matcher(Identifier, Eq, String))), PipelineExpr(PipelineExpr(PipelineStage(Pipe, LogfmtParser(Logfmt))), PipelineStage(Pipe, LabelFilter(LabelFilter(UnitFilter(DurationFilter(Identifier, Gtr, Duration))), And, LabelFilter(UnitFilter(BytesFilter(Identifier, Gtr, Bytes)))))))))
+
+# Log query with duration and bytes as floats
+
+{job="mysql"} | logfmt | duration > 1.5m and bytes_consumed > 20.2MB
+
+==>
+
+LogQL(Expr(LogExpr(Selector(Matchers(Matcher(Identifier, Eq, String))), PipelineExpr(PipelineExpr(PipelineStage(Pipe, LogfmtParser(Logfmt))), PipelineStage(Pipe, LabelFilter(LabelFilter(UnitFilter(DurationFilter(Identifier, Gtr, Duration))), And, LabelFilter(UnitFilter(BytesFilter(Identifier, Gtr, Bytes)))))))))
+
+# Complex log query with duration and bytes
+
+{job="mysql"} | logfmt | duration >= 20ms or (method="GET" and size <= 20KB)
+
+==>
+
+LogQL(Expr(LogExpr(Selector(Matchers(Matcher(Identifier, Eq, String))), PipelineExpr(PipelineExpr(PipelineStage(Pipe, LogfmtParser(Logfmt))), PipelineStage(Pipe, LabelFilter(LabelFilter(UnitFilter(DurationFilter(Identifier, Gte, Duration))), Or, LabelFilter(LabelFilter(LabelFilter(Matcher(Identifier, Eq, String)), And, LabelFilter(UnitFilter(BytesFilter(Identifier, Lte, Bytes)))))))))))
+
+# Complex log query with parsing, filtering, label formatting and line formatting
+
+{cluster="ops-tools1", name="querier", namespace="loki-dev"}
+  |= "metrics.go" != "loki-canary"
+  | logfmt
+  | query != ""
+  | label_format query="{{ Replace .query \"\\n\" \"\" -1 }}"
+  | line_format "{{ .ts}}\t{{.duration}}\ttraceID = {{.traceID}}\t{{ printf \"%-100.100s\" .query }} "
+
+==>
+
+LogQL(Expr(LogExpr(Selector(Matchers(Matchers(Matchers(Matcher(Identifier, Eq, String)), Matcher(Identifier, Eq, String)), Matcher(Identifier, Eq, String))), PipelineExpr(PipelineExpr(PipelineExpr(PipelineExpr(PipelineExpr(PipelineStage(LineFilters(LineFilters(LineFilter(Filter(PipeExact), String)), LineFilter(Filter(Neq), String)))), PipelineStage(Pipe, LogfmtParser(Logfmt))), PipelineStage(Pipe, LabelFilter(Matcher(Identifier, Neq, String)))), PipelineStage(Pipe, LabelFormatExpr(LabelFormat, LabelsFormat(LabelFormatMatcher(Identifier, Eq, String))))), PipelineStage(Pipe, LineFormatExpr(LineFormat, String))))))
+
+# Numeric literals
+
+0.123e3
+
+==>
+
+LogQL(Expr(MetricExpr(LiteralExpr(Number))))
+
+# Numeric Vector
+
+vector(5)
+
+==>
+
+LogQL(Expr(MetricExpr(VectorExpr(Vector, Number))))
+
+# Count over time query
+
+count_over_time({job="mysql"}[5m])
+
+==>
+
+LogQL(Expr(MetricExpr(RangeAggregationExpr(RangeOp(CountOverTime), LogRangeExpr(Selector(Matchers(Matcher(Identifier, Eq, String))), Range(Duration))))))
+
+# Rate counter query on value inside log line
+
+sum(rate_counter({job="tns/app"} | logfmt | __error__=`` | unwrap label | __error__=`` [5m]))
+
+==>
+
+LogQL(Expr(MetricExpr(VectorAggregationExpr(VectorOp(Sum), MetricExpr(RangeAggregationExpr(RangeOp(RateCounter), LogRangeExpr(Selector(Matchers(Matcher(Identifier, Eq, String))), PipelineExpr(PipelineExpr(PipelineStage(Pipe, LogfmtParser(Logfmt))), PipelineStage(Pipe, LabelFilter(Matcher(Identifier, Eq, String)))), UnwrapExpr(UnwrapExpr(Pipe, Unwrap, Identifier), Pipe, LabelFilter(Matcher(Identifier, Eq, String))), Range(Duration))))))))
+
+# Complex aggregation query
+
+sum by (host) (rate({job="mysql"} |= "error" != "timeout" | json | duration > 10s [1m]))
+
+==>
+
+LogQL(Expr(MetricExpr(VectorAggregationExpr(VectorOp(Sum), Grouping(By, Labels(Identifier)), MetricExpr(RangeAggregationExpr(RangeOp(Rate), LogRangeExpr(Selector(Matchers(Matcher(Identifier, Eq, String))), PipelineExpr(PipelineExpr(PipelineExpr(PipelineStage(LineFilters(LineFilters(LineFilter(Filter(PipeExact), String)), LineFilter(Filter(Neq), String)))), PipelineStage(Pipe, LabelParser(Json))), PipelineStage(Pipe, LabelFilter(UnitFilter(DurationFilter(Identifier, Gtr, Duration))))), Range(Duration))))))))
+# Vector aggregation query topk
+
+topk(10,sum(rate({region="us-east1"}[5m])) by (name))
+
+==>
+
+LogQL(Expr(MetricExpr(VectorAggregationExpr(VectorOp(Topk), Number, MetricExpr(VectorAggregationExpr(VectorOp(Sum), MetricExpr(RangeAggregationExpr(RangeOp(Rate), LogRangeExpr(Selector(Matchers(Matcher(Identifier, Eq, String))), Range(Duration)))), Grouping(By, Labels(Identifier))))))))
+
+# Vector aggregation query sum
+
+sum(count_over_time({job="mysql"}[5m])) by (level)
+
+==>
+
+LogQL(Expr(MetricExpr(VectorAggregationExpr(VectorOp(Sum), MetricExpr(RangeAggregationExpr(RangeOp(CountOverTime), LogRangeExpr(Selector(Matchers(Matcher(Identifier, Eq, String))), Range(Duration)))), Grouping(By, Labels(Identifier))))))
+
+# Vector aggregation query avg
+
+avg(rate(({job="nginx"} |= "GET" | json | path="/home")[10s])) by (region)
+
+==>
+
+LogQL(Expr(MetricExpr(VectorAggregationExpr(VectorOp(Avg), MetricExpr(RangeAggregationExpr(RangeOp(Rate), LogRangeExpr(Selector(Matchers(Matcher(Identifier, Eq, String))), PipelineExpr(PipelineExpr(PipelineExpr(PipelineStage(LineFilters(LineFilter(Filter(PipeExact), String)))), PipelineStage(Pipe, LabelParser(Json))), PipelineStage(Pipe, LabelFilter(Matcher(Identifier, Eq, String)))), Range(Duration)))), Grouping(By, Labels(Identifier))))))
+
+# Sum by query with unwrap
+
+sum by (org_id) (
+  sum_over_time(
+  {cluster="ops-tools1",container="loki-dev"}
+      |= "metrics.go"
+      | logfmt
+      | unwrap bytes_processed [1m])
+    )
+
+==>
+
+LogQL(Expr(MetricExpr(VectorAggregationExpr(VectorOp(Sum), Grouping(By, Labels(Identifier)), MetricExpr(RangeAggregationExpr(RangeOp(SumOverTime), LogRangeExpr(Selector(Matchers(Matchers(Matcher(Identifier, Eq, String)), Matcher(Identifier, Eq, String))), PipelineExpr(PipelineExpr(PipelineStage(LineFilters(LineFilter(Filter(PipeExact), String)))), PipelineStage(Pipe, LogfmtParser(Logfmt))), UnwrapExpr(Pipe, Unwrap, Identifier), Range(Duration))))))))
+
+# Quantile over time by query with unwrap
+
+quantile_over_time(0.99,
+  {cluster="ops-tools1",container="ingress-nginx"}
+    | json
+    | __error__ = ""
+    | unwrap request_time [1m]) by (path)
+
+==>
+
+LogQL(Expr(MetricExpr(RangeAggregationExpr(RangeOp(QuantileOverTime), Number, LogRangeExpr(Selector(Matchers(Matchers(Matcher(Identifier, Eq, String)), Matcher(Identifier, Eq, String))), PipelineExpr(PipelineExpr(PipelineStage(Pipe, LabelParser(Json))), PipelineStage(Pipe, LabelFilter(Matcher(Identifier, Eq, String)))), UnwrapExpr(Pipe, Unwrap, Identifier), Range(Duration)), Grouping(By, Labels(Identifier))))))
+
+# Log query with multiple operations
+
+{cluster="ops",job="loki-ops/querier"} |= "76fcbcd455e629e" |= "logger.go" != "Summary" |logfmt | traceID="76fcbc57655e629a" and method="query.Exec" | line_format "store_decompressed={{ .Store_DecompressedBytes }}\tdownload_time={{ .Store_ChunksDownloadTime }}\tchunks_downloaded={{ .Store_TotalChunksDownloaded }}\tcompressed_bytes={{ .Store_CompressedBytes }}"
+
+==>
+
+LogQL(Expr(LogExpr(Selector(Matchers(Matchers(Matcher(Identifier, Eq, String)), Matcher(Identifier, Eq, String))), PipelineExpr(PipelineExpr(PipelineExpr(PipelineExpr(PipelineStage(LineFilters(LineFilters(LineFilters(LineFilter(Filter(PipeExact), String)), LineFilter(Filter(PipeExact), String)), LineFilter(Filter(Neq), String)))), PipelineStage(Pipe, LogfmtParser(Logfmt))), PipelineStage(Pipe, LabelFilter(LabelFilter(Matcher(Identifier, Eq, String)), And, LabelFilter(Matcher(Identifier, Eq, String))))), PipelineStage(Pipe, LineFormatExpr(LineFormat, String))))))
+
+# Log query with multiple operations and complex line_format
+
+{job="cortex-ops"} |= "finish in prometheus" | logfmt | line_format `{ "qs": {{ .queries }} }` | json qs="qs" | line_format "{{ range $q := fromJson .qs  }} {{ $q.query }} \n {{end}}"
+
+==>
+
+LogQL(Expr(LogExpr(Selector(Matchers(Matcher(Identifier, Eq, String))), PipelineExpr(PipelineExpr(PipelineExpr(PipelineExpr(PipelineExpr(PipelineStage(LineFilters(LineFilter(Filter(PipeExact), String)))), PipelineStage(Pipe, LogfmtParser(Logfmt))), PipelineStage(Pipe, LineFormatExpr(LineFormat, String))), PipelineStage(Pipe, JsonExpressionParser(Json, LabelExtractionExpressionList(LabelExtractionExpression(Identifier, Eq, String))))), PipelineStage(Pipe, LineFormatExpr(LineFormat, String))))))
+
+# Metrics query with unwrap with duration as label
+
+sum(sum_over_time({job="grafana"} |= "error" | logfmt | unwrap duration | __error__="" [5m]))
+
+==>
+
+LogQL(Expr(MetricExpr(VectorAggregationExpr(VectorOp(Sum), MetricExpr(RangeAggregationExpr(RangeOp(SumOverTime), LogRangeExpr(Selector(Matchers(Matcher(Identifier, Eq, String))), PipelineExpr(PipelineExpr(PipelineStage(LineFilters(LineFilter(Filter(PipeExact), String)))), PipelineStage(Pipe, LogfmtParser(Logfmt))), UnwrapExpr(UnwrapExpr(Pipe, Unwrap, Identifier), Pipe, LabelFilter(Matcher(Identifier, Eq, String))), Range(Duration))))))))
+
+
+# Metrics query with unwrap with duration as function
+
+sum(sum_over_time({job="grafana"} |= "error" | logfmt | unwrap duration(label) | __error__="" [5m]))
+
+==>
+
+LogQL(Expr(MetricExpr(VectorAggregationExpr(VectorOp(Sum), MetricExpr(RangeAggregationExpr(RangeOp(SumOverTime), LogRangeExpr(Selector(Matchers(Matcher(Identifier, Eq, String))), PipelineExpr(PipelineExpr(PipelineStage(LineFilters(LineFilter(Filter(PipeExact), String)))), PipelineStage(Pipe, LogfmtParser(Logfmt))), UnwrapExpr(UnwrapExpr(Pipe, Unwrap, ConvOp(DurationConv), Identifier), Pipe, LabelFilter(Matcher(Identifier, Eq, String))), Range(Duration))))))))
+
+# Metrics query with unwrap with duration_seconds as function
+
+sum(sum_over_time({job="grafana"} |= "error" | logfmt | unwrap duration_seconds (label) | __error__="" [5m]))
+
+==>
+
+LogQL(Expr(MetricExpr(VectorAggregationExpr(VectorOp(Sum), MetricExpr(RangeAggregationExpr(RangeOp(SumOverTime), LogRangeExpr(Selector(Matchers(Matcher(Identifier, Eq, String))), PipelineExpr(PipelineExpr(PipelineStage(LineFilters(LineFilter(Filter(PipeExact), String)))), PipelineStage(Pipe, LogfmtParser(Logfmt))), UnwrapExpr(UnwrapExpr(Pipe, Unwrap, ConvOp(DurationSecondsConv), Identifier), Pipe, LabelFilter(Matcher(Identifier, Eq, String))), Range(Duration))))))))
+
+# Log query with multiple json expressions
+
+{job="cortex-ops"} |= "finish in prometheus" | json firstServer="server[0]", a="b", c_d="e"
+
+==>
+
+LogQL(Expr(LogExpr(Selector(Matchers(Matcher(Identifier, Eq, String))), PipelineExpr(PipelineExpr(PipelineStage(LineFilters(LineFilter(Filter(PipeExact), String)))), PipelineStage(Pipe, JsonExpressionParser(Json, LabelExtractionExpressionList(LabelExtractionExpressionList(LabelExtractionExpressionList(LabelExtractionExpression(Identifier, Eq, String)), LabelExtractionExpression(Identifier, Eq, String)), LabelExtractionExpression(Identifier, Eq, String))))))))
+
+# Simple log query with trailing comma in stream selector to have error
+
+{job="loki",}
+
+==>
+
+LogQL(Expr(LogExpr(Selector(Matchers(Matchers(Matcher(Identifier, Eq, String)), ⚠)))))
+
+# Log query with decolorize
+
+{job="loki"} | decolorize
+
+==>
+
+LogQL(Expr(LogExpr(Selector(Matchers(Matcher(Identifier, Eq, String))), PipelineExpr(PipelineStage(Pipe, DecolorizeExpr(Decolorize))))))
+
+# Log query with pipe operations and decolorize
+
+{job="loki"} | logfmt | label="value" | decolorize
+
+==>
+
+LogQL(Expr(LogExpr(Selector(Matchers(Matcher(Identifier, Eq, String))), PipelineExpr(PipelineExpr(PipelineExpr(PipelineStage(Pipe, LogfmtParser(Logfmt))), PipelineStage(Pipe, LabelFilter(Matcher(Identifier, Eq, String)))), PipelineStage(Pipe, DecolorizeExpr(Decolorize))))))
+
+# Range aggregation expression - "(" Selector ")" Range OffsetExpr UnwrapExpr
+
+rate(({label=""}) [1s] offset 1h | unwrap label)
+
+==>
+
+LogQL(Expr(MetricExpr(RangeAggregationExpr(RangeOp(Rate), LogRangeExpr(Selector(Matchers(Matcher(Identifier, Eq, String))), Range(Duration), OffsetExpr(Offset, Duration), UnwrapExpr(Pipe, Unwrap, Identifier))))))
+
+# Drop with one label
+
+{label=""} | drop name
+
+==>
+
+LogQL(Expr(LogExpr(Selector(Matchers(Matcher(Identifier, Eq, String))), PipelineExpr(PipelineStage(Pipe, DropLabelsExpr(Drop, DropLabels(DropLabel(Identifier))))))))
+
+# Drop with multiple labels and matchers
+
+{label=""} | drop name, other_name, some_name="some_value"
+
+==>
+
+LogQL(Expr(LogExpr(Selector(Matchers(Matcher(Identifier, Eq, String))), PipelineExpr(PipelineStage(Pipe, DropLabelsExpr(Drop, DropLabels(DropLabels(DropLabels(DropLabel(Identifier)), DropLabel(Identifier)), DropLabel(Matcher(Identifier, Eq, String)))))))))
+
+# Keep with one label
+
+{label=""} | keep name
+
+==>
+
+LogQL(Expr(LogExpr(Selector(Matchers(Matcher(Identifier, Eq, String))), PipelineExpr(PipelineStage(Pipe, KeepLabelsExpr(Keep, KeepLabels(KeepLabel(Identifier))))))))
+
+# Keep with multiple labels and matchers
+
+{label=""} | keep name, other_name, some_name="some_value"
+
+==>
+
+LogQL(Expr(LogExpr(Selector(Matchers(Matcher(Identifier, Eq, String))), PipelineExpr(PipelineStage(Pipe, KeepLabelsExpr(Keep, KeepLabels(KeepLabels(KeepLabels(KeepLabel(Identifier)), KeepLabel(Identifier)), KeepLabel(Matcher(Identifier, Eq, String)))))))))
+
+# Sort
+
+sort(rate(({app=~"foo|bar"} |~".+bar")[1m])) without (app)  
+
+==> 
+
+LogQL(Expr(MetricExpr(VectorAggregationExpr(VectorOp(Sort), MetricExpr(RangeAggregationExpr(RangeOp(Rate), LogRangeExpr(Selector(Matchers(Matcher(Identifier, Re, String))), PipelineExpr(PipelineStage(LineFilters(LineFilter(Filter(PipeMatch), String)))), Range(Duration)))), Grouping(Without, Labels(Identifier))))))
+
+# Sort desc
+
+sort_desc(sum(count_over_time({namespace=~".+"}[1m])) by (namespace))
+
+==>
+
+LogQL(Expr(MetricExpr(VectorAggregationExpr(VectorOp(Sort_Desc), MetricExpr(VectorAggregationExpr(VectorOp(Sum), MetricExpr(RangeAggregationExpr(RangeOp(CountOverTime), LogRangeExpr(Selector(Matchers(Matcher(Identifier, Re, String))), Range(Duration)))), Grouping(By, Labels(Identifier))))))))
+
+# Line filter with or in log query
+
+{app="foo"} |= "foo" or "test"
+
+==>
+
+LogQL(Expr(LogExpr(Selector(Matchers(Matcher(Identifier, Eq, String))), PipelineExpr(PipelineStage(LineFilters(LineFilter(Filter(PipeExact), String, Or, OrFilter(String))))))))
+
+# Line filter with or in metric query
+
+count_over_time({app="foo"} |= "foo" or "test" [1m])
+
+==>
+
+LogQL(Expr(MetricExpr(RangeAggregationExpr(RangeOp(CountOverTime), LogRangeExpr(Selector(Matchers(Matcher(Identifier, Eq, String))), PipelineExpr(PipelineStage(LineFilters(LineFilter(Filter(PipeExact), String, Or, OrFilter(String))))), Range(Duration))))))
+
+# Log query with ip line filter
+
+{job_name="myapp"} |= ip("192.168.4.5/16")
+
+==>
+
+LogQL(Expr(LogExpr(Selector(Matchers(Matcher(Identifier, Eq, String))), PipelineExpr(PipelineStage(LineFilters(LineFilter(Filter(PipeExact), FilterOp(Ip), String)))))))
+
+# Log query with ip filter
+
+{job_name="myapp"}
+	| logfmt
+	| addr = ip("192.168.4.5/16")
+	| addr != ip("192.168.4.2")
+
+==>
+
+LogQL(Expr(LogExpr(Selector(Matchers(Matcher(Identifier, Eq, String))), PipelineExpr(PipelineExpr(PipelineExpr(PipelineStage(Pipe, LogfmtParser(Logfmt))), PipelineStage(Pipe, LabelFilter(IpLabelFilter(Identifier, Eq, Ip, String)))), PipelineStage(Pipe, LabelFilter(IpLabelFilter(Identifier, Neq, Ip, String)))))))
+
+# Log query with ip filter range
+
+{job="grafana"} | logfmt | remote_addr = ip("2001:db8::1-2001:db8::8")
+
+==>
+
+LogQL(Expr(LogExpr(Selector(Matchers(Matcher(Identifier, Eq, String))), PipelineExpr(PipelineExpr(PipelineStage(Pipe, LogfmtParser(Logfmt))), PipelineStage(Pipe, LabelFilter(IpLabelFilter(Identifier, Eq, Ip, String)))))))
+
+# Log query with ip label name
+
+{ip="123"} | logfmt | remote_addr = ip("2001:db8::1-2001:db8::8")
+
+==>
+
+LogQL(Expr(LogExpr(Selector(Matchers(Matcher(Identifier, Eq, String))), PipelineExpr(PipelineExpr(PipelineStage(Pipe, LogfmtParser(Logfmt))), PipelineStage(Pipe, LabelFilter(IpLabelFilter(Identifier, Eq, Ip, String)))))))
+
+# Log query with negative numbers
+
+{foo="bar"} | logfmt | counter>-1 | counter>=-1 | counter<-1 | counter<=-1 | counter!=-1 | counter==-1
+
+==>
+
+LogQL(Expr(LogExpr(Selector(Matchers(Matcher(Identifier, Eq, String))), PipelineExpr(PipelineExpr(PipelineExpr(PipelineExpr(PipelineExpr(PipelineExpr(PipelineExpr(PipelineStage(Pipe, LogfmtParser(Logfmt))), PipelineStage(Pipe, LabelFilter(NumberFilter(Identifier, Gtr, LiteralExpr(Sub, Number))))), PipelineStage(Pipe, LabelFilter(NumberFilter(Identifier, Gte, LiteralExpr(Sub, Number))))), PipelineStage(Pipe, LabelFilter(NumberFilter(Identifier, Lss, LiteralExpr(Sub, Number))))), PipelineStage(Pipe, LabelFilter(NumberFilter(Identifier, Lte, LiteralExpr(Sub, Number))))), PipelineStage(Pipe, LabelFilter(NumberFilter(Identifier, Neq, LiteralExpr(Sub, Number))))), PipelineStage(Pipe, LabelFilter(NumberFilter(Identifier, Eql, LiteralExpr(Sub, Number))))))))
+
+# 5y2w3d4h5m6s succeeds
+
+5y2w3d4h5m6s
+
+==>
+
+LogQL(⚠(Duration))
+
+# 2w3y errors because week before year
+
+2w3y
+
+==>
+
+LogQL(⚠(Duration), ⚠(Duration))
+
+# 5.5y
+
+5.5y
+
+==>
+
+LogQL(Expr(MetricExpr(LiteralExpr(Number))), ⚠(Identifier))
+
+# 2.5h
+
+2.5h
+
+==>
+
+LogQL(⚠(Duration))
+
+# -2.5h
+
+-2.5h
+
+==>
+
+LogQL(⚠(Duration))
+
+# 20KB
+
+20KB
+
+==>
+
+LogQL(⚠(Bytes))
+
+# 20kb does parse as Bytes
+
+20kb
+
+==>
+
+LogQL(Expr(MetricExpr(LiteralExpr(Number))), ⚠(Identifier))
+
+# 20MB
+
+20MB
+
+==>
+
+LogQL(⚠(Bytes))
+
+# 20.5MB
+
+20.5MB 
+
+==>
+
+LogQL(⚠(Bytes))
+
+# -20.5MB
+
+-20.5MB 
+
+==>
+
+LogQL(Expr(MetricExpr(LiteralExpr(Sub, ⚠(Bytes)))))

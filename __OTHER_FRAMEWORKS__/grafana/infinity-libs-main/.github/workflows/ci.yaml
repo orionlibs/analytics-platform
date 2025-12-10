@@ -1,0 +1,55 @@
+name: Test & Build
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+defaults:
+  run:
+    shell: bash
+    working-directory: ./
+permissions:
+  contents: read
+env:
+  DO_NOT_TRACK: 1
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Harden Runner
+        uses: step-security/harden-runner@63c24ba6bd7ba022e95695ff85de572c04a18142 # v2.7.0
+        with:
+          egress-policy: audit
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          repository: ${{ github.event.pull_request.head.repo.full_name || github.repository }}
+          ref: ${{ github.event.pull_request.head.ref || github.ref }}
+          fetch-depth: 1
+          persist-credentials: false
+      - name: Setup NodeJS environment
+        uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: yarn
+      - name: Install frontend dependencies
+        run: yarn install --frozen-lockfile;
+      - name: Spellcheck
+        run: yarn spellcheck;
+      - name: Setup Go environment
+        uses: actions/setup-go@v5
+        with:
+          go-version: "1.24.6"
+          cache-dependency-path: "**/*.sum"
+      - name: Validate environment
+        run: |
+          echo "-------- node version -----"
+          node --version
+          echo "-------- npm version -----"
+          npm --version
+          echo "-------- yarn version -----"
+          yarn --version
+          echo "-------- go version -----"
+          go version
+      - name: Test
+        run: yarn test

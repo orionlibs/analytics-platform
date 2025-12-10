@@ -1,0 +1,102 @@
+---
+kind: pipeline
+type: docker
+name: test_and_build
+
+platform:
+  os: linux
+  arch: amd64
+
+steps:
+- name: builtin-compile-pipeline
+  image: golang:1.19
+  command:
+  - go
+  - build
+  - -o
+  - /var/scribe/pipeline
+  - ./ci
+  environment:
+    CGO_ENABLED: 0
+    GOARCH: amd64
+    GOOS: linux
+  volumes:
+  - name: scribe
+    path: /var/scribe
+
+- name: test_and_build
+  image: golang:1.19
+  commands:
+  - /var/scribe/pipeline --pipeline="test and build" --client cli --build-id=$DRONE_BUILD_NUMBER --state=file:///var/scribe-state/state.json --log-level=debug --version=v0.10.0-5-ge3d2c2b-dirty ./ci
+  volumes:
+  - name: scribe
+    path: /var/scribe
+  - name: scribe-state
+    path: /var/scribe-state
+  depends_on:
+  - builtin-compile-pipeline
+
+volumes:
+- name: scribe
+  temp: {}
+- name: scribe-state
+  temp: {}
+- name: docker_socket
+  host:
+    path: /var/run/docker.sock
+
+---
+kind: pipeline
+type: docker
+name: create_github_release
+
+platform:
+  os: linux
+  arch: amd64
+
+steps:
+- name: builtin-compile-pipeline
+  image: golang:1.19
+  command:
+  - go
+  - build
+  - -o
+  - /var/scribe/pipeline
+  - ./ci
+  environment:
+    CGO_ENABLED: 0
+    GOARCH: amd64
+    GOOS: linux
+  volumes:
+  - name: scribe
+    path: /var/scribe
+
+- name: create_github_release
+  image: golang:1.19
+  commands:
+  - /var/scribe/pipeline --pipeline="create github release" --client cli --build-id=$DRONE_BUILD_NUMBER --state=file:///var/scribe-state/state.json --log-level=debug --version=v0.10.0-5-ge3d2c2b-dirty ./ci
+  volumes:
+  - name: scribe
+    path: /var/scribe
+  - name: scribe-state
+    path: /var/scribe-state
+  depends_on:
+  - builtin-compile-pipeline
+
+volumes:
+- name: scribe
+  temp: {}
+- name: scribe-state
+  temp: {}
+- name: docker_socket
+  host:
+    path: /var/run/docker.sock
+
+trigger:
+  event:
+  - tag
+
+depends_on:
+- test_and_build
+
+...

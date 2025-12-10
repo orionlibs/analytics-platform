@@ -1,0 +1,27 @@
+apiVersion: streamanalytics.azure.upbound.io/v1beta1
+kind: FunctionJavascriptUda
+metadata:
+  annotations:
+    upjet.upbound.io/manual-intervention: "This resource requires manual intervention."
+  name: example
+spec:
+  forProvider:
+    input:
+    - type: bigint
+    output:
+    - type: bigint
+    script: |
+      function main() {
+          this.init = function () {
+              this.state = 0;
+          }
+
+          this.accumulate = function (value, timestamp) {
+              this.state += value;
+          }
+
+          this.computeResult = function () {
+              return this.state;
+          }
+      }
+    streamAnalyticsJobId: <steramanalyticsjobid>

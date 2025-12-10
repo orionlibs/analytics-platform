@@ -1,0 +1,30 @@
+[project]
+name = "convert"
+version = "0.1.0"
+description = "Sigma CLI Conversion"
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = [
+    "dynaconf>=3.2.10",
+    "pysigma-backend-loki>=0.12.3",
+    "pyyaml>=6.0.2",
+    "sigma-cli>=1.0.5",
+    "orjson>=3.10.0",
+]
+
+[dependency-groups]
+dev = [
+    "mypy>=1.15.0",
+    "pytest>=8.3.4",
+    "ruff>=0.11.4",
+    "types-pyyaml>=6.0.12.20250402",
+]
+
+[tool.ruff]
+exclude = ["dist", "build", "env", "venv", ".env", ".venv"]
+line-length = 100
+
+[tool.mypy]
+exclude = ["dist", "build", "env", "venv", ".env", ".venv"]
+ignore_missing_imports = true
+explicit_package_bases = true

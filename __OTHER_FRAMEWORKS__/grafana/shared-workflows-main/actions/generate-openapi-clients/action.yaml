@@ -1,0 +1,113 @@
+name: Generate OpenAPI client
+description: Takes in a locally stored OpenAPI spec and generates a client from it
+
+inputs:
+  generator-version:
+    description: "The version of the OpenAPI generator to use"
+    required: false
+    default: "7.7.0"
+  spec-path:
+    description: "The path to the OpenAPI spec to generate the client from"
+    required: true
+  output-dir:
+    description: "The directory to output the generated client to"
+    required: false
+    default: "."
+  commit-changes:
+    description: If true, the action will commit and push the changes to the repository, if there's a diff.
+    required: false
+    default: "true"
+  commit-message:
+    description: The commit message to use when committing the changes
+    required: false
+    default: "Update clients and publish"
+  commit-author:
+    description: Specify the author for the commit
+    required: false
+    default: "github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>"
+  commit-user-name:
+    description: Use a different username for the commit
+    required: false
+    default: github-actions[bot]
+  commit-user-email:
+    description: Use a different email address for the commit
+    required: false
+    default: 41898282+github-actions[bot]@users.noreply.github.com
+  package-name:
+    description: The name of the package to generate
+    required: true
+  modify-spec-script:
+    description: |
+      The path to an executable script that modifies the OpenAPI spec before generating the client.
+      The spec will be piped into the script and the script should output the modified spec to stdout.
+      Note: This is used as a workaround for the OpenAPI generator not supporting certain features. By using
+      this feature, the spec will be modified temporarily, and the changes will not be committed.
+    required: false
+    default: ""
+
+runs:
+  using: composite
+  steps:
+    # Get openapi-generator
+    - id: openapi-generator-cache
+      uses: actions/cache/restore@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0
+      with:
+        key: openapi-generator-${{ inputs.generator-version }}
+        path: openapi-generator-cli.jar
+
+    - name: Download openapi-generator
+      shell: bash
+      if: steps.openapi-generator-cache.outputs.cache-hit != 'true'
+      env:
+        GENERATOR_VERSION: ${{ inputs.generator-version }}
+      run: |
+        wget -nv "https://repo1.maven.org/maven2/org/openapitools/openapi-generator-cli/${GENERATOR_VERSION}/openapi-generator-cli-${GENERATOR_VERSION}.jar" -O ./openapi-generator-cli.jar
+    - uses: actions/cache/save@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0
+      if: steps.openapi-generator-cache.outputs.cache-hit != 'true'
+      with:
+        key: openapi-generator-${{ inputs.generator-version }}
+        path: openapi-generator-cli.jar
+
+    # Modify the spec if a script is provided
+    - name: Modify spec
+      id: modify-spec
+      shell: bash
+      env:
+        MODIFY_SCRIPT: ${{ inputs.modify-spec-script }}
+        SPEC_PATH: ${{ inputs.spec-path }}
+      run: |
+        if [ -n "${MODIFY_SCRIPT}" ]; then
+          cat "${SPEC_PATH}" | "${MODIFY_SCRIPT}" > temp-spec.txt
+          echo "spec-path=temp-spec.txt" | tee -a "${GITHUB_OUTPUT}"
+        else
+          echo "spec-path=${SPEC_PATH}" | tee -a "${GITHUB_OUTPUT}"
+        fi
+
+    # Generate the client
+    - shell: bash
+      run: ${GITHUB_ACTION_PATH}/generate.sh
+      env:
+        OUTPUT_DIR: ${{ inputs.output-dir }}
+        PACKAGE_NAME: ${{ inputs.package-name }}
+        SPEC_PATH: ${{ steps.modify-spec.outputs.spec-path }}
+
+    # Cleanup files that shouldn't be committed
+    - name: Cleanup
+      shell: bash
+      env:
+        MODIFY_SCRIPT: ${{ inputs.modify-spec-script }}
+      run: |
+        rm openapi-generator-cli.jar
+
+        if [ -n "${MODIFY_SCRIPT}" ]; then
+          rm temp-spec.txt
+        fi
+
+    # Commit the changes
+    - uses: stefanzweifel/git-auto-commit-action@28e16e81777b558cc906c8750092100bbb34c5e3 # v7.0.0
+      if: ${{ inputs.commit-changes == 'true' }}
+      with:
+        commit_message: ${{ inputs.commit-message }}
+        commit_author: ${{ inputs.commit-author}}
+        commit_user_name: ${{ inputs.commit-user-name}}
+        commit_user_email: ${{ inputs.commit-email }}

@@ -1,0 +1,69 @@
+/*
+The following example shows using the default all logs processing module, for
+a multiple tenants and specifying the destination url/credentials via environment
+variables.
+*/
+logging {
+  level  = "info"
+  format = "logfmt"
+}
+
+module.git "logs_primary" {
+  repository = "https://github.com/grafana/agent-modules.git"
+  revision = "main"
+  path = "modules/kubernetes/logs/all.river"
+
+  arguments {
+    forward_to = [loki.write.primary.receiver]
+    tenant = "primary|"
+    git_repo = "https://github.com/grafana/agent-modules.git"
+    git_rev = "main"
+  }
+}
+
+module.git "logs_op" {
+  repository = "https://github.com/grafana/agent-modules.git"
+  revision = "main"
+  path = "modules/kubernetes/logs/all.river"
+
+  arguments {
+    forward_to = [loki.write.default.receiver]
+    tenant = coalesce(env("OPS_TENANT_NAME"), "ops")
+    git_repo = "https://github.com/grafana/agent-modules.git"
+    git_rev = "main"
+  }
+}
+
+loki.write "local_primary" {
+  endpoint {
+    url = env("LOGS_PRIMARY_URL")
+
+    basic_auth {
+        username = env("LOGS_PRIMARY_TENANT")
+        password = env("LOGS_PRIMARY_TOKEN")
+    }
+  }
+
+  external_labels = {
+    "cluster" = coalesce(env("CLUSTER_NAME"), env("CLUSTER"), ""),
+    "env" = coalesce(env("ENV"), ""),
+    "region" = coalesce(env("REGION"), ""),
+  }
+}
+
+loki.write "local_ops" {
+  endpoint {
+    url = env("LOGS_OPS_URL")
+
+    basic_auth {
+        username = env("LOGS_OPS_TENANT")
+        password = env("LOGS_OPS_TOKEN")
+    }
+  }
+
+  external_labels = {
+    "cluster" = coalesce(env("CLUSTER_NAME"), env("CLUSTER"), ""),
+    "env" = coalesce(env("ENV"), ""),
+    "region" = coalesce(env("REGION"), ""),
+  }
+}

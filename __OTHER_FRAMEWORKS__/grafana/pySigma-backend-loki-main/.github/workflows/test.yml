@@ -1,0 +1,55 @@
+name: Test
+permissions: {}
+on:
+  push:
+    branches: [ "*" ]
+  pull_request:
+    branches: [ "*" ]
+  workflow_dispatch:
+
+jobs:
+  test:
+    strategy:
+      matrix:
+        os: [ 'ubuntu-latest' ]
+        python-version: [ '3.10', '3.11', '3.12', '3.13', '3.14' ]
+        poetry-version: [ '2.2' ]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@1af3b93b6815bc44a9784bd300feb67ff0d1eeb3 # v6
+        with:
+          persist-credentials: false
+      - name: Set up Python
+        uses: actions/setup-python@e797f83bcb11b83ae66e0230d6156d7c80228e7c # v6
+        with:
+          python-version: ${{ matrix.python-version }}
+      - name: Install Poetry
+        uses: abatilo/actions-poetry@3765cf608f2d4a72178a9fc5b918668e542b89b1 # v4.0.0
+        with:
+          poetry-version: ${{ matrix.poetry-version }}
+      - name: Install dependencies
+        run: poetry install
+      - name: Run formatter, linter and type checker
+        run: |
+          poetry run mypy --explicit-package-bases .
+          poetry run ruff check .
+      - name: Run unit tests
+        run: poetry run pytest --cov=sigma --cov-report term --cov-report lcov:coverage.lcov -vv
+      - name: Submit coverage report to Coveralls
+        if: ${{ success() }}
+        uses: coverallsapp/github-action@648a8eb78e6d50909eff900e4ec85cab4524a45b # v2.3.6
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          path-to-lcov: ./coverage.lcov
+          parallel: true
+          flag-name: python-${{ matrix.python-version }}
+  finish:
+    needs: test
+    runs-on: ubuntu-latest
+    steps:
+      - name: Finish coveralls
+        uses: coverallsapp/github-action@648a8eb78e6d50909eff900e4ec85cab4524a45b # v2.3.6
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          parallel-finished: true
+          carryforward: "python-3.10,python-3.11,python-3.12,python-3.13,python-3.14"

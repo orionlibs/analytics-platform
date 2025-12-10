@@ -1,0 +1,796 @@
+# Description:
+#  CI workflow for building, testing and packaging a plugin.
+#  It does the following steps:
+#  - Runs unit tests and builds the frontend
+#  - Tests and builds the backend (if it exists)
+#  - Signs and packages the plugin into a universal ZIP and OS/arch ZIPs
+#  - Tests the plugin docs (if they exist)
+#  - Runs Playwright E2E tests (if they exist)
+#  - Runs Trufflehog security scanning on all the plugin ZIPs
+#  - Uploads the ZIPs to Google Cloud Storage, for publishing to the Grafana Plugin Catalog
+#  - Uploads the ZIPs as GitHub artifacts, for other workflows to consume
+
+name: Plugins - CI
+
+on:
+  workflow_call:
+    inputs:
+      # Those inputs can be customized depending on the plugin's needs:
+
+      # Custom tooling versions. The default values are in the env section.
+      go-version:
+        description: Go version to use
+        type: string
+        required: false
+      node-version:
+        description: Node.js version to use
+        type: string
+        required: false
+      golangci-lint-version:
+        description: golangci-lint version to use
+        type: string
+        required: false
+      go-setup-caching:
+        description: Defines if setup-go action should have caching enabled (https://github.com/actions/setup-go#caching-dependency-files-and-build-outputs)olangci-lint version to use
+        type: boolean
+        required: false
+        default: true
+      trufflehog-version:
+        description: Trufflehog version to use
+        type: string
+        required: false
+
+      # Build options.
+      plugin-directory:
+        description: Directory of the plugin, if not in the root of the repository. If provided, package-manager must also be provided.
+        type: string
+        required: false
+        default: .
+      package-manager:
+        description: The package manager to use.
+        type: string
+        required: false
+        default: ""
+      frontend-secrets:
+        description: The secrets to use within frontend steps
+        type: string
+        required: false
+        default: ""
+      backend-secrets:
+        description: The secrets to use within frontend steps
+        type: string
+        required: false
+        default: ""
+      npm-registry-auth:
+        description: |
+          Whether to authenticate to the npm registry in Google Artifact Registry.
+          If true, the root of the plugin repository must contain a `.npmrc` file.
+        type: boolean
+        required: false
+        default: false
+
+      # Playwright
+      run-playwright:
+        description: Whether to run Playwright E2E tests.
+        type: boolean
+        required: false
+        default: true
+      run-playwright-docker:
+        description: |
+          Whether to run dockerized Playwright E2E tests.
+          Make sure to have a both a 'playwright' service with a 'playwright' profile
+          in your docker-compose.yaml file for the tests to run against
+          see: https://docs.docker.com/compose/how-tos/profiles/
+        type: boolean
+        required: false
+        default: false
+      # https://github.com/grafana/plugin-actions/blob/main/e2e-version/action.yml
+      run-playwright-with-grafana-dependency:
+        description: |
+          Optionally, use this input to pass a semver range of supported Grafana versions to test against.
+          This is only used when version-resolver-type is plugin-grafana-dependency.
+          If not provided, the action will try to read grafanaDependency from the plugin.json file.
+        type: string
+        required: false
+      run-playwright-with-skip-grafana-dev-image:
+        description: Optionally, you can skip the Grafana dev image
+        type: boolean
+        required: false
+        default: false
+      run-playwright-with-version-resolver-type:
+        description: Define which version resolver type to use for Playwright E2E tests.
+        type: string
+        required: false
+        default: plugin-grafana-dependency
+      upload-playwright-artifacts:
+        description: |
+          If true, the Playwright E2E artifacts will be uploaded to GitHub.
+          Default is false.
+          IMPORTANT: Make sure there are no unmasked secrets in the E2E tests before turning this on.
+        required: false
+        type: boolean
+        default: false
+      playwright-report-path:
+        required: false
+        type: string
+        description: Path to the folder to use to upload the artifacts
+        default: playwright-report/
+      playwright-docker-compose-file:
+        required: false
+        type: string
+        description: Path to the docker-compose file to use for testing
+      playwright-config:
+        required: false
+        type: string
+        default: playwright.config.ts
+        description: Path to the Playwright config file to use for testing
+      playwright-grafana-url:
+        description: The URL where Grafana is available at when running Playwright tests
+        type: string
+        required: false
+        default: http://localhost:3000/
+      playwright-secrets:
+        description: |
+          The secrets to use for Playwright tests.
+          This uses the grafana/shared-workflows/actions/get-vault-secrets action under the hood,
+          so the syntax is the same. It fetches from the repo's secrets.
+        type: string
+        required: false
+        default: ""
+
+      # Trufflehog
+      run-trufflehog:
+        description: Whether to run Trufflehog secrets scanning.
+        type: boolean
+        required: false
+        default: true
+      trufflehog-include-detectors:
+        description: |
+          Comma-separated list of detector types to include.
+          Protobuf name or IDs may be used, as well as ranges.
+          This value will be passed via the `--include-detectors` option to Trufflehog.
+          If not provided, the flag is not passed.
+        type: string
+        required: false
+      trufflehog-exclude-detectors:
+        description: |
+          Comma-separated list of detector types to exclude.
+          Protobuf name or IDs may be used, as well as ranges.
+          IDs defined here take precedence over the include list.
+          This value will be passed via the `--exclude-detectors` option to Trufflehog.
+          If not provided, the flag is not passed.
+        type: string
+        required: false
+
+      # Feature toggle: plugin-validator
+      run-plugin-validator:
+        description: Whether to run plugin-validator.
+        type: boolean
+        required: false
+        default: false
+      plugin-validator-config:
+        description: |
+          Content of the plugin validator configuration file (yaml) to use.
+          It has higher priority than `plugin-validator-config-path` input.
+          If not provided, the action will look for the file specified in `plugin-validator-config-path` input instead.
+          If neither is provided, a default configuration will be used.
+        type: string
+        required: false
+        default: ""
+      plugin-validator-config-path:
+        description: |
+          Path to the plugin validator configuration file (yaml) to use.
+          It will be used only if `plugin-validator-config` input is not provided.
+          If not provided, a default configuration will be used.
+        type: string
+        required: false
+        default: ""
+
+      # Options for building PRs. Those values should come from the PR event and should not be set manually.
+      plugin-version-suffix:
+        description: |
+          Suffix to append to plugin version before building it, which will be separated by a "+" sign.
+          For example `abcdef` will set the plugin version to `1.2.3+abcdef`.
+          Useful for giving a unique version to the plugin built from a PR.
+          Leave empty for no suffix (use the same version as in package.json).
+        type: string
+        required: false
+        default: ""
+      branch:
+        description: Branch to build from. Can be used to build PRs.
+        type: string
+        required: false
+        default: ${{ github.ref || github.ref_name }}
+      environment:
+        description: |
+          Environment(s) to publish to, in case the CI workflow is part of a CD workflow.
+          If present this will be used to control some aspects of the CI workflow.
+          Can be 'dev', 'ops' (or 'staging'), 'prod-canary' or 'prod'.
+        type: string
+        required: false
+      allow-unsigned:
+        description: |
+          Allow unsigned plugins to be built.
+        type: boolean
+        required: false
+        default: false
+      signature-type:
+        description: Specify signature type to use when signing the plugin
+        type: string
+        required: false
+        default: "grafana"
+
+      # Options for testing the workflow itself.
+      testing:
+        description: |
+          Whether the workflow is being run in order to test changes to the workflow itself.
+          This will treat the context as untrusted and thus skip steps that require secrets.
+        type: boolean
+        required: false
+        default: false
+      dist-artifacts-prefix:
+        description: |
+          Prefix to use when uploading the dist artifacts as GitHub artifacts.
+          Can be used if multiple CI jobs can be run in parallel in the same repository, in order to avoid name clashes.
+          For example: `my-plugin-`.
+        type: string
+        required: false
+        default: ""
+      DO-NOT-USE-allow-pinned-commit-hashes:
+        description: |
+          FOR INTERNAL TESTING ONLY, DO NOT USE.
+          If `true`, skip hard fail in case the workflow is pinned to a commit hash.
+          Vault access may still fail in such cases, depending on the WIF policies in place.
+        type: boolean
+        required: false
+        default: false
+
+    outputs:
+      plugin:
+        description: |
+          Plugin information in JSON format.
+
+          Contains the following properties:
+          - id: plugin id
+          - version: plugin version
+          - has-backend: true/false, whether the plugin has a backend
+          - executable: plugin backend executable path
+
+          Properties be consumed like this:
+          fromJSON(<...>.outputs.plugin).id
+        value: ${{ jobs.test-and-build.outputs.plugin }}
+
+      has-docs:
+        description: Whether the plugin has docs.
+        value: ${{ jobs.docs.outputs.exist }}
+
+      universal-zip:
+        value: ${{ jobs.test-and-build.outputs.universal-zip }}
+      os-arch-zips:
+        value: ${{ jobs.test-and-build.outputs.os-arch-zips }}
+      zips:
+        value: ${{ jobs.test-and-build.outputs.zips }}
+
+      gcs-zip-urls-latest:
+        value: ${{ jobs.upload-to-gcs.outputs.zip-urls-latest }}
+      gcs-zip-urls-commit:
+        value: ${{ jobs.upload-to-gcs.outputs.zip-urls-commit }}
+
+      gcs-universal-zip-url-latest:
+        value: ${{ jobs.upload-to-gcs.outputs.universal-zip-url-latest }}
+      gcs-universal-zip-url-commit:
+        value: ${{ jobs.upload-to-gcs.outputs.universal-zip-url-commit }}
+
+concurrency:
+  group: ci-${{ inputs.plugin-directory }}-${{ github.head_ref || github.run_id }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+  id-token: write
+
+env:
+  # Default versions for tooling
+  DEFAULT_NODE_VERSION: "22"
+  DEFAULT_GO_VERSION: "1.24"
+  DEFAULT_GOLANGCI_LINT_VERSION: "1.64.8"
+  DEFAULT_TRUFFLEHOG_VERSION: "3.91.0"
+
+  GCS_ARTIFACTS_BUCKET: integration-artifacts
+  VAULT_INSTANCE: ops
+
+jobs:
+  check-for-release-channel:
+    name: Check for release channel
+    runs-on: ubuntu-arm64-small
+    steps:
+      - name: Checkout
+        uses: actions/checkout@93cb6efe18208431cddfb8368fd83d5badbf9bfd # v5.0.1
+
+      - name: Check for rolling releases channel
+        run: |
+          diff=$(grep -E 'grafana/plugin-ci-workflows.+@main' -rn .github/workflows/ || true)
+          if [[ -n "$diff" ]]; then
+            echo "Found usage of rolling releases channel in the following files:"
+            echo "$diff"
+
+            title="Detected plugin-ci-workflows rolling release channel"
+            message="You are using workflows from plugin-ci-workflows rolling releases channel (\`@main\`). \
+          This is discouraged as it may lead to unexpected breaking changes. \
+          Please pin to a specific tagged release to ensure better stability. \
+          For more information, refer to the docs: https://enghub.grafana-ops.net/docs/default/component/grafana-plugins-platform/plugins-ci-github-actions/010-plugins-ci-github-actions/#versions-and-release-channels"
+
+            echo "::warning title=$title::$message"
+            exit 0
+          fi
+        shell: bash
+
+      - name: Check for plugin-ci-workflows pinned to commit hash
+        run: |
+          diff=$(grep -E 'grafana/plugin-ci-workflows.+@[0-9a-f]{6,40}' -rn .github/workflows/ || true)
+          if [[ -n "$diff" ]]; then
+            echo "Found plugin-ci-workflows pinned to a commit hash in the following files:"
+            echo "$diff"
+
+            title="Detected plugin-ci-workflows pinned to a commit hash"
+            message="You are pinning plugin-ci-workflows to a commit hash. \
+          To limit the amount of exposure (security reasons), this is not allowed and the workflow will fail. \
+          Please pin to a specific tagged release instead. \
+          For more information, refer to the docs: https://enghub.grafana-ops.net/docs/default/component/grafana-plugins-platform/plugins-ci-github-actions/010-plugins-ci-github-actions/#versions-and-release-channels"
+
+            echo "::error title=$title::$message"
+            if [ "${ALLOW_PINNED_COMMIT_HASHES}" != "true" ]; then
+              # Hard fail by default
+              exit 1
+            else
+              exit 0
+            fi
+          fi
+        env:
+          ALLOW_PINNED_COMMIT_HASHES: ${{ inputs.DO-NOT-USE-allow-pinned-commit-hashes }}
+        shell: bash
+
+  test-and-build:
+    name: Test and build plugin
+    runs-on: ubuntu-x64-large
+
+    needs:
+      # Not strictly necessary, but makes sure we fail fast if the workflow is misconfigured
+      - check-for-release-channel
+
+    outputs:
+      plugin: ${{ steps.outputs.outputs.plugin }}
+
+      universal-zip: ${{ steps.outputs.outputs.universal-zip }}
+      os-arch-zips: ${{ steps.outputs.outputs.os-arch-zips }}
+      zips: ${{ steps.outputs.outputs.zips }}
+
+      workflow-context: ${{ steps.workflow-context.outputs.result }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@93cb6efe18208431cddfb8368fd83d5badbf9bfd # v5.0.1
+        with:
+          ref: ${{ inputs.branch }}
+          persist-credentials: false
+
+      - name: Determine workflow context
+        uses: actions/github-script@ed597411d8f924073f98dfc5c65a23a2325f34cd # v8.0.0
+        id: workflow-context
+        with:
+          script: |
+            const trustedBots = [
+              'dependabot[bot]',
+              'renovate-sh-app[bot]',
+              // Used by other shared workflows such as the version bump workflow
+              'grafana-plugins-platform-bot[bot]'
+            ].map((s) => s.toLowerCase());
+
+            const isPR = context.eventName === 'pull_request';
+            const isBot = context.actor?.toLowerCase().endsWith('[bot]');
+            const isTrustedBot = trustedBots.includes(context.actor?.toLowerCase());
+            const isForkPR = isPR && context.payload.pull_request.head.repo.full_name !== context.payload.repository.full_name;
+            const isTesting = process.env['INPUT_TESTING'] === 'true';
+
+            // Events that are considered trusted because can be run by a trusted user (unless it's a bot)
+            const isTrustedEvent = ['push', 'workflow_dispatch'].includes(context.eventName);
+            const isTrusted = (isTrustedEvent || (isPR && !isForkPR)) && !isTesting && (!isBot || isTrustedBot);
+
+            const o = { isTrusted, isForkPR };
+            console.log(JSON.stringify(o));
+            return o
+        env:
+          INPUT_TESTING: ${{ inputs.testing }}
+
+      - name: Setup
+        uses: grafana/plugin-ci-workflows/actions/internal/plugins/setup@main
+        with:
+          # The priority to setup the node version is:
+          # 1. inputs.node-version
+          # 2. inputs.plugin-directory/.nvmrc
+          # 3. workflow-level DEFAULT_NODE_VERSION
+          node-version: ${{ inputs.node-version || (hashFiles(format('{0}/.nvmrc', inputs.plugin-directory)) == '' && env.DEFAULT_NODE_VERSION || '') }}
+          node-version-file: ${{ inputs.plugin-directory }}/.nvmrc
+          go-version: ${{ inputs.go-version || env.DEFAULT_GO_VERSION }}
+          golangci-lint-version: ${{ inputs.golangci-lint-version || env.DEFAULT_GOLANGCI_LINT_VERSION }}
+          go-setup-caching: ${{ inputs.go-setup-caching }}
+
+      - name: Get secrets from Vault
+        id: get-secrets
+        if: ${{ fromJson(steps.workflow-context.outputs.result).isTrusted }}
+        uses: grafana/shared-workflows/actions/get-vault-secrets@a37de51f3d713a30a9e4b21bcdfbd38170020593 # get-vault-secrets/v1.3.0
+        with:
+          vault_instance: ${{ env.VAULT_INSTANCE }}
+          common_secrets: |
+            SIGN_PLUGIN_ACCESS_POLICY_TOKEN=plugins/sign-plugin-access-policy-token:token
+            GITHUB_APP_ID=plugins-platform-bot-app:app-id
+            GITHUB_APP_PRIVATE_KEY=plugins-platform-bot-app:private-key
+          export_env: false
+
+      - name: Generate GitHub token
+        id: generate-github-token
+        uses: actions/create-github-app-token@67018539274d69449ef7c02e8e71183d1719ab42 # v2.1.4
+        if: ${{ fromJson(steps.workflow-context.outputs.result).isTrusted }}
+        with:
+          app-id: ${{ fromJSON(steps.get-secrets.outputs.secrets).GITHUB_APP_ID }}
+          private-key: ${{ fromJSON(steps.get-secrets.outputs.secrets).GITHUB_APP_PRIVATE_KEY }}
+          owner: ${{ github.repository_owner }}
+
+      - name: Spellcheck
+        run: |
+          if [ -f "./cspell.config.json" ]; then
+            npx --yes cspell@6.13.3 -c cspell.config.json "**/*.{ts,tsx,js,go,md,mdx,yml,yaml,json,scss,css}"
+          else
+            echo "❌ Spellcheck is not configured."
+          fi
+        shell: bash
+
+      - name: Replace plugin version
+        if: ${{ inputs.plugin-version-suffix != '' }}
+        run: |
+          package_json_path="$PLUGIN_DIRECTORY/package.json"
+          version=$(jq -r .version "$package_json_path")
+          pr_version="$version+${PLUGIN_VERSION_SUFFIX}"
+
+          # Plugin version should not exceed 190 characters including suffix
+          if [ ${#pr_version} -gt 190 ]; then
+            echo "❌ Error: Plugin version with suffix exceeds 190 character limit"
+            exit 1
+          fi
+
+          echo "Replacing plugin version \"$version\" with \"$pr_version\" in $package_json_path"
+          jq --arg pr_version "$pr_version" '.version = $pr_version' "$package_json_path" > /tmp/package.json
+          mv /tmp/package.json "$package_json_path"
+        env:
+          PLUGIN_DIRECTORY: ${{ inputs.plugin-directory }}
+          PLUGIN_VERSION_SUFFIX: ${{ inputs.plugin-version-suffix }}
+        shell: bash
+
+      - name: Check for backend
+        id: check-for-backend
+        run: |
+          r=false
+          [ -f "Magefile.go" ] && r=true
+          echo "has-backend=$r" >> "$GITHUB_OUTPUT"
+        shell: bash
+        working-directory: ${{ inputs.plugin-directory }}
+
+      - name: Test and build frontend
+        uses: grafana/plugin-ci-workflows/actions/internal/plugins/frontend@main
+        with:
+          package-manager: ${{ inputs.package-manager }}
+          plugin-directory: ${{ inputs.plugin-directory }}
+          secrets: ${{ (fromJson(steps.workflow-context.outputs.result).isTrusted && inputs.frontend-secrets != '') && inputs.frontend-secrets || '' }}
+          npm-registry-auth: ${{ inputs.npm-registry-auth }}
+
+      - name: Test and build backend
+        if: ${{ steps.check-for-backend.outputs.has-backend == 'true' }}
+        uses: grafana/plugin-ci-workflows/actions/internal/plugins/backend@main
+        with:
+          github-token: ${{ steps.generate-github-token.outputs.token }}
+          plugin-directory: ${{ inputs.plugin-directory }}
+          secrets: ${{ (fromJson(steps.workflow-context.outputs.result).isTrusted && inputs.backend-secrets != '') && inputs.backend-secrets || '' }}
+
+      - name: Package universal ZIP
+        id: universal-zip
+        uses: grafana/plugin-ci-workflows/actions/internal/plugins/package@main
+        with:
+          universal: "true"
+          dist-folder: dist
+          output-folder: dist-artifacts
+          access-policy-token: ${{ fromJson(steps.workflow-context.outputs.result).isTrusted && fromJSON(steps.get-secrets.outputs.secrets).SIGN_PLUGIN_ACCESS_POLICY_TOKEN || '' }}
+          allow-unsigned: ${{ ((inputs.environment == 'dev' || inputs.environment == '' || inputs.environment == 'none') && !(fromJson(steps.workflow-context.outputs.result).isTrusted)) || inputs.allow-unsigned }}
+          signature-type: ${{ inputs.signature-type }}
+
+      - name: Package os/arch ZIPs
+        id: os-arch-zips
+        uses: grafana/plugin-ci-workflows/actions/internal/plugins/package@main
+        with:
+          universal: "false"
+          dist-folder: dist
+          output-folder: dist-artifacts
+          access-policy-token: ${{ fromJson(steps.workflow-context.outputs.result).isTrusted && fromJSON(steps.get-secrets.outputs.secrets).SIGN_PLUGIN_ACCESS_POLICY_TOKEN || '' }}
+          allow-unsigned: ${{ ((inputs.environment == 'dev' || inputs.environment == '' || inputs.environment == 'none') && !(fromJson(steps.workflow-context.outputs.result).isTrusted)) || inputs.allow-unsigned }}
+          signature-type: ${{ inputs.signature-type }}
+
+      - name: Trufflehog secrets scanning
+        if: ${{ inputs.run-trufflehog == true }}
+        uses: grafana/plugin-ci-workflows/actions/internal/plugins/trufflehog@main
+        with:
+          trufflehog-version: ${{ inputs.trufflehog-version || env.DEFAULT_TRUFFLEHOG_VERSION }}
+          folder: dist-artifacts
+          include-detectors: ${{ inputs.trufflehog-include-detectors }}
+          exclude-detectors: ${{ inputs.trufflehog-exclude-detectors }}
+
+      - name: plugin-validator
+        if: ${{ inputs.run-plugin-validator == true }}
+        run: |
+          if [ -n "${PLUGIN_VALIDATOR_CONFIG}" ]; then
+            # User-provided configuration content
+            echo "Using provided plugin-validator configuration content."
+            PLUGIN_VALIDATOR_CONFIG_PATH=".plugin-validator.yaml"
+            echo "${PLUGIN_VALIDATOR_CONFIG}" > ${PLUGIN_VALIDATOR_CONFIG_PATH}
+          elif [ -n "${PLUGIN_VALIDATOR_CONFIG_PATH}" ]; then
+            # User-provided configuration file path
+            echo "Using plugin-validator configuration file at path: ${PLUGIN_VALIDATOR_CONFIG_PATH}"
+            if [ ! -f "${PLUGIN_VALIDATOR_CONFIG_PATH}" ]; then
+              echo "::error title=plugin-validator: missing config file::${PLUGIN_VALIDATOR_CONFIG_PATH} configuration file is missing."
+              exit 1
+            fi
+          else
+            # Default hardcoded configuration
+            PLUGIN_VALIDATOR_CONFIG_PATH=".plugin-validator.yaml"
+            echo "${PLUGIN_VALIDATOR_CONFIG_PATH} configuration file is missing. Providing a default one as fallback."
+            cat <<EOF > "${PLUGIN_VALIDATOR_CONFIG_PATH}"
+          global:
+            enabled: true
+          EOF
+          fi
+
+          echo "Using configuration:"
+          cat "${PLUGIN_VALIDATOR_CONFIG_PATH}"
+
+          # Create an empty dir for mounting it instead of node_modules, otherwise some validator analyzers
+          # will recurse into the plugin's directory (including node_modules).
+          mkdir -p /tmp/empty
+
+          # Do not run clamav because it takes too long
+          docker run --name=plugin-validator --pull=always \
+            -v "$PWD/${PLUGIN_VALIDATOR_CONFIG_PATH}:/workspace/.plugin-validator.yaml:ro" \
+            -v "$PWD/dist-artifacts:/workspace/dist-artifacts:ro" \
+            -v "$PWD/${PLUGIN_DIRECTORY}:/workspace" \
+            -v "/tmp/empty:/workspace/node_modules" \
+            -e SKIP_CLAMAV=1 \
+            grafana/plugin-validator-cli \
+            -ghaOutput \
+            -config=/workspace/.plugin-validator.yaml \
+            -sourceCodeUri=file:///workspace \
+            "/workspace/dist-artifacts/${UNIVERSAL_ZIP}"
+          exit "$(docker inspect plugin-validator --format='{{.State.ExitCode}}')"
+        env:
+          UNIVERSAL_ZIP: ${{ steps.universal-zip.outputs.zip }}
+          PLUGIN_VALIDATOR_CONFIG: ${{ inputs.plugin-validator-config }}
+          PLUGIN_VALIDATOR_CONFIG_PATH: ${{ inputs.plugin-validator-config-path }}
+          PLUGIN_DIRECTORY: ${{ inputs.plugin-directory }}
+        shell: bash
+
+      - name: Define outputs
+        id: outputs
+        run: |
+          {
+            echo plugin="$(jq -n -c \
+                --arg id "$(jq -r .id dist/plugin.json)" \
+                --arg version "$(jq -r .info.version dist/plugin.json)" \
+                --arg has-backend "${HAS_BACKEND}" \
+                --arg executable "$(jq -r .executable dist/plugin.json)" \
+                '$ARGS.named'
+              )"
+
+            echo universal-zip="${UNIVERSAL_ZIP}"
+            echo os-arch-zips="${OS_ARCH_ZIPS}"
+
+            # combine universal zip string with os-arch zips into a single array
+            zips=$(echo -e '["'"${UNIVERSAL_ZIP}"'"]' '\n' "${OS_ARCH_ZIPS}" | jq -cs 'add')
+            echo zips="$zips"
+          }  >> "$GITHUB_OUTPUT"
+          cat "$GITHUB_OUTPUT"
+        env:
+          HAS_BACKEND: ${{ steps.check-for-backend.outputs.has-backend }}
+          UNIVERSAL_ZIP: ${{ steps.universal-zip.outputs.zip }}
+          OS_ARCH_ZIPS: ${{ steps.os-arch-zips.outputs.zip }}
+        shell: bash
+
+      - name: Upload GitHub artifacts
+        uses: actions/upload-artifact@330a01c490aca151604b8cf639adc76d48f6c5d4 # v5.0.0
+        with:
+          name: ${{ inputs.dist-artifacts-prefix }}dist-artifacts
+          path: dist-artifacts/
+          retention-days: 7
+
+  docs:
+    name: Test docs
+    runs-on: ubuntu-latest
+    if: ${{ !github.event.act }}
+    needs:
+      # Not strictly necessary, but makes sure we fail fast if the workflow is misconfigured
+      - check-for-release-channel
+    container:
+      image: grafana/docs-base:latest # zizmor: ignore[unpinned-images]
+      volumes:
+        # This mount is required in order to run the "plugins/docs/test" shared action
+        # into the container. The action gets downloaded into /home/runner/work/_actions,
+        # which is normally outside of the container's filesystem.
+        - /home/runner/work/_actions:/home/runner/work/_actions
+
+    outputs:
+      exist: ${{ steps.exist.outputs.exist }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@93cb6efe18208431cddfb8368fd83d5badbf9bfd # v5.0.1
+        with:
+          ref: ${{ inputs.branch }}
+          persist-credentials: false
+
+      - name: Check docs exist
+        id: exist
+        run: |
+          r=false
+          [ -d "docs/sources" ] && r=true
+          echo "exist=$r" >> "$GITHUB_OUTPUT"
+        shell: bash
+
+      - name: Test docs
+        uses: grafana/plugin-ci-workflows/actions/internal/plugins/docs/test@main
+
+  playwright:
+    name: Playwright E2E tests
+    uses: grafana/plugin-ci-workflows/.github/workflows/playwright.yml@main
+    if: ${{ inputs.run-playwright == true }}
+    needs:
+      - test-and-build
+    with:
+      id: ${{ fromJSON(needs.test-and-build.outputs.plugin).id}}
+      version: ${{ fromJSON(needs.test-and-build.outputs.plugin).version}}
+      plugin-directory: ${{ inputs.plugin-directory }}
+      grafana-dependency: ${{ inputs.run-playwright-with-grafana-dependency }}
+      skip-grafana-dev-image: ${{ inputs.run-playwright-with-skip-grafana-dev-image }}
+      version-resolver-type: ${{ inputs.run-playwright-with-version-resolver-type }}
+      upload-artifacts: ${{ inputs.upload-playwright-artifacts }}
+      docker-compose-file: ${{ inputs.playwright-docker-compose-file }}
+      playwright-config: ${{ inputs.playwright-config }}
+      report-path: ${{ inputs.playwright-report-path }}
+      grafana-url: ${{ inputs.playwright-grafana-url }}
+      secrets: ${{ (fromJson(needs.test-and-build.outputs.workflow-context).isTrusted && inputs.playwright-secrets != '') && inputs.playwright-secrets || '' }}
+      node-version: ${{ inputs.node-version }}
+      npm-registry-auth: ${{ inputs.npm-registry-auth }}
+
+  playwright-docker:
+    name: Plugins - Dockerized Playwright E2E tests
+    uses: grafana/plugin-ci-workflows/.github/workflows/playwright-docker.yml@main
+    if: ${{ inputs.run-playwright-docker == true }}
+    needs:
+      - test-and-build
+    with:
+      id: ${{ fromJSON(needs.test-and-build.outputs.plugin).id}}
+      version: ${{ fromJSON(needs.test-and-build.outputs.plugin).version}}
+      grafana-dependency: ${{ inputs.run-playwright-with-grafana-dependency }}
+      skip-grafana-dev-image: ${{ inputs.run-playwright-with-skip-grafana-dev-image }}
+      version-resolver-type: ${{ inputs.run-playwright-with-version-resolver-type }}
+      upload-artifacts: ${{ inputs.upload-playwright-artifacts }}
+      grafana-compose-file: ${{ inputs.playwright-docker-compose-file }}
+      report-path: ${{ inputs.playwright-report-path }}
+      grafana-url: ${{ inputs.playwright-grafana-url }}
+      secrets: ${{ (fromJson(needs.test-and-build.outputs.workflow-context).isTrusted && inputs.playwright-secrets != '') && inputs.playwright-secrets || '' }}
+      # TODO: add support for NPM auth in Dockerized Playwright as well
+      # npm-registry-auth: ${{ inputs.npm-registry-auth }}
+
+  upload-to-gcs:
+    name: Upload to GCS
+    runs-on: ubuntu-arm64-small
+
+    # Skip the GCS upload (no access to the bucket) for PRs when run in non-trusted context (forks)
+    if: ${{ fromJson(needs.test-and-build.outputs.workflow-context).isTrusted }}
+
+    needs:
+      - test-and-build
+
+    outputs:
+      zip-urls-latest: ${{ steps.outputs.outputs.zip_urls_latest }}
+      zip-urls-commit: ${{ steps.outputs.outputs.zip_urls_commit }}
+
+      universal-zip-url-latest: ${{ steps.outputs.outputs.universal_zip_url_latest }}
+      universal-zip-url-commit: ${{ steps.outputs.outputs.universal_zip_url_commit }}
+
+    steps:
+      - name: Download GitHub artifact
+        uses: actions/download-artifact@018cc2cf5baa6db3ef3c5f8a56943fffe632ef53 # v6.0.0
+        with:
+          name: ${{ inputs.dist-artifacts-prefix }}dist-artifacts
+          path: /tmp/dist-artifacts
+
+      - name: Login to Google Cloud
+        uses: google-github-actions/auth@7c6bc770dae815cd3e89ee6cdf493a5fab2cc093 # v3.0.0
+        with:
+          workload_identity_provider: "projects/304398677251/locations/global/workloadIdentityPools/github/providers/github-provider"
+          service_account: github-plugin-ci-workflows@grafanalabs-workload-identity.iam.gserviceaccount.com
+
+      - name: Determine GCS artifacts paths
+        run: |
+          # Strip the SHA suffix from the version, if present.
+          PLUGIN_VERSION="${PLUGIN_VERSION%%+*}"
+          gcs_artifacts_base="${{ env.GCS_ARTIFACTS_BUCKET }}/${PLUGIN_ID}/${PLUGIN_VERSION}"
+          echo "gcs_artifacts_path_latest=$gcs_artifacts_base/main/latest" >> "$GITHUB_ENV"
+          echo "gcs_artifacts_path_commit=$gcs_artifacts_base/${GCS_GIT_REF}/${GCS_GIT_SHA}" >> "$GITHUB_ENV"
+        env:
+          PLUGIN_ID: ${{ fromJSON(needs.test-and-build.outputs.plugin).id }}
+          PLUGIN_VERSION: ${{ fromJSON(needs.test-and-build.outputs.plugin).version }}
+          GCS_GIT_REF: ${{ github.event.pull_request.base.ref || 'main' }}
+          GCS_GIT_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+        shell: bash
+
+      - name: Upload GCS artifacts (latest)
+        id: gcs-upload-latest
+        if: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main'}}
+        uses: google-github-actions/upload-cloud-storage@6397bd7208e18d13ba2619ee21b9873edc94427a # v3.0.0
+        with:
+          path: /tmp/dist-artifacts
+          destination: ${{ env.gcs_artifacts_path_latest }}
+          parent: false
+          process_gcloudignore: false
+
+      - name: Upload GCS artifacts (commit)
+        id: gcs-upload-commit
+        uses: google-github-actions/upload-cloud-storage@6397bd7208e18d13ba2619ee21b9873edc94427a # v3.0.0
+        with:
+          path: /tmp/dist-artifacts
+          destination: ${{ env.gcs_artifacts_path_commit }}
+          parent: false
+          process_gcloudignore: false
+
+      - name: Define outputs
+        id: outputs
+        run: |
+          gcs_prefix="https://storage.googleapis.com/${{ env.GCS_ARTIFACTS_BUCKET }}"
+
+          zip_urls_latest=$(jq -n '[]')
+          files="${GCS_UPLOADED_FILES_LATEST}"
+          echo gcs latest files: "$files"
+
+          IFS=','
+          for file in $files; do
+            if [[ ! $file == *.zip ]]; then
+              continue
+            fi
+            gcs_url="$gcs_prefix/$file"
+            zip_urls_latest=$(echo "$zip_urls_latest" | jq -c --arg x "$gcs_url" '. + [$x]')
+          done
+          unset IFS
+
+          zip_urls_commit=$(jq -n '[]')
+          files="${GCS_UPLOADED_FILES_COMMIT}"
+          echo gcs commit files: "$files"
+
+          IFS=','
+          for file in $files; do
+            if [[ ! $file == *.zip ]]; then
+              continue
+            fi
+            gcs_url="$gcs_prefix/$file"
+            zip_urls_commit=$(echo "$zip_urls_commit" | jq -c --arg x "$gcs_url" '. + [$x]')
+          done
+          unset IFS
+
+          echo zip_urls_latest="$zip_urls_latest" >> "$GITHUB_OUTPUT"
+          echo zip_urls_commit="$zip_urls_commit" >> "$GITHUB_OUTPUT"
+
+          universal_zip_file_name=$(basename "${UNIVERSAL_ZIP}")
+          if [ -n "$universal_zip_file_name" ]; then
+            echo universal_zip_url_latest="$gcs_artifacts_path_latest/$universal_zip_file_name" >> "$GITHUB_OUTPUT"
+            echo universal_zip_url_commit="$gcs_artifacts_path_commit/$universal_zip_file_name" >> "$GITHUB_OUTPUT"
+          fi
+        env:
+          GCS_UPLOADED_FILES_LATEST: ${{ steps.gcs-upload-latest.outputs.uploaded }}
+          GCS_UPLOADED_FILES_COMMIT: ${{ steps.gcs-upload-commit.outputs.uploaded }}
+          UNIVERSAL_ZIP: ${{ needs.test-and-build.outputs.universal-zip }}
+        shell: bash

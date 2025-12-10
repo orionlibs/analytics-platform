@@ -1,0 +1,138 @@
+name: Trigger Argo Workflow
+description: Trigger an Argo workflow in the Grafana Labs Argo Workflows instance
+
+inputs:
+  instance:
+    description: |
+      The instance to use (`dev` or `ops`). Defaults to `ops`.
+    default: ops
+  namespace:
+    description: |
+      Required. The namespace to trigger the workflow in.
+    required: true
+  parameters:
+    description: |
+      The newline-separated parameters to pass to the Argo workflow. Ex:
+
+      ```
+      param1=value1
+      param2=value2
+      ```
+  workflow_template:
+    description: |
+      The workflow template to use. Defaults to `grafana-ci`.
+    required: true
+  extra_args:
+    description: |
+      Extra arguments to pass to the Argo CLI. Ex: `--generate-name foo-"
+  log_level:
+    description: |
+      The log level to use. Choose from `debug`, `info`, `warn` or `error`. Defaults to `info`.
+    default: info
+
+outputs:
+  uri:
+    description: |
+      The URI of the workflow that was triggered.
+    value: ${{ steps.run.outputs.uri }}
+
+runs:
+  using: composite
+
+  steps:
+    - name: Checkout
+      env:
+        # In a composite action, these two need to be indirected via the
+        # environment, as per the GitHub actions documentation:
+        # https://docs.github.com/en/actions/learn-github-actions/contexts
+        action_repo: ${{ github.action_repository }}
+        action_ref: ${{ github.action_ref }}
+      uses: actions/checkout@1af3b93b6815bc44a9784bd300feb67ff0d1eeb3 # v6.0.0
+      with:
+        repository: ${{ env.action_repo }}
+        ref: ${{ env.action_ref }}
+        path: _shared-workflows-trigger-argo-workflow
+        persist-credentials: false
+
+    - name: Setup argo
+      uses: ./_shared-workflows-trigger-argo-workflow/actions/setup-argo
+
+    - name: Setup go
+      uses: actions/setup-go@4dc6199c7b1a012772edbd06daecab0f50c9053c # v6.1.0
+      with:
+        check-latest: true
+        cache-dependency-path: |
+          actions/trigger-argo-workflow/go.sum
+        go-version-file: "_shared-workflows-trigger-argo-workflow/actions/trigger-argo-workflow/go.mod"
+
+    - name: Map cluster and vault instance from Argo WF instance
+      id: argo-instance
+      env:
+        INSTANCE: ${{ inputs.instance }}
+      shell: sh
+      run: |
+        # Map the instance to the cluster name to get the correct secret
+        case "${INSTANCE}" in
+          dev)
+            cluster="dev-us-east-0"
+            vault_instance="dev"
+            ;;
+          ops)
+            cluster="ops-eu-south-0"
+            vault_instance="ops"
+            ;;
+          *)
+            echo "unknown instance '${INSTANCE}'"
+            exit 1
+            ;;
+        esac
+
+        echo "name=${cluster}" | tee -a "${GITHUB_OUTPUT}"
+        echo "vault-instance=${vault_instance}" | tee -a "${GITHUB_OUTPUT}"
+
+    - name: Get Argo Token
+      id: get-argo-token
+      uses: ./_shared-workflows-trigger-argo-workflow/actions/get-vault-secrets
+      with:
+        vault_instance: ${{ steps.argo-instance.outputs.vault-instance }}
+        repo_secrets: |
+          ARGO_TOKEN=${{ steps.argo-instance.outputs.name }}/argo-workflows-trigger:token
+
+    - name: Run
+      id: run
+      shell: bash
+      env:
+        ARGO_TOKEN: ${{ env.ARGO_TOKEN }}
+        EXTRA_ARGS: ${{ inputs.extra_args }}
+        INSTANCE: ${{ inputs.instance }}
+        LOG_LEVEL: ${{ inputs.log_level }}
+        NAMESPACE: ${{ inputs.namespace }}
+        PARAMETERS: ${{ inputs.parameters }}
+        WORKFLOW_TEMPLATE: ${{ inputs.workflow_template }}
+      run: |
+        cd _shared-workflows-trigger-argo-workflow/actions/trigger-argo-workflow
+
+        # Split the parameters into an array and pass them to the action as --parameter PARAM
+        parameters=()
+        while read -r line; do
+          if [ -z "${line}" ]; then
+            continue
+          fi
+
+          parameters+=("--parameter" "$line")
+        done <<< "${PARAMETERS}"
+
+        if [ -n "${WORKFLOW_TEMPLATE}" ]; then
+          parameters+=("--workflow-template" "${WORKFLOW_TEMPLATE}")
+        fi
+
+        # Explicitly disable Go workspace support in case the repo uses that:
+        export GOWORK=off
+
+        go run github.com/grafana/shared-workflows/actions/trigger-argo-workflow/cmd/trigger-argo-workflow \
+          --log-level "${LOG_LEVEL}" \
+          --namespace "${NAMESPACE}" \
+          --instance "${INSTANCE}" \
+          "${parameters[@]}" \
+          submit \
+          ${EXTRA_ARGS}

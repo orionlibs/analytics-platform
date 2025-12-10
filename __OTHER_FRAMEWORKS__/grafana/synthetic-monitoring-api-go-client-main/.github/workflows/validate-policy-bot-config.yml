@@ -1,0 +1,40 @@
+name: Validate Policy Bot Config
+
+on:
+  pull_request:
+    paths:
+      - ".policy.yml"
+
+  push:
+    branches:
+      - main
+    paths:
+      - ".policy.yml"
+
+permissions:
+  contents: none
+
+jobs:
+  validate:
+    name: Validate policy bot config
+
+    runs-on: ubuntu-latest
+
+    permissions:
+      contents: read
+      id-token: write
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@1af3b93b6815bc44a9784bd300feb67ff0d1eeb3 # v6.0.0
+        with:
+          persist-credentials: false
+
+      - name: Validate policy bot config
+        run: |
+          curl \
+            --silent \
+            --fail-with-body \
+            --request PUT \
+            --upload-file .policy.yml \
+            https://github-policy-bot.grafana-ops.net/api/validate

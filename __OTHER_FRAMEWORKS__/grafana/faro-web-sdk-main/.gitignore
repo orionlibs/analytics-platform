@@ -1,0 +1,35 @@
+# IDEs
+.idea
+.vscode
+*.iml
+
+# App-specifics
+.cache
+.eslintcache
+.husky/_
+coverage
+cypress/videos
+cypress/screenshots
+demo/logs/*.log
+demo/stats.html
+demo/vite.config.ts.timestamp-*.mjs
+dist
+node_modules
+packages/core/src/version.ts
+
+# Logs
+*.log
+lerna-debug.log*
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Misc
+.DS_Store
+
+# App plugin
+infra/grafana/plugins/
+infra/grafana/plugins-provisioning/*.yaml
+
+# Yarn 4
+install-state.gz

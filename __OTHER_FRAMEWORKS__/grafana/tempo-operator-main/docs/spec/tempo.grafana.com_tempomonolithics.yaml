@@ -1,0 +1,207 @@
+apiVersion: tempo.grafana.com/v1alpha1   # APIVersion defines the versioned schema of this representation of an object. Servers should convert recognized schemas to the latest internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources
+kind: TempoMonolithic                    # Kind is a string value representing the REST resource this object represents. Servers may infer this from the endpoint the client submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds
+metadata:
+  name: example
+spec:                                    # TempoMonolithicSpec defines the desired state of TempoMonolithic.
+  extraConfig:                           # ExtraConfig defines any extra (overlay) configuration of components.
+    tempo: {}                            # Tempo defines any extra Tempo configuration, which will be merged with the operator's generated Tempo configuration
+  ingestion:                             # Ingestion defines the trace ingestion configuration.
+    otlp:                                # OTLP defines the ingestion configuration for the OTLP protocol.
+      grpc:                              # GRPC defines the OTLP over gRPC configuration.
+        enabled: true                    # Enabled defines if OTLP over gRPC is enabled. Default: enabled.
+        tls:                             # TLS defines the TLS configuration for OTLP/gRPC ingestion.  On OpenShift when operator config `servingCertsService`  and TLS is enabled  but no `certName` and `caName` are provided it will use OpenShift serving certificate service.
+          enabled: false                 # Enabled defines if TLS is enabled.
+          caName: ""                     # CA is the name of a ConfigMap containing a CA certificate (service-ca.crt). It needs to be in the same namespace as the Tempo custom resource.
+          certName: ""                   # Cert is the name of a Secret containing a certificate (tls.crt) and private key (tls.key). It needs to be in the same namespace as the Tempo custom resource.
+          minVersion: ""                 # MinVersion defines the minimum acceptable TLS version.
+      http:                              # HTTP defines the OTLP over HTTP configuration.
+        enabled: true                    # Enabled defines if OTLP over HTTP is enabled. Default: enabled.
+        tls:                             # TLS defines the TLS configuration for OTLP/HTTP ingestion.  On OpenShift when operator config `servingCertsService`  and TLS is enabled  but no `certName` and `caName` are provided it will use OpenShift serving certificate service.
+          enabled: false                 # Enabled defines if TLS is enabled.
+          caName: ""                     # CA is the name of a ConfigMap containing a CA certificate (service-ca.crt). It needs to be in the same namespace as the Tempo custom resource.
+          certName: ""                   # Cert is the name of a Secret containing a certificate (tls.crt) and private key (tls.key). It needs to be in the same namespace as the Tempo custom resource.
+          minVersion: ""                 # MinVersion defines the minimum acceptable TLS version.
+  jaegerui:                              # JaegerUI defines the Jaeger UI configuration.
+    enabled: false                       # Enabled defines if the Jaeger UI component should be created.
+    authentication:                      # Authentication defines the options for the oauth proxy used to protect jaeger UI
+      enabled: false                     # Defines if the authentication will be enabled for jaeger UI.
+      sar: ""                            # SAR defines the SAR to be used in the oauth-proxy default is "{"namespace": "<tempo_stack_namespace>", "resource": "pods", "verb": "get"}
+      resources:                         # Resources defines the compute resource requirements of the OAuth Proxy container. The OAuth Proxy performs authentication and authorization of incoming requests to Jaeger UI when multi-tenancy is disabled.
+        claims:                          # Claims lists the names of resources, defined in spec.resourceClaims, that are used by this container.  This is an alpha field and requires enabling the DynamicResourceAllocation feature gate.  This field is immutable. It can only be set for containers.
+        - name: ""                       # Name must match the name of one entry in pod.spec.resourceClaims of the Pod where this field is used. It makes that resource available inside a container.
+          request: ""                    # Request is the name chosen for a request in the referenced claim. If empty, everything from the claim is made available, otherwise only the result of this request.
+        limits:                          # Limits describes the maximum amount of compute resources allowed. More info: https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/
+          cpu: "750m"
+          memory: "2Gi"
+        requests:                        # Requests describes the minimum amount of compute resources required. If Requests is omitted for a container, it defaults to Limits if that is explicitly specified, otherwise to an implementation-defined value. Requests cannot exceed Limits. More info: https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/
+          cpu: "500m"
+          memory: "1Gi"
+    findTracesConcurrentRequests: 0      # FindTracesConcurrentRequests defines how many concurrent request a single trace search can submit (defaults 2). The search for traces in Jaeger submits limit+1 requests. First requests finds trace IDs and then it fetches entire traces by ID. This property allows Jaeger to fetch traces in parallel. Note that by default a single Tempo querier can process 20 concurrent search jobs. Increasing this property might require scaling up querier instances, especially on error "job queue full" See also Tempo's extraConfig: querier.max_concurrent_queries (20 default) query_frontend.max_outstanding_per_tenant: (2000 default). Increase if the query-frontend returns 429
+    ingress:                             # Ingress defines the Ingress configuration for the Jaeger UI.
+      enabled: false                     # Enabled defines if an Ingress object should be created for Jaeger UI.
+      annotations: {}                    # Annotations defines the annotations of the Ingress object.
+      host: ""                           # Host defines the hostname of the Ingress object.
+      ingressClassName: ""               # IngressClassName defines the name of an IngressClass cluster resource. Defines which ingress controller serves this ingress resource.
+    route:                               # Route defines the OpenShift route configuration for the Jaeger UI.
+      enabled: false                     # Enabled defines if a Route object should be created for Jaeger UI.
+      annotations: {}                    # Annotations defines the annotations of the Route object.
+      host: ""                           # Host defines the hostname of the Route object.
+      termination: ""                    # Termination specifies the termination type.
+    servicesQueryDuration: ""            # ServicesQueryDuration defines how long the services will be available in the services list
+    tempoQueryResources:                 # Resources defines the compute resource requirements of the Tempo Query container.
+      claims:                            # Claims lists the names of resources, defined in spec.resourceClaims, that are used by this container.  This is an alpha field and requires enabling the DynamicResourceAllocation feature gate.  This field is immutable. It can only be set for containers.
+      - name: ""                         # Name must match the name of one entry in pod.spec.resourceClaims of the Pod where this field is used. It makes that resource available inside a container.
+        request: ""                      # Request is the name chosen for a request in the referenced claim. If empty, everything from the claim is made available, otherwise only the result of this request.
+      limits:                            # Limits describes the maximum amount of compute resources allowed. More info: https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/
+        cpu: "750m"
+        memory: "2Gi"
+      requests:                          # Requests describes the minimum amount of compute resources required. If Requests is omitted for a container, it defaults to Limits if that is explicitly specified, otherwise to an implementation-defined value. Requests cannot exceed Limits. More info: https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/
+        cpu: "500m"
+        memory: "1Gi"
+    resources:                           # Resources defines the compute resource requirements of the Jaeger UI container.
+      claims:                            # Claims lists the names of resources, defined in spec.resourceClaims, that are used by this container.  This is an alpha field and requires enabling the DynamicResourceAllocation feature gate.  This field is immutable. It can only be set for containers.
+      - name: ""                         # Name must match the name of one entry in pod.spec.resourceClaims of the Pod where this field is used. It makes that resource available inside a container.
+        request: ""                      # Request is the name chosen for a request in the referenced claim. If empty, everything from the claim is made available, otherwise only the result of this request.
+      limits:                            # Limits describes the maximum amount of compute resources allowed. More info: https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/
+        cpu: "750m"
+        memory: "2Gi"
+      requests:                          # Requests describes the minimum amount of compute resources required. If Requests is omitted for a container, it defaults to Limits if that is explicitly specified, otherwise to an implementation-defined value. Requests cannot exceed Limits. More info: https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/
+        cpu: "500m"
+        memory: "1Gi"
+  management: ""                         # ManagementState defines whether this instance is managed by the operator or self-managed. Default: Managed.
+  multitenancy:                          # Multitenancy defines the multi-tenancy configuration.
+    enabled: false                       # Enabled defines if multi-tenancy is enabled.
+    authentication:                      # Authentication defines the tempo-gateway component authentication configuration spec per tenant.
+    - oidc:                              # OIDC defines the spec for the OIDC tenant's authentication.
+        groupClaim: ""                   # Group claim field from ID Token
+        issuerURL: ""                    # IssuerURL defines the URL for issuer.
+        redirectURL: ""                  # RedirectURL defines the URL for redirect.
+        secret:                          # Secret defines the spec for the clientID, clientSecret and issuerCAPath for tenant's authentication.
+          name: ""                       # Name of a secret in the namespace configured for tenant secrets.
+        usernameClaim: ""                # User claim field from ID Token
+      tenantId: ""                       # TenantID defines a universally unique identifier of the tenant. Unlike the tenantName, which must be unique at a given time, the tenantId must be unique over the entire lifetime of the Tempo deployment. Tempo uses this ID to prefix objects in the object storage.
+      tenantName: ""                     # TenantName defines a human readable, unique name of the tenant. The value of this field must be specified in the X-Scope-OrgID header and in the resources field of a ClusterRole to identify the tenant.
+    authorization:                       # Authorization defines the tempo-gateway component authorization configuration spec per tenant.
+      roleBindings:                      # RoleBindings defines configuration to bind a set of roles to a set of subjects.
+      - name: ""
+        roles:
+        - ""
+        subjects:
+        - kind: ""                       # SubjectKind is a kind of Tempo Gateway RBAC subject.
+          name: ""
+      roles:                             # Roles defines a set of permissions to interact with a tenant.
+      - name: ""
+        permissions:
+        - ""                             # PermissionType is a Tempo Gateway RBAC permission.
+        tenants:
+        - ""
+        resources:
+        - ""
+    mode: "static"                       # Mode defines the multitenancy mode.
+    resources:                           # Resources defines the compute resource requirements of the gateway container. The gateway performs authentication and authorization of incoming requests when multi-tenancy is enabled.
+      claims:                            # Claims lists the names of resources, defined in spec.resourceClaims, that are used by this container.  This is an alpha field and requires enabling the DynamicResourceAllocation feature gate.  This field is immutable. It can only be set for containers.
+      - name: ""                         # Name must match the name of one entry in pod.spec.resourceClaims of the Pod where this field is used. It makes that resource available inside a container.
+        request: ""                      # Request is the name chosen for a request in the referenced claim. If empty, everything from the claim is made available, otherwise only the result of this request.
+      limits:                            # Limits describes the maximum amount of compute resources allowed. More info: https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/
+        cpu: "750m"
+        memory: "2Gi"
+      requests:                          # Requests describes the minimum amount of compute resources required. If Requests is omitted for a container, it defaults to Limits if that is explicitly specified, otherwise to an implementation-defined value. Requests cannot exceed Limits. More info: https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/
+        cpu: "500m"
+        memory: "1Gi"
+  observability:                         # Observability defines the observability configuration of the Tempo deployment.
+    grafana:                             # Grafana defines the Grafana configuration of the Tempo deployment.
+      dataSource:                        # DataSource defines the Grafana data source configuration.
+        enabled: false                   # Enabled defines if a Grafana data source should be created for this Tempo deployment.
+        instanceSelector:                # InstanceSelector defines the Grafana instance where the data source should be created.
+          matchExpressions:              # matchExpressions is a list of label selector requirements. The requirements are ANDed.
+          - key: ""                      # key is the label key that the selector applies to.
+            operator: ""                 # operator represents a key's relationship to a set of values. Valid operators are In, NotIn, Exists and DoesNotExist.
+            values:                      # values is an array of string values. If the operator is In or NotIn, the values array must be non-empty. If the operator is Exists or DoesNotExist, the values array must be empty. This array is replaced during a strategic merge patch.
+            - ""
+          matchLabels: {}                # matchLabels is a map of {key,value} pairs. A single {key,value} in the matchLabels map is equivalent to an element of matchExpressions, whose key field is "key", the operator is "In", and the values array contains only "value". The requirements are ANDed.
+    metrics:                             # Metrics defines the metric configuration of the Tempo deployment.
+      prometheusRules:                   # ServiceMonitors defines the PrometheusRule configuration.
+        enabled: false                   # Enabled defines if PrometheusRule objects should be created for this Tempo deployment.
+      serviceMonitors:                   # ServiceMonitors defines the ServiceMonitor configuration.
+        enabled: false                   # Enabled defines if ServiceMonitor objects should be created for this Tempo deployment.
+  podSecurityContext:                    # PodSecurityContext defines the security context that will be applied to the Tempo Pod.
+    appArmorProfile:                     # appArmorProfile is the AppArmor options to use by the containers in this pod. Note that this field cannot be set when spec.os.name is windows.
+      localhostProfile: ""               # localhostProfile indicates a profile loaded on the node that should be used. The profile must be preconfigured on the node to work. Must match the loaded name of the profile. Must be set if and only if type is "Localhost".
+      type: ""                           # type indicates which kind of AppArmor profile will be applied. Valid options are:   Localhost - a profile pre-loaded on the node.   RuntimeDefault - the container runtime's default profile.   Unconfined - no AppArmor enforcement.
+    fsGroup: 0                           # A special supplemental group that applies to all containers in a pod. Some volume types allow the Kubelet to change the ownership of that volume to be owned by the pod:  1. The owning GID will be the FSGroup 2. The setgid bit is set (new files created in the volume will be owned by FSGroup) 3. The permission bits are OR'd with rw-rw----  If unset, the Kubelet will not modify the ownership and permissions of any volume. Note that this field cannot be set when spec.os.name is windows.
+    fsGroupChangePolicy: ""              # fsGroupChangePolicy defines behavior of changing ownership and permission of the volume before being exposed inside Pod. This field will only apply to volume types which support fsGroup based ownership(and permissions). It will have no effect on ephemeral volume types such as: secret, configmaps and emptydir. Valid values are "OnRootMismatch" and "Always". If not specified, "Always" is used. Note that this field cannot be set when spec.os.name is windows.
+    runAsGroup: 0                        # The GID to run the entrypoint of the container process. Uses runtime default if unset. May also be set in SecurityContext.  If set in both SecurityContext and PodSecurityContext, the value specified in SecurityContext takes precedence for that container. Note that this field cannot be set when spec.os.name is windows.
+    runAsNonRoot: false                  # Indicates that the container must run as a non-root user. If true, the Kubelet will validate the image at runtime to ensure that it does not run as UID 0 (root) and fail to start the container if it does. If unset or false, no such validation will be performed. May also be set in SecurityContext.  If set in both SecurityContext and PodSecurityContext, the value specified in SecurityContext takes precedence.
+    runAsUser: 0                         # The UID to run the entrypoint of the container process. Defaults to user specified in image metadata if unspecified. May also be set in SecurityContext.  If set in both SecurityContext and PodSecurityContext, the value specified in SecurityContext takes precedence for that container. Note that this field cannot be set when spec.os.name is windows.
+    seLinuxChangePolicy: ""              # seLinuxChangePolicy defines how the container's SELinux label is applied to all volumes used by the Pod. It has no effect on nodes that do not support SELinux or to volumes does not support SELinux. Valid values are "MountOption" and "Recursive".  "Recursive" means relabeling of all files on all Pod volumes by the container runtime. This may be slow for large volumes, but allows mixing privileged and unprivileged Pods sharing the same volume on the same node.  "MountOption" mounts all eligible Pod volumes with `-o context` mount option. This requires all Pods that share the same volume to use the same SELinux label. It is not possible to share the same volume among privileged and unprivileged Pods. Eligible volumes are in-tree FibreChannel and iSCSI volumes, and all CSI volumes whose CSI driver announces SELinux support by setting spec.seLinuxMount: true in their CSIDriver instance. Other volumes are always re-labelled recursively. "MountOption" value is allowed only when SELinuxMount feature gate is enabled.  If not specified and SELinuxMount feature gate is enabled, "MountOption" is used. If not specified and SELinuxMount feature gate is disabled, "MountOption" is used for ReadWriteOncePod volumes and "Recursive" for all other volumes.  This field affects only Pods that have SELinux label set, either in PodSecurityContext or in SecurityContext of all containers.  All Pods that use the same volume should use the same seLinuxChangePolicy, otherwise some pods can get stuck in ContainerCreating state. Note that this field cannot be set when spec.os.name is windows.
+    seLinuxOptions:                      # The SELinux context to be applied to all containers. If unspecified, the container runtime will allocate a random SELinux context for each container.  May also be set in SecurityContext.  If set in both SecurityContext and PodSecurityContext, the value specified in SecurityContext takes precedence for that container. Note that this field cannot be set when spec.os.name is windows.
+      level: ""                          # Level is SELinux level label that applies to the container.
+      role: ""                           # Role is a SELinux role label that applies to the container.
+      type: ""                           # Type is a SELinux type label that applies to the container.
+      user: ""                           # User is a SELinux user label that applies to the container.
+    seccompProfile:                      # The seccomp options to use by the containers in this pod. Note that this field cannot be set when spec.os.name is windows.
+      localhostProfile: ""               # localhostProfile indicates a profile defined in a file on the node should be used. The profile must be preconfigured on the node to work. Must be a descending path, relative to the kubelet's configured seccomp profile location. Must be set if type is "Localhost". Must NOT be set for any other type.
+      type: ""                           # type indicates which kind of seccomp profile will be applied. Valid options are:  Localhost - a profile defined in a file on the node should be used. RuntimeDefault - the container runtime default profile should be used. Unconfined - no profile should be applied.
+    supplementalGroups:                  # A list of groups applied to the first process run in each container, in addition to the container's primary GID and fsGroup (if specified).  If the SupplementalGroupsPolicy feature is enabled, the supplementalGroupsPolicy field determines whether these are in addition to or instead of any group memberships defined in the container image. If unspecified, no additional groups are added, though group memberships defined in the container image may still be used, depending on the supplementalGroupsPolicy field. Note that this field cannot be set when spec.os.name is windows.
+    - 0
+    supplementalGroupsPolicy: ""         # Defines how supplemental groups of the first container processes are calculated. Valid values are "Merge" and "Strict". If not specified, "Merge" is used. (Alpha) Using the field requires the SupplementalGroupsPolicy feature gate to be enabled and the container runtime must implement support for this feature. Note that this field cannot be set when spec.os.name is windows.
+    sysctls:                             # Sysctls hold a list of namespaced sysctls used for the pod. Pods with unsupported sysctls (by the container runtime) might fail to launch. Note that this field cannot be set when spec.os.name is windows.
+    - name: ""                           # Name of a property to set
+      value: ""                          # Value of a property to set
+    windowsOptions:                      # The Windows specific settings applied to all containers. If unspecified, the options within a container's SecurityContext will be used. If set in both SecurityContext and PodSecurityContext, the value specified in SecurityContext takes precedence. Note that this field cannot be set when spec.os.name is linux.
+      gmsaCredentialSpec: ""             # GMSACredentialSpec is where the GMSA admission webhook (https://github.com/kubernetes-sigs/windows-gmsa) inlines the contents of the GMSA credential spec named by the GMSACredentialSpecName field.
+      gmsaCredentialSpecName: ""         # GMSACredentialSpecName is the name of the GMSA credential spec to use.
+      hostProcess: false                 # HostProcess determines if a container should be run as a 'Host Process' container. All of a Pod's containers must have the same effective HostProcess value (it is not allowed to have a mix of HostProcess containers and non-HostProcess containers). In addition, if HostProcess is true then HostNetwork must also be set to true.
+      runAsUserName: ""                  # The UserName in Windows to run the entrypoint of the container process. Defaults to the user specified in image metadata if unspecified. May also be set in PodSecurityContext. If set in both SecurityContext and PodSecurityContext, the value specified in SecurityContext takes precedence.
+  query:                                 # Query defines query configuration.
+    rbac:                                # RBAC defines query RBAC options. This option can be used only with multi-tenancy.
+      enabled: false                     # Enabled defines if the query RBAC should be enabled.
+  serviceAccount: ""                     # ServiceAccount defines the Service Account to use for all Tempo components.
+  storage:                               # Storage defines the storage configuration.
+    traces:                              # Traces defines the storage configuration for traces.
+      azure:                             # Azure defines the configuration for Azure Storage.
+        secret: ""                       # Secret is the name of a Secret containing credentials for accessing object storage. It needs to be in the same namespace as the TempoMonolithic custom resource.
+      backend: "memory"                  # Backend defines the backend for storing traces. Default: memory.
+      gcs:                               # GCP defines the configuration for Google Cloud Storage.
+        secret: ""                       # Secret is the name of a Secret containing credentials for accessing object storage. It needs to be in the same namespace as the TempoMonolithic custom resource.
+      s3:                                # S3 defines the configuration for Amazon S3.
+        credentialMode: ""               # CredentialMode can be used to set the desired credential mode for authenticating with the object storage. If this is not set, then the operator tries to infer the credential mode from the provided secret and its own configuration.
+        secret: ""                       # Secret is the name of a Secret containing credentials for accessing object storage. It needs to be in the same namespace as the TempoMonolithic custom resource.
+        tls:                             # TLS defines the TLS configuration for Amazon S3.
+          enabled: false                 # Enabled defines if TLS is enabled.
+          caName: ""                     # CA is the name of a ConfigMap containing a CA certificate (service-ca.crt). It needs to be in the same namespace as the Tempo custom resource.
+          certName: ""                   # Cert is the name of a Secret containing a certificate (tls.crt) and private key (tls.key). It needs to be in the same namespace as the Tempo custom resource.
+          minVersion: ""                 # MinVersion defines the minimum acceptable TLS version.
+      size: 0Gi                          # Size defines the size of the volume where traces are stored. For in-memory storage, this defines the size of the tmpfs volume. For persistent volume storage, this defines the size of the persistent volume. For object storage, this defines the size of the persistent volume containing the Write-Ahead Log (WAL) of Tempo. Default: 2Gi for memory, 10Gi for all other backends.
+      storageClassName: ""               # StorageClassName for the PVC used by the Tempo Pod. Defaults to nil (uses the default storage class in the cluster).
+  timeout: ""                            # Timeout configures the same timeout on all components starting at ingress down to the ingestor/querier. Timeout configuration on a specific component has a higher precedence. Default is 30 seconds.
+  affinity:                              # Affinity defines the Affinity rules for scheduling pods.
+    nodeAffinity: {}                     # Describes node affinity scheduling rules for the pod.
+    podAffinity: {}                      # Describes pod affinity scheduling rules (e.g. co-locate this pod in the same node, zone, etc. as some other pod(s)).
+    podAntiAffinity: {}                  # Describes pod anti-affinity scheduling rules (e.g. avoid putting this pod in the same node, zone, etc. as some other pod(s)).
+  nodeSelector: {}                       # NodeSelector defines which labels are required by a node to schedule the pod onto it.
+  resources:                             # Resources defines the compute resource requirements of the Tempo container.
+    claims:                              # Claims lists the names of resources, defined in spec.resourceClaims, that are used by this container.  This is an alpha field and requires enabling the DynamicResourceAllocation feature gate.  This field is immutable. It can only be set for containers.
+    - name: ""                           # Name must match the name of one entry in pod.spec.resourceClaims of the Pod where this field is used. It makes that resource available inside a container.
+      request: ""                        # Request is the name chosen for a request in the referenced claim. If empty, everything from the claim is made available, otherwise only the result of this request.
+    limits:                              # Limits describes the maximum amount of compute resources allowed. More info: https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/
+      cpu: "750m"
+      memory: "2Gi"
+    requests:                            # Requests describes the minimum amount of compute resources required. If Requests is omitted for a container, it defaults to Limits if that is explicitly specified, otherwise to an implementation-defined value. Requests cannot exceed Limits. More info: https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/
+      cpu: "500m"
+      memory: "1Gi"
+  tolerations: {}                        # Tolerations defines the tolerations of a node to schedule the pod onto it.
+status:                                  # TempoMonolithicStatus defines the observed state of TempoMonolithic.
+  components:                            # Components provides summary of all Tempo pod status, grouped per component.
+    tempo:                               # Tempo is a map of the pod status of the Tempo pods.
+      "key":
+      - ""
+  conditions:                            # Conditions of the Tempo deployment health.
+  - lastTransitionTime: "2006-01-02T15:04:05Z" # lastTransitionTime is the last time the condition transitioned from one status to another. This should be when the underlying condition changed.  If that is not known, then using the time when the API field changed is acceptable.
+    message: ""                          # message is a human readable message indicating details about the transition. This may be an empty string.
+    observedGeneration: 0                # observedGeneration represents the .metadata.generation that the condition was set based upon. For instance, if .metadata.generation is currently 12, but the .status.conditions[x].observedGeneration is 9, the condition is out of date with respect to the current state of the instance.
+    reason: ""                           # reason contains a programmatic identifier indicating the reason for the condition's last transition. Producers of specific condition types may define expected values and meanings for this field, and whether the values are considered a guaranteed API. The value should be a CamelCase string. This field may not be empty.
+    status: ""                           # status of the condition, one of True, False, Unknown.
+    type: ""                             # type of condition in CamelCase or in foo.example.com/CamelCase.
+  operatorVersion: ""                    # Version of the Tempo Operator.
+  tempoVersion: ""                       # Version of the managed Tempo instance.

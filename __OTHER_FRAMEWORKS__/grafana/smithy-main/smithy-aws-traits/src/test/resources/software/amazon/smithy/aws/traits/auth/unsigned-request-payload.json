@@ -1,0 +1,11 @@
+{
+    "smithy": "1.0",
+    "shapes": {
+        "ns.foo#Unsigned1": {
+            "type": "operation",
+            "traits": {
+                "aws.auth#unsignedPayload": {}
+            }
+        }
+    }
+}

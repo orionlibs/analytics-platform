@@ -1,0 +1,108 @@
+name: validate pull request
+
+on:
+  pull_request:
+    branches:
+      - main
+
+permissions:
+  contents: none
+  packages: none
+
+jobs:
+  validate:
+    name: validate
+    strategy:
+      matrix:
+        runner: [ ubuntu-latest, github-hosted-ubuntu-arm64 ]
+    runs-on: ${{ matrix.runner }}
+
+    permissions:
+      contents: read
+
+    container:
+      image: ghcr.io/grafana/grafana-build-tools:1.23.1@sha256:66fb15e42d9b1f3ba68b28d8117c3dd6f598d5975ca8d3a01238054930356df9
+      volumes:
+        # This works as long as we are using self-hosted runners.
+        #
+        # Self-hosted runners have this file which is used to configure
+        # buildkitd. The file is injected when the image is created.
+        - /etc/buildkitd.toml:/etc/buildkitd.toml
+    steps:
+      - name: checkout
+        uses: actions/checkout@1af3b93b6815bc44a9784bd300feb67ff0d1eeb3 # v6.0.0
+        with:
+          fetch-depth: 0
+          fetch-tags: true
+          persist-credentials: false
+
+      - name: Set up global git config
+        run: |
+          # The directory where the code has been checked out ends up belonging
+          # to a different user, so git complains about permissions. Indicate
+          # that it's safe to ignore.
+          git config --global --add safe.directory '*'
+
+      - name: Restore Go cache
+        id: restore-go-cache
+        uses: ./.github/actions/go-cache-restore
+
+      - name: build info
+        id: build-info
+        run: |
+          echo "os=$(go env GOOS)" >> "$GITHUB_OUTPUT"
+          echo "arch=$(go env GOARCH)" >> "$GITHUB_OUTPUT"
+
+      - name: ensure dependencies are up-to-date
+        run: |
+          make deps
+          scripts/enforce-clean
+
+      - name: version
+        id: version
+        run: |
+          make version
+          echo "value=$(cat dist/version)" >> "$GITHUB_OUTPUT"
+
+      - name: build
+        run: make build-native
+
+      - name: Download sm-k6
+        run: make sm-k6-native
+
+      - name: lint
+        run: make lint
+
+      - name: test
+        run: make test
+
+      - name: build packages
+        run: make package-native
+
+      - name: test docker build (no browser)
+        uses: grafana/shared-workflows/actions/build-push-to-dockerhub@1acd69f48c01d7aef5f209f94048dfeb789026db # build-push-to-dockerhub/v0.2.0
+        with:
+          push: false
+          cache-from: type=local,src=${{ runner.temp }}/.buildx-cache
+          cache-to: type=local,dest=${{ runner.temp }}/.buildx-cache,mode=min
+          platforms: |-
+            ${{ steps.build-info.outputs.os }}/${{ steps.build-info.outputs.arch }}
+          tags: |-
+            type=raw,value=${{ steps.version.outputs.value }}
+            type=sha,prefix=sha-,format=short
+            latest
+          target: release
+
+      - name: test docker build (browser)
+        uses: grafana/shared-workflows/actions/build-push-to-dockerhub@1acd69f48c01d7aef5f209f94048dfeb789026db # build-push-to-dockerhub/v0.2.0
+        with:
+          push: false
+          cache-from: type=local,src=${{ runner.temp }}/.buildx-cache
+          cache-to: type=local,dest=${{ runner.temp }}/.buildx-cache,mode=min
+          platforms: |-
+            ${{ steps.build-info.outputs.os }}/${{ steps.build-info.outputs.arch }}
+          tags: |-
+            type=raw,value=${{ steps.version.outputs.value }}-browser
+            type=sha,prefix=sha-,suffix=-browser,format=short
+            latest-browser
+          target: with-browser

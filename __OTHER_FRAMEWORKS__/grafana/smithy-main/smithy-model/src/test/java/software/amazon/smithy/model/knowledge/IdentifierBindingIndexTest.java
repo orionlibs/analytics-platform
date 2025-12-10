@@ -1,0 +1,145 @@
+/*
+ * Copyright 2019 Amazon.com, Inc. or its affiliates. All Rights Reserved.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License").
+ * You may not use this file except in compliance with the License.
+ * A copy of the License is located at
+ *
+ *  http://aws.amazon.com/apache2.0
+ *
+ * or in the "license" file accompanying this file. This file is distributed
+ * on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either
+ * express or implied. See the License for the specific language governing
+ * permissions and limitations under the License.
+ */
+
+package software.amazon.smithy.model.knowledge;
+
+import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.Matchers.equalTo;
+
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.Map;
+import org.junit.jupiter.api.Test;
+import software.amazon.smithy.model.Model;
+import software.amazon.smithy.model.SourceLocation;
+import software.amazon.smithy.model.shapes.MemberShape;
+import software.amazon.smithy.model.shapes.OperationShape;
+import software.amazon.smithy.model.shapes.ResourceShape;
+import software.amazon.smithy.model.shapes.ShapeId;
+import software.amazon.smithy.model.shapes.StringShape;
+import software.amazon.smithy.model.shapes.StructureShape;
+import software.amazon.smithy.model.traits.ReadonlyTrait;
+import software.amazon.smithy.model.traits.RequiredTrait;
+import software.amazon.smithy.model.traits.ResourceIdentifierTrait;
+
+public class IdentifierBindingIndexTest {
+
+    @Test
+    public void returnsEmptyMapForUnknownBindings() {
+        Model model = Model.builder().build();
+        IdentifierBindingIndex index = IdentifierBindingIndex.of(model);
+
+        assertThat(index.getOperationBindingType(ShapeId.from("ns.foo#A"), ShapeId.from("ns.foo#B")),
+                   equalTo(IdentifierBindingIndex.BindingType.NONE));
+        assertThat(index.getOperationBindings(ShapeId.from("ns.foo#A"), ShapeId.from("ns.foo#B")),
+                   equalTo(Collections.emptyMap()));
+    }
+
+    @Test
+    public void findsImplicitInstanceBindings() {
+        StringShape id = StringShape.builder().id("ns.foo#Id").build();
+        StructureShape input = StructureShape.builder()
+                .id("ns.foo#Input")
+                .addMember(MemberShape.builder()
+                                   .id("ns.foo#Input$abc")
+                                   .addTrait(new RequiredTrait())
+                                   .target("ns.foo#Id").build())
+                .build();
+        OperationShape operation = OperationShape.builder().id("ns.foo#Operation").input(input.getId()).build();
+        ResourceShape resource = ResourceShape.builder()
+                .id("ns.foo#Resource")
+                .addIdentifier("abc", "ns.foo#Id")
+                .addOperation(operation.getId())
+                .build();
+        Model model = Model.assembler().addShapes(id, resource, operation, input).assemble().unwrap();
+        IdentifierBindingIndex index = IdentifierBindingIndex.of(model);
+
+        assertThat(index.getOperationBindingType(resource.getId(), operation.getId()),
+                   equalTo(IdentifierBindingIndex.BindingType.INSTANCE));
+
+        Map<String, String> expectedBindings = new HashMap<>();
+        expectedBindings.put("abc", "abc");
+        assertThat(index.getOperationBindings(resource.getId(), operation.getId()), equalTo(expectedBindings));
+    }
+
+    @Test
+    public void findsCollectionBindings() {
+        StringShape id = StringShape.builder().id("ns.foo#Id").build();
+        StructureShape input = StructureShape.builder().id("ns.foo#Input").build();
+        OperationShape operation = OperationShape.builder()
+                .id("ns.foo#Operation")
+                .input(input.getId())
+                .build();
+        OperationShape listOperation = OperationShape.builder()
+                .id("ns.foo#ListResources")
+                .addTrait(new ReadonlyTrait())
+                .input(input.getId())
+                .build();
+        OperationShape createOperation = OperationShape.builder()
+                .id("ns.foo#CreateResource")
+                .input(input.getId())
+                .build();
+        ResourceShape resource = ResourceShape.builder()
+                .id("ns.foo#Resource")
+                .addIdentifier("abc", "ns.foo#Id")
+                .create(createOperation.getId())
+                .list(listOperation.getId())
+                .addCollectionOperation(operation.getId())
+                .build();
+        Model model = Model.assembler()
+                .addShapes(id, resource, operation, input, listOperation, createOperation)
+                .assemble()
+                .unwrap();
+        IdentifierBindingIndex index = IdentifierBindingIndex.of(model);
+
+        assertThat(index.getOperationBindingType(resource.getId(), operation.getId()),
+                   equalTo(IdentifierBindingIndex.BindingType.COLLECTION));
+        assertThat(index.getOperationBindings(resource.getId(), operation.getId()), equalTo(Collections.emptyMap()));
+        assertThat(index.getOperationBindingType(resource.getId(), listOperation.getId()),
+                equalTo(IdentifierBindingIndex.BindingType.COLLECTION));
+        assertThat(index.getOperationBindings(
+                resource.getId(), listOperation.getId()), equalTo(Collections.emptyMap()));
+        assertThat(index.getOperationBindingType(resource.getId(), createOperation.getId()),
+                equalTo(IdentifierBindingIndex.BindingType.COLLECTION));
+        assertThat(index.getOperationBindings(
+                resource.getId(), createOperation.getId()), equalTo(Collections.emptyMap()));
+    }
+
+    @Test
+    public void findsExplicitBindings() {
+        Map<String, String> expectedBindings = new HashMap<>();
+        expectedBindings.put("abc", "def");
+        StructureShape input = StructureShape.builder()
+                .id("ns.foo#Input")
+                .addMember(MemberShape.builder()
+                        .id("ns.foo#Input$def")
+                        .addTrait(new RequiredTrait())
+                        .addTrait(new ResourceIdentifierTrait("abc", SourceLocation.NONE))
+                        .target("smithy.api#String").build())
+                .build();
+        OperationShape operation = OperationShape.builder().id("ns.foo#Operation").input(input.getId()).build();
+        ResourceShape resource = ResourceShape.builder()
+                .id("ns.foo#Resource")
+                .addIdentifier("abc", "smithy.api#String")
+                .addOperation(operation.getId())
+                .build();
+        Model model = Model.assembler().addShapes(resource, operation, input).assemble().unwrap();
+        IdentifierBindingIndex index = IdentifierBindingIndex.of(model);
+
+        assertThat(index.getOperationBindingType(resource.getId(), operation.getId()),
+                   equalTo(IdentifierBindingIndex.BindingType.INSTANCE));
+        assertThat(index.getOperationBindings(resource.getId(), operation.getId()), equalTo(expectedBindings));
+    }
+}

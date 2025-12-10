@@ -1,0 +1,65 @@
+name: Run `prettier` on a branch
+description: This action runs `prettier` on a branch.
+inputs:
+  branch:
+    description: Name of branch to checkout and write changes to.
+    required: true
+  path:
+    default: docs/sources
+    description: Path to run `prettier` on.
+    required: false
+  token:
+    default: ""
+    description: Used to open the PR.
+    required: false
+runs:
+  using: composite
+  steps:
+    - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+      with:
+        persist-credentials: false
+        ref: ${{ inputs.branch }}
+        # Use github.token since that can usually always read the repository contents.
+        token: ${{ github.token }}
+    - id: get-secrets
+      if: inputs.token == ''
+      uses: grafana/shared-workflows/actions/get-vault-secrets@97c6f45f01d4bca8a3b1acfe397113ce88858a81 # get-vault-secrets-v1.0.1
+      with:
+        repo_secrets: |
+          DOCS_PLATFORM_TEAM_APP_ID=docs-platform-team:app-id
+          DOCS_PLATFORM_TEAM_PRIVATE_KEY=docs-platform-team:key
+    - uses: actions/create-github-app-token@df432ceedc7162793a195dd1713ff69aefc7379e # v2.0.6
+      if: inputs.token == ''
+      id: app-token
+      with:
+        app-id: ${{ env.DOCS_PLATFORM_TEAM_APP_ID }}
+        owner: grafana
+        private-key: ${{ env.DOCS_PLATFORM_TEAM_PRIVATE_KEY }}
+    - name: Update `make docs` procedure
+      env:
+        # Use App token if present because the github.token doesn't trigger other workflows like CI for pull requests.
+        GH_TOKEN: ${{ steps.app-token.outputs.token || github.token }}
+        PRETTIER_PATH: ${{ inputs.path }}
+      run: |
+        set -euf -o pipefail
+
+        if [[ -n "${RUNNER_DEBUG+x}" ]]; then
+          set -x
+        fi
+
+        # commit adds and commits the updated files as the Grafanabot GitHub user.
+        function commit {
+          git add .
+          git config --local user.email bot@grafana.com
+          git config --local user.name grafanabot
+          git commit --message 'Run `prettier`'
+        }
+
+        npx prettier -w "${PRETTIER_PATH}"
+
+        if ! git diff --exit-code; then
+          commit
+          git remote set-url origin "https://x-access-token:${GH_TOKEN}@github.com/grafana/writers-toolkit"
+          git push origin
+        fi
+      shell: bash

@@ -1,0 +1,10 @@
+{
+  "name": "@grafana/infinity-jsonframer",
+  "private": true,
+  "version": "1.3.0",
+  "scripts": {
+    "tidy": "go mod tidy",
+    "bench:backend": "go test -bench=.",
+    "test:backend": "go test -v  ./..."
+  }
+}

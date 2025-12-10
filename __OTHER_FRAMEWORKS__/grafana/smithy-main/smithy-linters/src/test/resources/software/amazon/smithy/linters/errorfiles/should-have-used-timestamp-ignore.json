@@ -1,0 +1,41 @@
+{
+    "smithy": "1.0",
+    "shapes": {
+        "example.namespace#Consolidate": {
+            "type": "string"
+        },
+        "example.namespace#Dates": {
+            "type": "string"
+        },
+        "example.namespace#Bat": {
+            "type": "string"
+        },
+        "example.namespace#Prefixtime": {
+            "type": "string"
+        },
+        "example.namespace#Prefixdate": {
+            "type": "string"
+        },
+        "example.namespace#Prefixat": {
+            "type": "string"
+        },
+        "example.namespace#Prefixon": {
+            "type": "string"
+        },
+        "example.namespace#CreatedOn": {
+            "type": "timestamp"
+        }
+    },
+    "metadata": {
+        "validators": [
+            {
+                "name": "ShouldHaveUsedTimestamp",
+                "configuration": {
+                    "additionalPatterns": [
+                        "^Oops.*$"
+                    ]
+                }
+            }
+        ]
+    }
+}

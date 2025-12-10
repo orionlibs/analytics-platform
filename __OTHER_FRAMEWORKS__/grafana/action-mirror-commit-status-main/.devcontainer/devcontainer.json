@@ -1,0 +1,52 @@
+{
+  "name": "action-mirror-commit-status",
+  "build": {
+    "dockerfile": "Dockerfile",
+    "context": ".."
+  },
+  "postCreateCommand": "npm install",
+  "customizations": {
+    "codespaces": {
+      "openFiles": ["README.md"]
+    },
+    "vscode": {
+      "extensions": [
+        "bierner.markdown-preview-github-styles",
+        "davidanson.vscode-markdownlint",
+        "dbaeumer.vscode-eslint",
+        "esbenp.prettier-vscode",
+        "github.copilot",
+        "github.copilot-chat",
+        "github.vscode-github-actions",
+        "github.vscode-pull-request-github",
+        "me-dutour-mathieu.vscode-github-actions",
+        "orta.vscode-jest",
+        "redhat.vscode-yaml",
+        "rvest.vs-code-prettier-eslint",
+        "yzhang.markdown-all-in-one"
+      ],
+      "settings": {
+        "editor.defaultFormatter": "rvest.vs-code-prettier-eslint",
+        "editor.formatOnPaste": true,
+        "editor.formatOnSaveMode": "file",
+        "editor.formatOnSave": true,
+        "editor.formatOnType": false,
+        "editor.tabSize": 2,
+        "markdown.extension.italic.indicator": "_",
+        "markdown.extension.list.indentationSize": "adaptive",
+        "markdown.extension.orderedList.marker": "one",
+        "vs-code-prettier-eslint.prettierLast": false
+      }
+    }
+  },
+  "containerEnv": {
+    "DEVCONTAINER": "true"
+  },
+  "remoteEnv": {
+    "GITHUB_TOKEN": "${localEnv:GITHUB_TOKEN}"
+  },
+  "features": {
+    "ghcr.io/devcontainers/features/github-cli:1": {},
+    "ghcr.io/devcontainers-contrib/features/prettier:1": {}
+  }
+}

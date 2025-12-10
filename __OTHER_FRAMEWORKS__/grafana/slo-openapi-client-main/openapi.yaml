@@ -1,0 +1,666 @@
+components:
+  schemas:
+    api.ErrorResponse:
+      additionalProperties: false
+      properties:
+        code:
+          format: int64
+          type: integer
+        error:
+          type: string
+      required:
+      - code
+      - error
+      type: object
+    api.ReportCreateResponse:
+      additionalProperties: false
+      properties:
+        message:
+          type: string
+        uuid:
+          type: string
+      required:
+      - message
+      - uuid
+      type: object
+    api.ReportListResponse:
+      additionalProperties: false
+      properties:
+        reports:
+          items:
+            $ref: '#/components/schemas/report.v1.Report'
+          type: array
+      required:
+      - reports
+      type: object
+    api.SLOCreateResponse:
+      additionalProperties: false
+      properties:
+        message:
+          type: string
+        uuid:
+          type: string
+      required:
+      - message
+      - uuid
+      type: object
+    api.SLOListResponse:
+      additionalProperties: false
+      properties:
+        slos:
+          items:
+            $ref: '#/components/schemas/slo.v0_0.Slo'
+          type: array
+      required:
+      - slos
+      type: object
+    report.v1.Label:
+      additionalProperties: false
+      properties:
+        key:
+          type: string
+        value:
+          type: string
+      required:
+      - key
+      - value
+      type: object
+    report.v1.Report:
+      additionalProperties: false
+      properties:
+        description:
+          type: string
+        labels:
+          items:
+            $ref: '#/components/schemas/report.v1.Label'
+          type: array
+        name:
+          type: string
+        reportDefinition:
+          $ref: '#/components/schemas/report.v1.ReportDefinitionSloList'
+        timeSpan:
+          type: string
+        uuid:
+          type: string
+      required:
+      - uuid
+      - name
+      - description
+      - timeSpan
+      - reportDefinition
+      type: object
+    report.v1.ReportDefinitionSloList:
+      additionalProperties: false
+      properties:
+        slos:
+          items:
+            $ref: '#/components/schemas/report.v1.ReportSlo'
+          type: array
+      required:
+      - slos
+      type: object
+    report.v1.ReportSlo:
+      additionalProperties: false
+      properties:
+        sloUuid:
+          type: string
+      required:
+      - sloUuid
+      type: object
+    slo.v0_0.AdvancedOptions:
+      additionalProperties: false
+      properties:
+        minFailures:
+          format: int64
+          type: integer
+      type: object
+    slo.v0_0.Alerting:
+      additionalProperties: false
+      properties:
+        advancedOptions:
+          $ref: '#/components/schemas/slo.v0_0.AdvancedOptions'
+        annotations:
+          items:
+            $ref: '#/components/schemas/slo.v0_0.Label'
+          type: array
+        fastBurn:
+          $ref: '#/components/schemas/slo.v0_0.AlertingMetadata'
+        labels:
+          items:
+            $ref: '#/components/schemas/slo.v0_0.Label'
+          type: array
+        slowBurn:
+          $ref: '#/components/schemas/slo.v0_0.AlertingMetadata'
+      type: object
+    slo.v0_0.AlertingMetadata:
+      additionalProperties: false
+      properties:
+        annotations:
+          items:
+            $ref: '#/components/schemas/slo.v0_0.Label'
+          type: array
+        labels:
+          items:
+            $ref: '#/components/schemas/slo.v0_0.Label'
+          type: array
+      type: object
+    slo.v0_0.DashboardRef:
+      additionalProperties: false
+      properties:
+        UID:
+          type: string
+      required:
+      - UID
+      type: object
+    slo.v0_0.DestinationDatasource:
+      additionalProperties: false
+      properties:
+        type:
+          type: string
+        uid:
+          type: string
+      type: object
+    slo.v0_0.FailureRatioQuery:
+      additionalProperties: false
+      properties:
+        failureMetric:
+          $ref: '#/components/schemas/slo.v0_0.MetricDef'
+        groupByLabels:
+          items:
+            type: string
+          type: array
+        totalMetric:
+          $ref: '#/components/schemas/slo.v0_0.MetricDef'
+      required:
+      - failureMetric
+      - totalMetric
+      type: object
+    slo.v0_0.FailureThresholdQuery:
+      additionalProperties: false
+      properties:
+        failureThresholdExpression:
+          type: string
+        groupByLabels:
+          items:
+            type: string
+          type: array
+        threshold:
+          $ref: '#/components/schemas/slo.v0_0.Threshold'
+      required:
+      - failureThresholdExpression
+      - threshold
+      type: object
+    slo.v0_0.Folder:
+      additionalProperties: false
+      properties:
+        uid:
+          type: string
+      type: object
+    slo.v0_0.FreeformQuery:
+      additionalProperties: false
+      properties:
+        query:
+          type: string
+      required:
+      - query
+      type: object
+    slo.v0_0.GrafanaQueries:
+      additionalProperties: false
+      properties:
+        grafanaQueries:
+          items:
+            additionalProperties: {}
+            type: object
+          type: array
+      required:
+      - grafanaQueries
+      type: object
+    slo.v0_0.Label:
+      additionalProperties: false
+      properties:
+        key:
+          type: string
+        value:
+          type: string
+      required:
+      - key
+      - value
+      type: object
+    slo.v0_0.MetricDef:
+      additionalProperties: false
+      properties:
+        prometheusMetric:
+          type: string
+        type:
+          type: string
+      required:
+      - prometheusMetric
+      type: object
+    slo.v0_0.Objective:
+      additionalProperties: false
+      properties:
+        value:
+          format: double
+          type: number
+        window:
+          type: string
+      required:
+      - value
+      - window
+      type: object
+    slo.v0_0.Query:
+      additionalProperties: false
+      properties:
+        failureRatio:
+          $ref: '#/components/schemas/slo.v0_0.FailureRatioQuery'
+        failureThreshold:
+          $ref: '#/components/schemas/slo.v0_0.FailureThresholdQuery'
+        freeform:
+          $ref: '#/components/schemas/slo.v0_0.FreeformQuery'
+        grafanaQueries:
+          $ref: '#/components/schemas/slo.v0_0.GrafanaQueries'
+        ratio:
+          $ref: '#/components/schemas/slo.v0_0.RatioQuery'
+        threshold:
+          $ref: '#/components/schemas/slo.v0_0.ThresholdQuery'
+        type:
+          enum:
+          - freeform
+          - ratio
+          - threshold
+          - failureThreshold
+          type: string
+      required:
+      - type
+      type: object
+    slo.v0_0.RatioQuery:
+      additionalProperties: false
+      properties:
+        groupByLabels:
+          items:
+            type: string
+          type: array
+        successMetric:
+          $ref: '#/components/schemas/slo.v0_0.MetricDef'
+        totalMetric:
+          $ref: '#/components/schemas/slo.v0_0.MetricDef'
+      required:
+      - successMetric
+      - totalMetric
+      type: object
+    slo.v0_0.ReadOnly:
+      additionalProperties: false
+      properties:
+        allowedActions:
+          items:
+            type: string
+          type: array
+        creationTimestamp:
+          format: int64
+          type: integer
+        drillDownDashboardRef:
+          $ref: '#/components/schemas/slo.v0_0.DashboardRef'
+        parsesAsRatio:
+          type: boolean
+        provenance:
+          type: string
+        sourceDatasource:
+          $ref: '#/components/schemas/slo.v0_0.DestinationDatasource'
+        status:
+          $ref: '#/components/schemas/slo.v0_0.Status'
+      required:
+      - creationTimestamp
+      type: object
+    slo.v0_0.Slo:
+      additionalProperties: false
+      properties:
+        alerting:
+          $ref: '#/components/schemas/slo.v0_0.Alerting'
+        description:
+          type: string
+        destinationDatasource:
+          $ref: '#/components/schemas/slo.v0_0.DestinationDatasource'
+        folder:
+          $ref: '#/components/schemas/slo.v0_0.Folder'
+        labels:
+          items:
+            $ref: '#/components/schemas/slo.v0_0.Label'
+          type: array
+        name:
+          type: string
+        objectives:
+          items:
+            $ref: '#/components/schemas/slo.v0_0.Objective'
+          type: array
+        query:
+          $ref: '#/components/schemas/slo.v0_0.Query'
+        readOnly:
+          $ref: '#/components/schemas/slo.v0_0.ReadOnly'
+        searchExpression:
+          type: string
+        uuid:
+          type: string
+      required:
+      - uuid
+      - name
+      - description
+      - query
+      - objectives
+      type: object
+    slo.v0_0.Status:
+      additionalProperties: false
+      properties:
+        message:
+          type: string
+        type:
+          enum:
+          - created
+          - creating
+          - deleting
+          - error
+          - unknown
+          - updated
+          - updating
+          type: string
+      required:
+      - type
+      type: object
+    slo.v0_0.Threshold:
+      additionalProperties: false
+      properties:
+        operator:
+          enum:
+          - <
+          - <=
+          - ==
+          - '!='
+          - '>='
+          - '>'
+          type: string
+        value:
+          format: double
+          type: number
+      required:
+      - value
+      - operator
+      type: object
+    slo.v0_0.ThresholdQuery:
+      additionalProperties: false
+      properties:
+        groupByLabels:
+          items:
+            type: string
+          type: array
+        threshold:
+          $ref: '#/components/schemas/slo.v0_0.Threshold'
+        thresholdExpression:
+          type: string
+      required:
+      - thresholdExpression
+      - threshold
+      type: object
+  securitySchemes:
+    bearerAuth:
+      scheme: bearer
+      type: http
+info:
+  description: "This API CRUDs SLO objects for the Grafana plugin. \nModifying an
+    SLO object will create or update recording and alerting rules in a connected Prometheus
+    instance and create or update dashboards in Grafana."
+  title: Grafana SLO API
+  version: 1.0.0
+openapi: 3.1.0
+paths:
+  /v1/report:
+    get:
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/api.ReportListResponse'
+          description: OK
+        "400":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/api.ErrorResponse'
+          description: Bad Request
+        "500":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/api.ErrorResponse'
+          description: Internal Server Error
+    post:
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/report.v1.Report'
+        required: true
+      responses:
+        "202":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/api.ReportCreateResponse'
+          description: Accepted
+        "400":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/api.ErrorResponse'
+          description: Bad Request
+        "500":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/api.ErrorResponse'
+          description: Internal Server Error
+  /v1/report/{id}:
+    delete:
+      parameters:
+      - in: path
+        name: id
+        required: true
+        schema:
+          type: string
+      responses:
+        "204":
+          description: No Content
+        "400":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/api.ErrorResponse'
+          description: Bad Request
+        "500":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/api.ErrorResponse'
+          description: Internal Server Error
+    get:
+      parameters:
+      - in: path
+        name: id
+        required: true
+        schema:
+          type: string
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/report.v1.Report'
+          description: OK
+        "400":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/api.ErrorResponse'
+          description: Bad Request
+        "500":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/api.ErrorResponse'
+          description: Internal Server Error
+    put:
+      parameters:
+      - in: path
+        name: id
+        required: true
+        schema:
+          type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/report.v1.Report'
+        required: true
+      responses:
+        "202":
+          description: Accepted
+        "400":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/api.ErrorResponse'
+          description: Bad Request
+        "500":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/api.ErrorResponse'
+          description: Internal Server Error
+  /v1/slo:
+    get:
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/api.SLOListResponse'
+          description: OK
+        "400":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/api.ErrorResponse'
+          description: Bad Request
+        "500":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/api.ErrorResponse'
+          description: Internal Server Error
+    post:
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/slo.v0_0.Slo'
+        required: true
+      responses:
+        "202":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/api.SLOCreateResponse'
+          description: Accepted
+        "400":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/api.ErrorResponse'
+          description: Bad Request
+        "500":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/api.ErrorResponse'
+          description: Internal Server Error
+  /v1/slo/{id}:
+    delete:
+      parameters:
+      - in: path
+        name: id
+        required: true
+        schema:
+          type: string
+      responses:
+        "204":
+          description: No Content
+        "400":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/api.ErrorResponse'
+          description: Bad Request
+        "500":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/api.ErrorResponse'
+          description: Internal Server Error
+    get:
+      parameters:
+      - in: path
+        name: id
+        required: true
+        schema:
+          type: string
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/slo.v0_0.Slo'
+          description: OK
+        "400":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/api.ErrorResponse'
+          description: Bad Request
+        "500":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/api.ErrorResponse'
+          description: Internal Server Error
+    put:
+      parameters:
+      - in: path
+        name: id
+        required: true
+        schema:
+          type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/slo.v0_0.Slo'
+        required: true
+      responses:
+        "202":
+          description: Accepted
+        "400":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/api.ErrorResponse'
+          description: Bad Request
+        "500":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/api.ErrorResponse'
+          description: Internal Server Error
+security:
+- bearerAuth: []
+servers:
+- description: API Subpath
+  url: /api/plugins/grafana-slo-app/resources

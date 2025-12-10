@@ -1,0 +1,83 @@
+file_name: snake_case
+function_name: PascalCase
+arg_name: camelCase
+struct_name: PascalCase
+field_name: PascalCase
+
+type_mapping:
+  int: int64
+  double: double
+  boolean: bool
+  string: string
+  "int[]": "[]int64"
+  "double[]": "[]double"
+  "boolean[]": "[]bool"
+  "string[]": "[]string"
+
+acronyms: ["iOS", "API", "URL"]
+
+templates:
+  - template: "registry.md"
+    filter: "."
+    application_mode: single
+  - template: "**/attribute_group.md"
+    filter: semconv_grouped_attributes
+    application_mode: each
+  - template: "**/attribute_groups.md"
+    filter: semconv_grouped_attributes
+    application_mode: single
+  - template: "**/event.md"
+    filter: >
+      .groups
+      | map(select(.type == "event"))
+      | map(. + {
+          event_namespace: (if .id | index(".") then (.id | split(".") | .[0:-1] | join(".")) else "other" end)
+        })
+      | sort_by(.event_namespace, .id)
+      | group_by(.event_namespace)
+      | map({ event_namespace: .[0].event_namespace, events: . | sort_by(.id) })
+    application_mode: each
+  - template: "**/events.md"
+    filter: >
+      .groups
+      | map(select(.type == "event"))
+      | map(. + {
+          event_namespace: (if .id | index(".") then (.id | split(".") | .[0:-1] | join(".")) else "other" end)
+        })
+      | sort_by(.event_namespace, .id)
+      | group_by(.event_namespace)
+      | map({ event_namespace: .[0].event_namespace, events: . | sort_by(.id) })
+    application_mode: single
+  - template: "**/metric.md"
+    filter: semconv_grouped_metrics
+    application_mode: each
+  - template: "**/metrics.md"
+    filter: semconv_grouped_metrics
+    application_mode: single
+  - template: "**/metric_names.md"
+    filter: semconv_metrics
+    application_mode: single
+  - template: "**/resource.md"
+    filter: >
+      semconv_signal("resource"; {})
+      | group_by(.root_namespace)
+      | map({ root_namespace: .[0].root_namespace, resources: . | sort_by(.id) })
+    application_mode: each
+  - template: "**/resources.md"
+    filter: >
+      semconv_signal("resource"; {})
+      | group_by(.root_namespace)
+      | map({ root_namespace: .[0].root_namespace, resources: . | sort_by(.id) })
+    application_mode: single
+  - template: "**/span.md"
+    filter: >
+      semconv_signal("span"; {})
+      | group_by(.root_namespace)
+      | map({ root_namespace: .[0].root_namespace, spans: . | sort_by(.id) })
+    application_mode: each
+  - template: "**/spans.md"
+    filter: >
+      semconv_signal("span"; {})
+      | group_by(.root_namespace)
+      | map({ root_namespace: .[0].root_namespace, spans: . | sort_by(.id) })
+    application_mode: single

@@ -1,0 +1,19 @@
+# Base
+
+/iconography
+/themes
+
+/layouts/*
+
+/content-modules/*
+
+/content/en/blog/2019
+/content/en/blog/202[23]
+
+/content/bn
+
+# The following locales are processed by Prettier but without prose wrap.
+# For the relevant scripts, see package.json.
+/content/ja
+/content/uk
+/content/zh

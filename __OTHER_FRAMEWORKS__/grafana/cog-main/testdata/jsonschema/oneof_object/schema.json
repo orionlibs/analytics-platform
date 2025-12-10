@@ -1,0 +1,52 @@
+{
+  "$ref": "#/definitions/Entry",
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "definitions": {
+    "Entry": {
+      "type": "object",
+      "properties": {
+        "oneOf": {
+          "$ref": "#/definitions/OneOf"
+        },
+        "oneOfObj": {
+          "$ref": "#/definitions/OneOfObject"
+        }
+      }
+    },
+    "OneOf": {
+      "oneOf": [
+        {
+          "type": "integer"
+        },
+        {
+          "type": "string"
+        }
+      ]
+    },
+    "OneOfObject": {
+      "type": "object",
+      "oneOf": [
+        {
+          "properties": {
+            "bar": {
+              "type": "integer"
+            }
+          },
+          "required": [
+            "bar"
+          ]
+        },
+        {
+          "properties": {
+            "foo": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "foo"
+          ]
+        }
+      ]
+    }
+  }
+}

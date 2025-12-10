@@ -1,0 +1,43 @@
+{
+  "ignorePaths": [
+    "node_modules/**",
+    "pkg/googlesheets/testdata",
+    "dist/**",
+    "mage_output_file.go",
+    "provisioning/**",
+    "package.json",
+    "yarn.lock"
+  ],
+  "words": [
+    "araddon",
+    "dataproxy",
+    "datasource",
+    "datasources",
+    "datasourcetest",
+    "dateparse",
+    "davecgh",
+    "errorsource",
+    "googleapi",
+    "googlesheets",
+    "hqeqe",
+    "httpadapter",
+    "httpclient",
+    "instancemgmt",
+    "Middlewares",
+    "patrickmn",
+    "percentunit",
+    "PTRACE",
+    "raintank",
+    "Sdump",
+    "seccomp",
+    "stackdriver",
+    "stretchr",
+    "subresource",
+    "testdata",
+    "testid",
+    "tokenprovider",
+    "typecheck",
+    "uplot"
+  ],
+  "language": "en-US"
+}

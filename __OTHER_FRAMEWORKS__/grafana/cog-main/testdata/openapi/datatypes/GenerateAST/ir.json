@@ -1,0 +1,128 @@
+{
+  "Package": "grafanatest",
+  "Metadata": {},
+  "EntryPointType": {
+    "Kind": "",
+    "Nullable": false
+  },
+  "Objects": {
+    "DataTypes": {
+      "Name": "DataTypes",
+      "Comments": [
+        "An object with many fields."
+      ],
+      "Type": {
+        "Kind": "struct",
+        "Nullable": false,
+        "Struct": {
+          "Fields": [
+            {
+              "Name": "boolean",
+              "Comments": [
+                "Comment for boolean"
+              ],
+              "Type": {
+                "Kind": "scalar",
+                "Nullable": false,
+                "Scalar": {
+                  "ScalarKind": "bool"
+                }
+              },
+              "Required": false
+            },
+            {
+              "Name": "bytes",
+              "Comments": [
+                "Comment for byte"
+              ],
+              "Type": {
+                "Kind": "scalar",
+                "Nullable": false,
+                "Scalar": {
+                  "ScalarKind": "bytes"
+                }
+              },
+              "Required": true
+            },
+            {
+              "Name": "float32",
+              "Comments": [
+                "Comment for float64"
+              ],
+              "Type": {
+                "Kind": "scalar",
+                "Nullable": false,
+                "Default": 3.5,
+                "Scalar": {
+                  "ScalarKind": "float32"
+                }
+              },
+              "Required": false
+            },
+            {
+              "Name": "float64",
+              "Comments": [
+                "Comment for float64"
+              ],
+              "Type": {
+                "Kind": "scalar",
+                "Nullable": false,
+                "Scalar": {
+                  "ScalarKind": "float64"
+                }
+              },
+              "Required": false
+            },
+            {
+              "Name": "int32",
+              "Comments": [
+                "Comment for integer32"
+              ],
+              "Type": {
+                "Kind": "scalar",
+                "Nullable": false,
+                "Default": 3,
+                "Scalar": {
+                  "ScalarKind": "int32"
+                }
+              },
+              "Required": false
+            },
+            {
+              "Name": "int64",
+              "Comments": [
+                "Comment for integer32"
+              ],
+              "Type": {
+                "Kind": "scalar",
+                "Nullable": false,
+                "Scalar": {
+                  "ScalarKind": "int64"
+                }
+              },
+              "Required": false
+            },
+            {
+              "Name": "string",
+              "Comments": [
+                "Comment for string"
+              ],
+              "Type": {
+                "Kind": "scalar",
+                "Nullable": true,
+                "Scalar": {
+                  "ScalarKind": "string"
+                }
+              },
+              "Required": true
+            }
+          ]
+        }
+      },
+      "SelfRef": {
+        "ReferredPkg": "grafanatest",
+        "ReferredType": "DataTypes"
+      }
+    }
+  }
+}

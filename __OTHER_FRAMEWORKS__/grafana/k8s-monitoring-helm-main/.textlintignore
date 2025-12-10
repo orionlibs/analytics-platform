@@ -1,0 +1,4 @@
+**/description.txt
+charts/k8s-monitoring-v1/templates/**
+data-alloy/**
+node_modules/**

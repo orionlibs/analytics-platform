@@ -1,0 +1,62 @@
+#!/usr/bin/env bash
+set -eo pipefail  # Exit immediately if a command fails.
+
+scriptDir=$(dirname "$(readlink -f "$0")")
+
+usage() {
+  echo "USAGE: helm-test [<test-dir>]"
+  echo ""
+  echo "Runs a test against a real Kubernetes Cluster"
+  echo ""
+  echo "  <test-dir>           - The test directory. If not provided, the current directory is used."
+  echo "                         Expects this file to exist:"
+  echo "    test-plan.yaml        - The test plan."
+}
+
+# Argument parsing
+if [ "${1}" == "-h" ] || [ "${1}" == "-help" ] || [ "${1}" == "--help" ]; then
+  usage
+  exit 0
+fi
+
+testDir=$1
+if [ -z "${testDir}" ]; then
+  testDir=$(pwd)
+elif [ ! -d "${testDir}" ]; then
+  echo "Argument is not a valid directory: ${testDir}"
+  usage
+  exit 1
+fi
+testPlan=$(realpath "${testDir}/test-plan.yaml")
+
+if [ ! -f "${testPlan}" ]; then
+  echo "test-plan.yaml file not found in ${testDir}"
+  usage
+  exit 1
+fi
+
+# Start of script
+CREATE_CLUSTER=${CREATE_CLUSTER:-true}
+if [ "${CREATE_CLUSTER}" == "true" ]; then
+  "${scriptDir}/create-cluster" "${testDir}"
+fi
+
+deleteCluster() {
+  "${scriptDir}/delete-cluster" "${testDir}"
+}
+
+DELETE_CLUSTER=${DELETE_CLUSTER:-false}
+if [ "${DELETE_CLUSTER}" == "true" ]; then
+  trap deleteCluster EXIT
+fi
+
+"${scriptDir}/deploy-dependencies" "${testDir}"
+
+"${scriptDir}/deploy-subject" "${testDir}"
+
+runUninstall=$(yq eval '.subject.uninstall // false' "${testPlan}")
+if [ "${runUninstall}" == "true" ]; then
+  "${scriptDir}/uninstall-subject" "${testDir}"
+fi
+
+"${scriptDir}/run-tests" "${testDir}"

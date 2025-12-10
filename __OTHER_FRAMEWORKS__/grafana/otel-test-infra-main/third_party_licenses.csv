@@ -1,0 +1,7 @@
+github.com/davecgh/go-spew/spew,https://github.com/grafana/otel-test-infra/blob/HEAD/vendor/github.com/davecgh/go-spew/LICENSE,ISC
+github.com/grafana/otel-test-infra,https://github.com/grafana/otel-test-infra/blob/HEAD/LICENSE,Apache-2.0
+github.com/mariomac/guara/pkg/test,https://github.com/grafana/otel-test-infra/blob/HEAD/vendor/github.com/mariomac/guara/LICENSE,Apache-2.0
+github.com/pmezard/go-difflib/difflib,https://github.com/grafana/otel-test-infra/blob/HEAD/vendor/github.com/pmezard/go-difflib/LICENSE,BSD-3-Clause
+github.com/stretchr/testify,https://github.com/grafana/otel-test-infra/blob/HEAD/vendor/github.com/stretchr/testify/LICENSE,MIT
+golang.org/x/exp,https://github.com/grafana/otel-test-infra/blob/HEAD/vendor/golang.org/x/exp/LICENSE,BSD-3-Clause
+gopkg.in/yaml.v3,https://github.com/grafana/otel-test-infra/blob/HEAD/vendor/gopkg.in/yaml.v3/LICENSE,MIT

@@ -1,0 +1,78 @@
+# HELP probe_dns_lookup_time_seconds Returns the time taken for probe dns lookup in seconds
+# TYPE probe_dns_lookup_time_seconds gauge
+probe_dns_lookup_time_seconds 2.435e-06
+# HELP probe_duration_seconds Returns how long the probe took to complete in seconds
+# TYPE probe_duration_seconds gauge
+probe_duration_seconds 0.002199732
+# HELP probe_failed_due_to_regex Indicates if probe failed due to regex
+# TYPE probe_failed_due_to_regex gauge
+probe_failed_due_to_regex 0
+# HELP probe_http_content_length Length of http content response
+# TYPE probe_http_content_length gauge
+probe_http_content_length 0
+# HELP probe_http_duration_seconds Duration of http request by phase, summed over all redirects
+# TYPE probe_http_duration_seconds gauge
+probe_http_duration_seconds{phase="connect"} 4.3262e-05
+probe_http_duration_seconds{phase="processing"} 0.000117266
+probe_http_duration_seconds{phase="resolve"} 2.435e-06
+probe_http_duration_seconds{phase="tls"} 0.001857162
+probe_http_duration_seconds{phase="transfer"} 4.1902e-05
+# HELP probe_http_redirects The number of redirects
+# TYPE probe_http_redirects gauge
+probe_http_redirects 0
+# HELP probe_http_ssl Indicates if SSL was used for the final redirect
+# TYPE probe_http_ssl gauge
+probe_http_ssl 1
+# HELP probe_http_status_code Response HTTP status code
+# TYPE probe_http_status_code gauge
+probe_http_status_code 200
+# HELP probe_http_uncompressed_body_length Length of uncompressed response body
+# TYPE probe_http_uncompressed_body_length gauge
+probe_http_uncompressed_body_length 0
+# HELP probe_http_version Returns the version of HTTP of the probe response
+# TYPE probe_http_version gauge
+probe_http_version 1.1
+# HELP probe_ip_addr_hash Specifies the hash of IP address. It's useful to detect if the IP address changes.
+# TYPE probe_ip_addr_hash gauge
+probe_ip_addr_hash 3.668918509e+09
+# HELP probe_ip_protocol Specifies whether probe ip protocol is IP4 or IP6
+# TYPE probe_ip_protocol gauge
+probe_ip_protocol 4
+# HELP probe_ssl_earliest_cert_expiry Returns last SSL chain expiry in unixtime
+# TYPE probe_ssl_earliest_cert_expiry gauge
+probe_ssl_earliest_cert_expiry 3.6e+09
+# HELP probe_ssl_last_chain_expiry_timestamp_seconds Returns last SSL chain expiry in timestamp
+# TYPE probe_ssl_last_chain_expiry_timestamp_seconds gauge
+probe_ssl_last_chain_expiry_timestamp_seconds -6.21355968e+10
+# HELP probe_ssl_last_chain_info Contains SSL leaf certificate information
+# TYPE probe_ssl_last_chain_info gauge
+probe_ssl_last_chain_info{fingerprint_sha256="ab601914436e58babb17b9166155caf97bd7e5f8deb9b659bcdb66c58b49f323",issuer="O=Acme Co",subject="O=Acme Co",subjectalternative="example.com"} 1
+# HELP probe_success Displays whether or not the probe was a success
+# TYPE probe_success gauge
+probe_success 1
+# HELP probe_tls_version_info Returns the TLS version used or NaN when unknown
+# TYPE probe_tls_version_info gauge
+probe_tls_version_info{version="TLS 1.3"} 1
+# HELP sm_check_info Provides information about a single check configuration
+# TYPE sm_check_info gauge
+sm_check_info 1
+# HELP probe_all_duration_seconds Returns how long the probe took to complete in seconds (histogram)
+# TYPE probe_all_duration_seconds histogram
+probe_all_duration_seconds_bucket{le="0.005"} 1
+probe_all_duration_seconds_bucket{le="0.01"} 1
+probe_all_duration_seconds_bucket{le="0.025"} 1
+probe_all_duration_seconds_bucket{le="0.05"} 1
+probe_all_duration_seconds_bucket{le="0.1"} 1
+probe_all_duration_seconds_bucket{le="0.25"} 1
+probe_all_duration_seconds_bucket{le="0.5"} 1
+probe_all_duration_seconds_bucket{le="1"} 1
+probe_all_duration_seconds_bucket{le="2.5"} 1
+probe_all_duration_seconds_bucket{le="5"} 1
+probe_all_duration_seconds_bucket{le="10"} 1
+probe_all_duration_seconds_bucket{le="+Inf"} 1
+probe_all_duration_seconds_sum 0.002199732
+probe_all_duration_seconds_count 1
+# HELP probe_all_success Displays whether or not the probe was a success (summary)
+# TYPE probe_all_success summary
+probe_all_success_sum 1
+probe_all_success_count 1

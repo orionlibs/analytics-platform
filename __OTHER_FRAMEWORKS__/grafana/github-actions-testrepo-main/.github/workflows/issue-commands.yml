@@ -1,0 +1,55 @@
+name: Run commands when issues and pull requests are labeled
+on:
+  issues:
+    types: [labeled, opened, unlabeled]
+  issue_comment:
+    types: [created]
+  pull_request:
+    types: [labeled]
+
+concurrency:
+  group: pr-issue-commands-${{ github.event.number }}
+
+permissions:
+  contents: read
+  id-token: write
+jobs:
+  main:
+    if: ${{ github.event.pull_request == false || github.event.pull_request.head.repo.full_name == github.repository }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: "Get vault secrets"
+        id: vault-secrets
+        uses: grafana/shared-workflows/actions/get-vault-secrets@main
+        with:
+          # Secrets placed in the ci/repo/grafana/<repo>/<path> path in Vault
+          repo_secrets: |
+            APP_ID=triager_bot_github:app_id
+            APP_PEM=triager_bot_github:app_pem
+
+      - name: "Generate token"
+        id: generate_token
+        uses: tibdex/github-app-token@b62528385c34dbc9f38e5f4225ac829252d1ea92
+        with:
+          app_id: ${{ env.APP_ID }}
+          private_key: ${{ env.APP_PEM }}
+
+      - uses: hmarr/debug-action@v2
+      - name: Checkout Actions
+        uses: actions/checkout@v4
+        with:
+          repository: "grafana/grafana-github-actions"
+          path: ./actions
+          ref: academo/test-label-issues
+      - name: Install Actions
+        run: npm install --production --prefix ./actions
+      - name: Run Commands
+        uses: ./actions/commands
+        with:
+          token: ${{ steps.generate_token.outputs.token }}
+          configPath: issue-commands
+      # - name: Setup tmate session
+      #   uses: mxschmitt/action-tmate@v3
+      #   with:
+      #     limit-access-to-actor: true
+      #     timeout-minutes: 15

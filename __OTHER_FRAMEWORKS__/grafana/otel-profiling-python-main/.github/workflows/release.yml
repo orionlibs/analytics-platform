@@ -1,0 +1,65 @@
+name: Publish to pypi.org
+
+on:
+  push:
+    tags:
+    - 'v*'
+
+jobs:
+  release:
+    runs-on: ubuntu-x64
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: 3.12
+      - name: Install pip build
+        run: pip install build
+      - name: Build wheel and sdist
+        run: python -m build --sdist --wheel
+      - name: Create GitHub release
+        id: create_release
+        uses: actions/create-release@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tag_name: ${{ github.ref }}
+          release_name: Release ${{ github.ref }}
+          draft: false
+          prerelease: false
+      - name: Upload release artifacts
+        uses: korniltsev/actions-upload-release-asset@a7f1a48a96ff80f206fd26bdbfcf81539d44fa5e # TODO(korniltsev): get rid of this fork
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ steps.create_release.outputs.upload_url }}
+          asset_path: "dist/*"
+  publish:
+    needs: release
+    runs-on: ubuntu-x64
+    permissions:
+      id-token: write
+    steps:
+      - uses: robinraju/release-downloader@ed86e52bc497d1185844fc28454c5999aaed2fa5 # v1.4
+        with: 
+          tag: ${{ github.ref_name }}
+          fileName: "*"
+          tarBall: false 
+          zipBall: false 
+          out-file-path: "dist"
+          token: ${{ secrets.GITHUB_TOKEN }}
+      - uses: grafana/shared-workflows/actions/get-vault-secrets@974c33049d0967c5c9cfc249fe675daf341dc78f
+        with:
+          vault_instance: dev
+          # Secrets placed in the ci/repo/grafana/otel-profiling-python/ path in Vault
+          repo_secrets: |
+            PYPI_API_TOKEN=publishing:pypi_api_key
+      - name: Publish a Python distribution to PyPI
+        uses: pypa/gh-action-pypi-publish@76f52bc884231f62b9a034ebfe128415bbaabdfc # v1.12.4
+        with:
+          user: __token__
+          password: ${{ env.PYPI_API_TOKEN }}

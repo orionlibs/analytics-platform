@@ -1,0 +1,55 @@
+{
+    "$schema": "https://developer.microsoft.com/json-schemas/rush/v5/command-line.schema.json",
+    "commands": [
+        {
+            "name": "test",
+            "commandKind": "bulk",
+            "summary": "Run all tests for all packages",
+            "description": "Runs tests for all projects",
+            "safeForSimultaneousRushProcesses": false,
+            "enableParallelism": false,
+            "ignoreMissingScript": false,
+            "allowWarningsInSuccessfulBuild": true
+        },
+        {
+            "name": "lint",
+            "commandKind": "bulk",
+            "summary": "Run all tslint for all packages",
+            "description": "Runs tslint for all projects",
+            "safeForSimultaneousRushProcesses": false,
+            "enableParallelism": true,
+            "ignoreMissingScript": false
+        },
+        {
+            "name": "lint:fix",
+            "commandKind": "bulk",
+            "summary": "Run all tslint for all packages",
+            "description": "Runs tslint for all projects",
+            "safeForSimultaneousRushProcesses": false,
+            "enableParallelism": true,
+            "ignoreMissingScript": false,
+            "allowWarningsInSuccessfulBuild": true
+        },
+        {
+            "name": "build",
+            "commandKind": "bulk",
+            "summary": "Run all build targets for all packages",
+            "enableParallelism": true,
+            "allowWarningsInSuccessfulBuild": true
+        },
+        {
+            "name": "rebuild",
+            "commandKind": "bulk",
+            "summary": "Run all build targets for all packages",
+            "enableParallelism": true,
+            "allowWarningsInSuccessfulBuild": true
+        },
+        {
+            "name": "compile",
+            "commandKind": "bulk",
+            "summary": "Run all compile targets for all packages",
+            "enableParallelism": true,
+            "allowWarningsInSuccessfulBuild": true
+        }
+    ]
+}

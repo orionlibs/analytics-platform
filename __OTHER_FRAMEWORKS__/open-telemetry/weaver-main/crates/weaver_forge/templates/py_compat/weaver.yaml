@@ -1,0 +1,4 @@
+templates:
+  - template: test
+    filter: .
+    application_mode: single

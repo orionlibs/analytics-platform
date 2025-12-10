@@ -1,0 +1,43 @@
+---
+name: Helm Lint
+permissions: {}
+on:
+  # `ct lint` does not work well with tag references on releases.
+  # OTOH, Helm linting on tags is not necessary so long as it
+  # happens on push to branches.
+  push:
+    branches:
+      - '**'
+    paths:
+      - 'charts/**'
+  pull_request:
+    branches-ignore:
+      - 'release-**/bundle-update'
+
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+          fetch-depth: 0
+
+      - name: Set up Helm
+        # this is v4.3.0
+        uses: azure/setup-helm@b9e51907a09c216f16ebe8536097933489208112
+        with:
+          version: v3.7.2
+
+      - uses: actions/setup-python@v2
+        with:
+          python-version: 3.13.1
+
+      - name: Set up chart-testing
+        # this is v2.7.0
+        uses: helm/chart-testing-action@0d28d3144d3a25ea2cc349d6e59901c4ff469b3b
+
+      - name: Run chart-testing (lint)
+        run: |
+          ct lint --config ./charts/ct.yaml

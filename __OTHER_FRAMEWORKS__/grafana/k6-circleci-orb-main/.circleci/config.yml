@@ -1,0 +1,65 @@
+version: 2.1
+
+orbs:
+  grafana: grafana/k6@<< pipeline.parameters.dev-orb-version >>
+  orb-tools: circleci/orb-tools@10.1.0
+  # bats: circleci/bats@1.0
+  # shellcheck: circleci/shellcheck@2.0
+
+parameters:
+  run-integration-tests:
+    description: An internal flag to prevent integration test from running before a development version has been created.
+    type: boolean
+    default: false
+  dev-orb-version:
+    description: >
+      The development version of the orb to test.
+      This value is automatically adjusted by the "trigger-integration-tests-workflow" job to correspond with the specific version created by the commit and should not be edited.
+      A "dev:alpha" version must exist for the initial pipeline run.
+    type: string
+    default: "1.0.0"
+    # default: "dev:alpha"
+
+workflows:
+  test-pack:
+    unless: << pipeline.parameters.run-integration-tests >>
+    jobs:
+      - orb-tools/lint
+      - orb-tools/pack
+      # - shellcheck/check:
+      #    dir: ./src/scripts
+      #    exclude: SC2148
+      - orb-tools/publish-dev:
+          orb-name: grafana/k6
+          context: orb-publishing
+          publish-token-variable: CIRCLE_TOKEN_ORB
+          requires:
+            - orb-tools/lint
+            - orb-tools/pack
+            # - shellcheck/check
+      - orb-tools/trigger-integration-tests-workflow:
+          name: trigger-integration-dev
+          context: orb-publishing
+          token-variable: CIRCLE_TOKEN_ORB
+          requires:
+            - orb-tools/publish-dev
+
+  integration-test_deploy:
+    when: << pipeline.parameters.run-integration-tests >>
+    jobs:
+      - grafana/k6:
+          script: data/test.js
+      - orb-tools/dev-promote-prod-from-commit-subject:
+          orb-name: grafana/k6
+          context: orb-publishing
+          add-pr-comment: false
+          fail-if-semver-not-indicated: true
+          publish-version-tag: false
+          publish-token-variable: CIRCLE_TOKEN_ORB
+          requires:
+            - grafana/k6
+          filters:
+            branches:
+              only:
+                - master
+                - main

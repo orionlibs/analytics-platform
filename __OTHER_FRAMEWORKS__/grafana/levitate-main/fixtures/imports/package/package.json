@@ -1,0 +1,14 @@
+{
+  "name": "levitate-check-imports",
+  "version": "1.0.0",
+  "description": "Check imports fixture package",
+  "private": true,
+  "devDependencies": {
+    "@grafana/data": "latest",
+    "@grafana/ui": "latest"
+  },
+  "engines": {
+    "node": ">=14"
+  },
+  "packageManager": "yarn@4.6.0"
+}

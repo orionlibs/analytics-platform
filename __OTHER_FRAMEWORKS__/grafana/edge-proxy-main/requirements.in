@@ -1,0 +1,10 @@
+fastapi
+uvicorn
+marshmallow
+flagsmith-flag-engine
+python-decouple
+python-dotenv
+pydantic
+structlog
+orjson
+httpx

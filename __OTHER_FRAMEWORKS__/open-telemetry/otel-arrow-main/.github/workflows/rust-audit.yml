@@ -1,0 +1,30 @@
+name: Rust-Audit
+permissions:
+  contents: read
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - 'rust/otap-dataflow/Cargo.toml'
+  schedule:
+    - cron: '0 2 * * 1' # run at 2 AM UTC every Monday
+
+jobs:
+  audit:
+    strategy:
+      fail-fast: false
+      matrix:
+        folder: [otap-dataflow]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
+      - uses: dtolnay/rust-toolchain@6d653acede28d24f02e3cd41383119e8b1b35921
+        with:
+          toolchain: stable
+      - name: cargo install cargo-audit
+        run: cargo install cargo-audit
+      - name: cargo audit ${{ matrix.folder }}
+        run: cargo audit
+        working-directory: ./rust/${{ matrix.folder }}

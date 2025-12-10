@@ -1,0 +1,12 @@
+# bin
+flagger-k6-webhook
+
+# IDE
+.vscode
+
+# CI
+.drone/temp.yml
+
+# Tilt setup
+.cache
+dev-workload.yml

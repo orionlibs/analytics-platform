@@ -1,0 +1,34 @@
+name: Format github issues
+on:
+  issues:
+    types:
+      - opened
+
+jobs:
+  label-and-add-to-project:
+    name: Add common labels and project to issues
+    runs-on: ubuntu-latest
+    permissions:
+      id-token: write
+      issues: write
+      contents: read
+    steps:
+      - name: Get GitHub App token
+        id: app-token
+        uses: grafana/shared-workflows/actions/create-github-app-token@d2db509c45f0d0e75e26fe03c276225d6bbc3e0d # create-github-app-token/v0.2.0
+        with:
+          github_app: DrilldownBot
+
+      - uses: actions/add-to-project@244f685bbc3b7adfa8466e08b698b5577571133e # v1.0.2
+        with:
+          project-url: https://github.com/orgs/grafana/projects/702
+          github-token: ${{ steps.app-token.outputs.token }}
+
+      - name: Add common labels and project to issues
+        run: |
+          gh issue edit "$NUMBER" --add-label "$LABELS"
+        env:
+          GH_TOKEN: ${{ steps.app-token.outputs.token }}
+          GH_REPO: ${{ github.repository }}
+          NUMBER: ${{ github.event.issue.number }}
+          LABELS: needs-triage

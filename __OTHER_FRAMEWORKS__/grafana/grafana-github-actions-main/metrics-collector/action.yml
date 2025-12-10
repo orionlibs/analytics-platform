@@ -1,0 +1,14 @@
+name: Metrics collector
+description: Records metrics on issue open & close
+inputs:
+  token:
+    description: GitHub token with issue, comment, and label read/write permissions
+    default: ${{ github.token }}
+  configPath:
+    description: Name of .json file (no extension) in .github/ directory of repo holding configuration for this action
+  metricsWriteAPIKey:
+    description: Grafana Cloud metrics api key
+    required: false
+runs:
+  using: 'node20'
+  main: 'index.js'

@@ -1,0 +1,44 @@
+image:
+  repository: grafana/grafana
+  tag: ops-plugins
+persistence:
+  enabled: false
+sidecar:
+  datasources:
+    enabled: true
+
+# HACK: Add this value to allow unencrypted credentials. This is not recommended for production, and should be removed once we properly support variable expansion in this PR.
+assertNoLeakedSecrets: false
+
+admin:
+  existingSecret: grafana-admin-creds
+serviceAccount:
+  # Broken by Helm chart version 7.3.2. Prefer to set this explicitly rather than depend on default behavior.
+  autoMount: true
+  create: default
+service:
+  port: 3000
+  nodePort: 3000
+
+grafana.ini:
+  app_mode: development
+  analytics:
+    reporting_enabled: false
+  auth.anonymous:
+    enabled: true
+    org_role: Admin
+  feature_toggles:
+    enable: topnav
+  log:
+    level: info
+  log.frontend:
+    enabled: true
+  navigation.app_sections:
+    grafana-incident-app: alerts-and-incidents
+  plugins:
+    allow_loading_unsigned_plugins: grafana-incident-app
+  server:
+    http_port: 3000
+    router_logging: true
+  users:
+    default_theme: dark

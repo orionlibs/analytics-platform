@@ -1,0 +1,35 @@
+{
+  "$schema": "https://docs.renovatebot.com/renovate-schema.json",
+  "extends": [
+    "github>grafana/sm-renovate//presets/grafana.json5",
+    "github>grafana/sm-renovate//presets/synthetic-monitoring.json5",
+    "github>grafana/sm-renovate//presets/go.json5",
+    "github>grafana/sm-renovate//presets/grafana-build-tools.json5",
+  ],
+  "customManagers": [
+    {
+      "customType": "regex",
+      "datasourceTemplate": "docker",
+      "depNameTemplate": "ghcr.io/grafana/crocochrome",
+      "managerFilePatterns": [
+        "**/*_test.go",
+      ],
+      "matchStrings": [
+        "ghcr.io/grafana/crocochrome:(?<currentValue>[\\w.-]+)(?:@(?<currentDigest>[\\w:]+))?",
+      ]
+    },
+    {
+      "customType": "regex",
+      "datasourceTemplate": "git-refs",
+      "depNameTemplate": "gsm-api-go-client",
+      "packageNameTemplate": "https://github.com/grafana/gsm-api-go-client",
+      "currentValueTemplate": "main",
+      "managerFilePatterns": [
+        ".github/workflows/push-pr-release.yaml"
+      ],
+      "matchStrings": [
+        "--with github.com/grafana/gsm-api-go-client@(?<currentDigest>[a-f0-9]{7,40})"
+      ]
+    }
+  ]
+}

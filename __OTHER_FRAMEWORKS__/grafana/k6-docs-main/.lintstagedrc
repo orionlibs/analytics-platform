@@ -1,0 +1,6 @@
+{
+  "docs/sources/**/*.md": [
+    "prettier --parser markdown --write",
+    "eslint -c ./docs/sources/.eslintrc.js --fix"
+  ]
+}

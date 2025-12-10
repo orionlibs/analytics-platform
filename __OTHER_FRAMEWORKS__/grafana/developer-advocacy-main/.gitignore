@@ -1,0 +1,7 @@
+.DS_Store
+.obsidian
+venv
+.env
+transcripts/*.csv
+__pycache__
+.hippo

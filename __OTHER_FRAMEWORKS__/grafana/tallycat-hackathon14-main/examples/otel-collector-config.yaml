@@ -1,0 +1,99 @@
+receivers:
+  # OTLP receiver for traces, metrics, and logs
+  otlp:
+    protocols:
+      grpc:
+        endpoint: 0.0.0.0:4318
+      http:
+        endpoint: 0.0.0.0:4319
+
+  # Generate synthetic logs for testing
+  filelog:
+    include: ["examples/test-logs/*.log"]
+    start_at: beginning
+    operators:
+      - type: json_parser
+        id: json_parser
+        output: extract_timestamp_parser
+      - type: time_parser
+        id: extract_timestamp_parser
+        parse_from: attributes.timestamp
+        layout: '%Y-%m-%d %H:%M:%S'
+  
+  prometheus:
+    config:
+      scrape_configs:
+        - job_name: 'otel-collector'
+          scrape_interval: 10s
+          static_configs:
+            - targets: ['127.0.0.1:8888']
+
+processors:
+  batch:
+    timeout: 1s
+    send_batch_size: 1024
+  
+  # Add resource attributes to identify the source
+  resource:
+    attributes:
+      - key: service.name
+        action: delete
+      - key: service.name
+        value: "otelcontribcol"
+        action: insert
+      - key: service.version
+        action: delete
+      - key: service.version
+        value: "0.134.0-dev"
+        action: insert
+      - key: deployment.environment
+        value: "development"
+        action: insert
+
+  # Transform logs to add severity and structured data
+  transform/logs:
+    log_statements:
+      - context: log
+        statements:
+          - set(log.severity_text, "INFO") where log.severity_text == nil
+          - set(log.severity_number, 9) where log.severity_number == nil
+          - set(log.attributes["log.source"], "otelcontribcol")
+          # Add event names for proper schema identification
+          - set(log.event_name, log.attributes["service"]) where log.event_name == nil and log.attributes["service"] != nil
+          - set(log.event_name, "application_log") where log.event_name == nil
+
+  # Transform traces to add additional attributes for testing
+  transform/traces:
+    trace_statements:
+      - context: span
+        statements:
+          - set(attributes["trace.source"], "otelcontribcol")
+          - set(attributes["environment"], "development")
+          # Add some test attributes based on span name
+          - set(attributes["operation.category"], "database") where name == "SELECT users"
+          - set(attributes["operation.category"], "http") where name == "GET /api/users"
+          - set(attributes["operation.category"], "cache") where name == "redis.get"
+
+exporters:
+  otlp:
+    endpoint: localhost:4317
+    tls:
+      insecure: true
+    compression: none
+
+service:
+  pipelines:
+    traces:
+      receivers: [otlp]
+      processors: [resource, transform/traces, batch]
+      exporters: [otlp]
+    
+    metrics:
+      receivers: [prometheus]
+      processors: [resource, batch]
+      exporters: [otlp]
+    
+    logs:
+      receivers: [filelog]
+      processors: [resource, transform/logs, batch]
+      exporters: [otlp] 

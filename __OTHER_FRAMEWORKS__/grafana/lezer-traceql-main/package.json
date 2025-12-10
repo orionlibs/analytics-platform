@@ -1,0 +1,44 @@
+{
+  "name": "@grafana/lezer-traceql",
+  "version": "0.0.25",
+  "description": "Grafana Tempo TraceQL lezer grammar",
+  "main": "index.cjs",
+  "type": "module",
+  "module": "index.es.js",
+  "types": "index.d.ts",
+  "license": "Apache-2.0",
+  "author": "Grafana Labs <team@grafana.com> (https://grafana.com)",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/grafana/lezer-traceql.git"
+  },
+  "scripts": {
+    "build": "bash ./build.sh",
+    "test": "mocha test/test-*.js"
+  },
+  "devDependencies": {
+    "@lezer/lr": "^1.4.2",
+    "@lezer/generator": "^1.8.0",
+    "@rollup/plugin-node-resolve": "^16.0.3",
+    "mocha": "11.7.4",
+    "rollup": "^4.52.4"
+  },
+  "peerDependencies": {
+    "@lezer/lr": "^1.4.2"
+  },
+  "exports": {
+    "types": "./index.d.ts",
+    "import": "./index.es.js",
+    "require": "./index.cjs"
+  },
+  "bugs": {
+    "url": "https://github.com/grafana/lezer-traceql/issues"
+  },
+  "homepage": "https://github.com/grafana/lezer-traceql#readme",
+  "files": [
+    "index.cjs",
+    "index.d.ts",
+    "index.es.js",
+    "package.json"
+  ]
+}

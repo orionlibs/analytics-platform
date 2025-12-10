@@ -1,0 +1,68 @@
+receivers:
+  otlp:
+    protocols:
+      grpc:
+        endpoint: 0.0.0.0:4317
+      http:
+        endpoint: 0.0.0.0:4318
+
+exporters:
+  otlphttp:
+    endpoint: $OTLP_ENDPOINT
+    tls:
+      insecure: true
+  prometheus:
+    endpoint: 0.0.0.0:8889
+
+processors:
+  assertsprocessor:
+    asserts_server:
+      endpoint: $ASSERTS_SERVER_API_ENDPOINT
+      user: $ASSERTS_SERVER_USERNAME
+      password: $ASSERTS_SERVER_PASSWORD
+    asserts_env: $ASSERTS_ENV
+    asserts_site: $ASSERTS_SITE
+    asserts_tenant: $ASSERTS_TENANT
+    capture_metrics: true
+    span_attributes:
+      - attr_name: asserts.error.type
+        attr_configs:
+          - rules:
+              - value_expr: client_errors
+                regex: 4..
+                source_attributes: ["http.status_code"]
+                span_kinds: ["Client", "Server"]
+              - value_expr: server_errors
+                regex: 5..
+                source_attributes: ["http.status_code"]
+                span_kinds: ["Client", "Server"]
+      - attr_name: asserts.request.context
+        attr_configs:
+          - rules:
+              - source_attributes: ["http.route"]
+                regex: "(.+)"
+                span_kinds: ["Server"]
+              - source_attributes: ["http.url"]
+                span_kinds: ["Server", "Client"]
+                regex: "https?://.+?((/[^/?]+){1,2}).*"
+    attributes_as_metric_labels:
+      - "rpc.system"
+      - "rpc.service"
+      - "rpc.method"
+      - "aws.table.name"
+      - "aws.queue.url"
+      - "aws.bucket.name"
+      - "db.operation"
+      - "db.system"
+service:
+  telemetry:
+    logs:
+      level: $LOG_LEVEL
+  pipelines:
+    traces:
+      receivers: [otlp]
+      processors: [assertsprocessor]
+      exporters: [otlphttp]
+    metrics:
+      receivers: [otlp]
+      exporters: [prometheus]

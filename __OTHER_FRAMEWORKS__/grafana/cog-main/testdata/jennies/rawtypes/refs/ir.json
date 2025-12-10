@@ -1,0 +1,57 @@
+{
+  "Package": "refs",
+  "Objects": {
+    "SomeStruct": {
+      "Name": "SomeStruct",
+      "SelfRef": {
+        "ReferredPkg": "refs",
+        "ReferredType": "SomeStruct"
+      },
+      "Type": {
+        "Kind": "struct",
+        "Struct": {
+          "Fields": [
+            {
+              "Name": "FieldAny",
+              "Required": true,
+              "Type": {
+                "Kind": "scalar",
+                "Scalar": {
+                  "ScalarKind": "any"
+                }
+              }
+            }
+          ]
+        }
+      }
+    },
+    "RefToSomeStruct": {
+      "Name": "RefToSomeStruct",
+      "SelfRef": {
+        "ReferredPkg": "refs",
+        "ReferredType": "RefToSomeStruct"
+      },
+      "Type": {
+        "Kind": "ref",
+        "Ref": {
+          "ReferredPkg": "refs",
+          "ReferredType": "SomeStruct"
+        }
+      }
+    },
+    "RefToSomeStructFromOtherPackage": {
+      "Name": "RefToSomeStructFromOtherPackage",
+      "SelfRef": {
+        "ReferredPkg": "refs",
+        "ReferredType": "RefToSomeStructFromOtherPackage"
+      },
+      "Type": {
+        "Kind": "ref",
+        "Ref": {
+          "ReferredPkg": "otherpkg",
+          "ReferredType": "SomeDistantStruct"
+        }
+      }
+    }
+  }
+}

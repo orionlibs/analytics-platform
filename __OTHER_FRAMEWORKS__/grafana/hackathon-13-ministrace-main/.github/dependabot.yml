@@ -1,0 +1,34 @@
+version: 2
+updates:
+  - package-ecosystem: cargo
+    directory: / 
+    schedule:
+      interval: weekly
+      day: thursday
+    labels:
+      - dependencies
+      - rust
+    versioning-strategy: auto
+    open-pull-requests-limit: 5
+    rebase-strategy: auto
+    # Make 1 massive PR for all dependency updates.
+    groups:
+      dependencies:
+        patterns:
+          - "*"
+
+  - package-ecosystem: github-actions
+    directory: /.github/workflows
+    schedule:
+      interval: weekly
+      day: thursday
+    labels:
+      - dependencies
+      - github-actions
+    open-pull-requests-limit: 5
+    rebase-strategy: auto
+    # Group all updates together
+    groups:
+      actions:
+        patterns:
+          - "*" 

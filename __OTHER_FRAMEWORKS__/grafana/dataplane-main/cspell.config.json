@@ -1,0 +1,30 @@
+{
+  "ignorePaths": [
+    "node_modules/",
+    "go.work",
+    "**/*_test.go",
+    "./docusaurus/website/**/*.{tsx,css}"
+  ],
+  "words": [
+    "dataframe",
+    "dataframes",
+    "dataplane",
+    "datapoint",
+    "datapoints",
+    "datasource",
+    "datasources",
+    "datatypes",
+    "devportal",
+    "grafana",
+    "Heatmaps",
+    "jsoniter",
+    "Milli",
+    "scanline",
+    "scanlines",
+    "sdata",
+    "testdata",
+    "timeseries",
+    "typecheck",
+    "Visualisation"
+  ]
+}

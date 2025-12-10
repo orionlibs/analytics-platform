@@ -1,0 +1,55 @@
+{
+    "smithy": "1.0",
+    "shapes": {
+        "ns.foo#SomeService": {
+            "type": "service",
+            "version": "2018-03-17",
+            "resources": [
+                {
+                    "target": "ns.foo#A"
+                }
+            ],
+            "traits": {
+                "aws.api#service": {
+                    "sdkId": "Some Value",
+                    "arnNamespace": "service",
+                    "cloudFormationName": "SomeService"
+                }
+            }
+        },
+        "ns.foo#A": {
+            "type": "resource",
+            "identifiers": {
+                "aid": {
+                    "target": "smithy.api#String"
+                }
+            },
+            "resources": [
+                {
+                    "target": "ns.foo#B"
+                }
+            ],
+            "traits": {
+                "aws.api#arn": {
+                    "template": "a"
+                }
+            }
+        },
+        "ns.foo#B": {
+            "type": "resource",
+            "identifiers": {
+                "aid": {
+                    "target": "smithy.api#String"
+                },
+                "bid": {
+                    "target": "smithy.api#String"
+                }
+            },
+            "traits": {
+                "aws.api#arn": {
+                    "template": "a/b"
+                }
+            }
+        }
+    }
+}

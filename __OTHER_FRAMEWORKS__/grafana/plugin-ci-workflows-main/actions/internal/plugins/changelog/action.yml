@@ -1,0 +1,29 @@
+name: Plugins - GitHub Release - Get changelog
+description: Gets the most recent section from the changelog file
+
+inputs:
+  changelog-path:
+    description: |
+      Path to the changelog file.
+      If not provided, defaults to CHANGELOG.md.
+    required: false
+    type: string
+
+outputs:
+  changelog:
+    description: The most recent section from the changelog file, in markdown format.
+    value: ${{ steps.parse.outputs.changelog }}
+
+runs:
+  using: composite
+  steps:
+    - name: Parse changelog
+      id: parse
+      run: |
+        changelog=`${{ github.action_path }}/parse-changelog.sh ${CHANGELOG_PATH}`
+        echo 'changelog<<EOF' >> "$GITHUB_OUTPUT"
+        echo "$changelog" >> "$GITHUB_OUTPUT"
+        echo 'EOF' >> "$GITHUB_OUTPUT"
+      env:
+        CHANGELOG_PATH: ${{ inputs.changelog-path || 'CHANGELOG.md' }}
+      shell: bash

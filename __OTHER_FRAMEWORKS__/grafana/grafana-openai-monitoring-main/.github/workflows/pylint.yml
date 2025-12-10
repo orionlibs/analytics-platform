@@ -1,0 +1,46 @@
+name: Pylint
+
+on: 
+  push: 
+    branches:
+        - "main"
+  pull_request:
+  schedule:
+    - cron: '0 6 * * *'
+
+defaults:
+  run:
+    working-directory: ./python
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: ["3.8", "3.9", "3.10"]
+    
+    steps:
+    - uses: actions/checkout@v3
+
+    - name: Get changed files in the docs folder
+      id: changed-files-specific
+      uses: tj-actions/changed-files@v41
+      with:
+        files: python/**
+    
+    - name: Set up Python ${{ matrix.python-version }}
+      if: steps.changed-files-specific.outputs.any_changed == 'true' || github.event.schedule == '*/180 * * * *'
+      uses: actions/setup-python@v3
+      with:
+        python-version: ${{ matrix.python-version }}
+
+    - name: Install dependencies
+      if: steps.changed-files-specific.outputs.any_changed == 'true' || github.event.schedule == '*/180 * * * *'
+      run: |
+        python -m pip install --upgrade pip
+        pip install pylint requests openai
+
+    - name: Analysing the code with pylint
+      if: steps.changed-files-specific.outputs.any_changed == 'true' || github.event.schedule == '*/180 * * * *'
+      run: |
+        pylint $(git ls-files '*.py')

@@ -1,0 +1,33 @@
+name: CI
+on:
+  push:
+    branches:
+      - main
+
+# These permissions are needed to assume roles from Github's OIDC.
+permissions:
+  contents: read
+  id-token: write
+
+jobs:
+  build:
+    name: Build
+    runs-on: ubuntu-latest
+    steps:
+      - name: Set up Go 1.22
+        uses: actions/setup-go@v5
+        with:
+          go-version: '>=1.22.4'
+
+      - name: Check out code
+        uses: actions/checkout@v4
+
+      - name:  Image tag
+        id: image-tag
+        run: echo "version=$(./tools/image-tag)" >> $GITHUB_OUTPUT
+
+      - name: Start grafana docker
+        run: cd frontend && docker compose up -d
+
+      - name: Stop grafana docker
+        run: cd frontend && docker compose down

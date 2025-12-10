@@ -1,0 +1,69 @@
+[package]
+name = "grafana-plugin-sdk"
+version = "0.5.0"
+authors = ["Ben Sully <ben.sully@grafana.com>"]
+license = "MIT/Apache-2.0"
+edition = "2021"
+rust-version = "1.81"
+repository = "https://github.com/grafana/grafana-plugin-sdk-rust"
+description = "SDK for building Grafana backend plugins."
+
+[dependencies]
+arrow = { version = "57.0.0", default-features = false, features = ["ipc"] }
+cfg-if = "1.0.0"
+chrono = "0.4.26"
+futures-core = "0.3.28"
+futures-util = "0.3.28"
+grafana-plugin-sdk-macros = { version = "0.5.0", path = "../grafana-plugin-sdk-macros" }
+http = "1.0.0"
+itertools = "0.14.0"
+num-traits = "0.2.15"
+prost = "0.14.1"
+reqwest_lib = { package = "reqwest", version = "0.12.7", optional = true }
+serde = { version = "1.0.164", features = ["derive"] }
+serde_json = { version = "1.0.96", features = ["float_roundtrip", "raw_value"] }
+serde_with = "3.0.0"
+thiserror = "2.0.11"
+time = { version = "0.3.22", features = ["formatting", "macros"] }
+tokio = { version = "1.38.2", features = ["rt-multi-thread"] }
+tokio-stream = { version = "0.1.14", features = ["net"] }
+tonic = "0.14.2"
+tonic-health = "0.14.2"
+tonic-prost = "0.14.2"
+tracing = "0.1.37"
+tracing-core = "0.1.31"
+tracing-log = "0.2.0"
+tracing-serde = "0.2.0"
+tracing-subscriber = { version = "0.3.20", features = [
+  "env-filter",
+  "json",
+  "time",
+] }
+
+[dev-dependencies]
+async-stream = "0.3.5"
+bytes = "1.4.0"
+futures = "0.3.28"
+paste = "1.0.12"
+pretty_assertions = "1.3.0"
+prometheus = { version = "0.14.0", default-features = false }
+tokio = { version = "1.38.2", features = ["rt-multi-thread"] }
+tokio-stream = "0.1.14"
+
+[build-dependencies]
+tonic-prost-build = { version = "0.14.2", optional = true }
+
+# docs.rs-specific configuration
+[package.metadata.docs.rs]
+# document all features
+all-features = true
+# defines the configuration attribute `docsrs`
+rustdoc-args = ["--cfg", "docsrs"]
+
+[features]
+reqwest = ["reqwest_lib"]
+# Since prost 0.11 we no longer use prost-build at build time to generate code,
+# because it requires protoc. The generated code is instead checked in to source
+# control. To regenerate code in the case of updated .proto definitions, build
+# with this feature enabled.
+gen-proto = ["dep:tonic-prost-build"]

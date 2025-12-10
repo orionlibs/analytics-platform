@@ -1,0 +1,29 @@
+{
+  "bootstrap-sha": "586ad0bab1467ba590ce3b15ce9d42804564f059",
+  "plugins": [
+    {
+      "type": "node-workspace",
+      "updatePeerDependencies": true
+    }
+  ],
+  "packages": {
+    "packages/faro-bundlers-shared": {
+      "changelog-path": "CHANGELOG.md",
+      "release-type": "node"
+    },
+    "packages/faro-cli": {
+      "changelog-path": "CHANGELOG.md",
+      "release-type": "node"
+    },
+    "packages/faro-rollup": {
+      "changelog-path": "CHANGELOG.md",
+      "release-type": "node"
+    },
+    "packages/faro-webpack": {
+      "changelog-path": "CHANGELOG.md",
+      "release-type": "node"
+    }
+  },
+  "include-v-in-tag": true,
+  "$schema": "https://raw.githubusercontent.com/googleapis/release-please/main/schemas/config.json"
+}

@@ -1,0 +1,27 @@
+FROM --platform=$BUILDPLATFORM golang:1.25-alpine@sha256:d3f0cf7723f3429e3f9ed846243970b20a2de7bae6a5b66fc5914e228d831bbb AS build
+
+WORKDIR /
+
+# Copy source code
+COPY [".", "."]
+
+# Download dependencies
+RUN ["go", "mod", "download"]
+
+ARG PROBE_IMAGE
+#  Passed in from buildx
+ARG TARGETOS
+ARG TARGETARCH
+# Build the probe binary
+RUN env CGO_ENABLED=0 GOOS=${TARGETOS} GOARCH=${TARGETARCH} go build -ldflags="-w -s -extldflags '-static' -X 'github.com/grafana/nethax/pkg/kubernetes.DefaultProbeImage=${PROBE_IMAGE}'" -a -o /nethax-probe ./cmd/nethax-probe
+RUN env CGO_ENABLED=0 GOOS=linux go build -ldflags="-w -s -extldflags '-static' -X 'github.com/grafana/nethax/pkg/kubernetes.DefaultProbeImage=${PROBE_IMAGE}'" -a -o /nethax-probe ./cmd/nethax-probe
+
+FROM scratch
+
+COPY --from=build /nethax-probe /nethax-probe
+
+# Copy CA certificates from build
+COPY --from=build /etc/ssl/certs/ca-certificates.crt /etc/ssl/certs/ca-certificates.crt
+
+# Set the entrypoint
+ENTRYPOINT ["/nethax-probe"]

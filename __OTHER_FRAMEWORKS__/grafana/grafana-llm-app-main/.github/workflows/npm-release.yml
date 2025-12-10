@@ -1,0 +1,78 @@
+name: NPM Release
+
+on:
+  workflow_dispatch:
+    inputs:
+      release:
+        description: 'Release a new version of the npm library'
+        required: true
+        default: false
+        type: 'boolean'
+
+permissions:
+  contents: write
+  id-token: write
+
+jobs:
+  build-and-publish:
+    environment: Release npm package
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8
+        with:
+          # Releases should always be made off of 'main'
+          ref: 'main'
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Setup Node.js environment
+        uses: actions/setup-node@2028fbc5c25fe9cf00d9f06a71cc4710d4507903
+        with:
+          node-version: 22
+          registry-url: "https://registry.npmjs.org"
+
+      # A newer version of npm is required to make use of Trusted Publishing.
+      - name: Install newer npm
+        run: npm install -g npm@^11.5.1
+
+      - name: Setup Go environment
+        uses: actions/setup-go@44694675825211faa026b3c33043df3e48a5fa00
+        with:
+          go-version: '1.21'
+
+      - name: Store Go cache paths
+        id: go-cache-paths
+        run: echo "go-build=$(go env GOCACHE)" >> $GITHUB_OUTPUT
+
+      - name: Restore go-build cache
+        id: restore-go-build-cache
+        uses: actions/cache/restore@v4
+        with:
+          path: ${{ steps.go-cache-paths.outputs.go-build }}
+          key: ${{ runner.os }}-go-build-${{ hashFiles('**/go.sum') }}
+          restore-keys: ${{ runner.os }}-go-build-
+
+      - name: Install utilities
+        run: sudo apt-get install jq
+
+      - name: Install Mage
+        uses: magefile/mage-action@6f50bbb8ea47d56e62dee92392788acbc8192d0b
+        with:
+            install-only: true
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build plugin
+        run: npm run build:all
+
+      - name: Run frontend tests
+        run: npm run test:ci
+
+      - name: Run backend tests
+        run: npm run backend:test
+
+      - name: Publish to NPM
+        run: |
+          cd packages/grafana-llm-frontend
+          npm publish --access public

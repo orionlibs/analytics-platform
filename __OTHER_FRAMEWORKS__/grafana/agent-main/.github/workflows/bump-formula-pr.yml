@@ -1,0 +1,64 @@
+name: bump-formula-pr
+on:
+  release:
+    types: [released]
+
+permissions:
+  contents: read
+
+jobs:
+  homebrew-core:
+    name: homebrew-core
+    runs-on: ubuntu-latest
+    steps:
+    - name: Get latest release
+      uses: rez0n/actions-github-release@794c12f5e8d629e6ca329cf2e2daeb0f0ce6a3ce # main
+      id: latest_release
+      with:
+        token: ${{ secrets.GITHUB_TOKEN }}
+        repository: "${{ github.repository }}"
+        type: "stable"
+
+    - name: Update Homebrew formula
+      if: 'steps.latest_release.outputs.release_id == github.event.release.id'
+      uses: dawidd6/action-homebrew-bump-formula@8d494330bce4434918392df134ad3db1167904db # v4
+      with:
+        # Required, custom GitHub access token with the 'public_repo' and 'workflow' scopes
+        token: ${{secrets.HOMEBREW_FORMULA_GH_TOKEN}}
+        # Formula name, required
+        formula: grafana-agent
+        # Optional, will be determined automatically
+        tag: ${{github.ref}}
+        # Optional, will be determined automatically
+        revision: ${{github.sha}}
+        # Optional, if don't want to check for already open PRs
+        force: false # true
+
+  homebrew-grafana:
+    name: homebrew-grafana
+    runs-on: ubuntu-latest
+    steps:
+    - name: Get latest release
+      uses: rez0n/actions-github-release@794c12f5e8d629e6ca329cf2e2daeb0f0ce6a3ce # main
+      id: latest_release
+      with:
+        token: ${{ secrets.GITHUB_TOKEN }}
+        repository: "${{ github.repository }}"
+        type: "stable"
+
+    - name: Update Homebrew formula
+      if: 'steps.latest_release.outputs.release_id == github.event.release.id'
+      uses: dawidd6/action-homebrew-bump-formula@8d494330bce4434918392df134ad3db1167904db # v4
+      with:
+        # Required, custom GitHub access token with the 'public_repo' and 'workflow' scopes
+        token: ${{secrets.HOMEBREW_FORMULA_GH_TOKEN}}
+        # Optional, defaults to homebrew/core
+        tap: grafana/grafana
+        # Formula name, required
+        formula: grafana-agent-flow
+        # Optional, will be determined automatically
+        tag: ${{github.ref}}
+        # Optional, will be determined automatically
+        revision: ${{github.sha}}
+        # Optional, if don't want to check for already open PRs
+        force: false # true

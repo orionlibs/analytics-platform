@@ -1,0 +1,30 @@
+#!/usr/bin/env sh
+
+set -eu
+
+kernel=$(uname -s)
+
+case "${kernel}" in
+	Linux)
+		kernel=linux
+		;;
+	FreeBSD)
+		kernel=freebsd
+		;;
+	Darwin)
+		kernel=darwin
+		;;
+esac
+
+machine=$(uname -m)
+
+case "${machine}" in
+	x86_64)
+		machine=amd64
+		;;
+	aarch64)
+		machine=arm64
+		;;
+esac
+
+echo "${kernel}-${machine}"

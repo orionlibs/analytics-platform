@@ -1,0 +1,36 @@
+[workspace]
+resolver = "2"
+members = [
+  "crates/kernel-collector-sys",
+  "crates/kernel-collector-bin",
+  "crates/reducer-sys",
+  "crates/reducer-bin",
+  "crates/cloud-collector-sys",
+  "crates/cloud-collector-bin",
+  "crates/k8s-relay-sys",
+  "crates/k8s-relay-bin",
+  "crates/reducer",
+  "crates/perfect_hash_map",
+  "crates/render_parser",
+  "crates/otlp_export",
+  "crates/element-queue",
+  "crates/timeslot",
+  # Render encoders (ebpf_net)
+  "crates/render/ebpf_net",
+  "crates/render/ebpf_net/agent_internal",
+  "crates/render/ebpf_net/aggregation",
+  "crates/render/ebpf_net/cloud_collector",
+  "crates/render/ebpf_net/ingest",
+  "crates/render/ebpf_net/kernel_collector",
+  "crates/render/ebpf_net/logging",
+  "crates/render/ebpf_net/matching",
+  "crates/k8s-collector",
+  "crates/k8s-collector-bin",
+]
+
+[workspace.dependencies]
+render_parser = { path = "crates/render_parser" }
+otlp_export = { path = "crates/otlp_export" }
+reducer = { path = "crates/reducer" }
+reducer-sys = { path = "crates/reducer-sys" }
+rc-hashmap = { version = "0.1" }

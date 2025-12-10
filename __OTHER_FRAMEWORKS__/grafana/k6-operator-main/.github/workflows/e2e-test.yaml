@@ -1,0 +1,113 @@
+---
+name: "Create cluster using KinD"
+permissions: {}
+on:
+  workflow_dispatch: {}
+jobs:
+  docker:
+    runs-on: ubuntu-latest
+    permissions:
+      packages: write
+    steps:
+      - name: "Build:checkout"
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: "Build:buildx"
+        # this is v3.10.0
+        uses: docker/setup-buildx-action@b5ca514318bd6ebac0fb2aedd5d36ec1b5c232a2
+        with:
+          version: v0.9.1 # Buildx version
+      - name: "Build:login"
+        # this is v3.4.0
+        uses: docker/login-action@74a5d142397b4f367a81961eba4e8cd7edddf772
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - name: "Build:dockerimage"
+        # this is v6.16.0
+        uses: docker/build-push-action@14487ce63c7a62a4a324b0bfb37086795e31c6c1
+        with:
+          context: .
+          file: Dockerfile.controller
+          push: true
+          build-args: |
+            GO_BUILDER_IMG=golang:1.25
+          tags: |
+            ghcr.io/grafana/k6-operator:${{ github.sha }}
+
+  kind-kustomize:
+    needs: ["docker"]
+    runs-on: ubuntu-latest
+    steps:
+      - name: "Checkout"
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+
+      - name: "Setup kustomize"
+        # this is v2.1.0
+        uses: imranismail/setup-kustomize@2ba527d4d055ab63514ba50a99456fc35684947f
+
+      - name: "Kustomize Build"
+        run: |
+          cd config/default && kustomize build . > ../../rendered.yaml
+
+      - name: Create kind cluster
+        # this is v1.12.0
+        uses: helm/kind-action@a1b0e391336a6ee6713a0583f8c6240d70863de3
+        with:
+          node_image: "kindest/node:v1.27.1"
+
+      - name: Test
+        run: |
+          kubectl cluster-info
+          kubectl cluster-info dump | grep 'nodeInfo' -A 11
+          kubectl apply -f rendered.yaml
+          kubectl -n k6-operator-system set image deployment/k6-operator-controller-manager manager=ghcr.io/grafana/k6-operator:${{ github.sha }}
+          kubectl -n k6-operator-system describe deployment k6-operator-controller-manager
+          kubectl create configmap crocodile-stress-test --from-file e2e/test.js
+          kubectl apply -f e2e/test.yaml
+          sleep 30
+          kubectl get namespaces
+          kubectl get jobs -A
+          kubectl wait --for=condition=complete --timeout=180s job/k6-sample-initializer
+          kubectl delete configmap crocodile-stress-test
+          kubectl delete -f e2e/test.yaml
+
+  kind-helm:
+    needs: ["docker"]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Set up Helm
+        # this is v4.3.0
+        uses: azure/setup-helm@b9e51907a09c216f16ebe8536097933489208112
+        with:
+          version: v3.7.2
+
+      - name: Create kind cluster
+        # this is v1.12.0
+        uses: helm/kind-action@a1b0e391336a6ee6713a0583f8c6240d70863de3
+        with:
+          node_image: "kindest/node:v1.27.1"
+
+      - name: Testing
+        run: |
+          helm install k6-operator ./charts/k6-operator/ -f ./charts/k6-operator/values.yaml --set manager.image.tag=${{github.sha}}
+          kubectl cluster-info dump | grep 'nodeInfo' -A 11
+          kubectl -n k6-operator-system describe deployment k6-operator-controller-manager
+          kubectl create configmap crocodile-stress-test --from-file e2e/test.js
+          kubectl apply -f e2e/test.yaml
+          sleep 30
+          kubectl get namespaces
+          kubectl get jobs -A
+          kubectl wait --for=condition=complete --timeout=180s job/k6-sample-1
+          kubectl delete configmap crocodile-stress-test
+          kubectl delete -f e2e/test.yaml

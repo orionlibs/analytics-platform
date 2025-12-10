@@ -1,0 +1,24 @@
+name: markdownlint
+
+on:
+  pull_request:
+    paths:
+      - "**.md"
+
+permissions: {}
+
+jobs:
+  build:
+    runs-on: ubuntu-24.04
+
+    steps:
+      - name: Check out
+        with:
+          persist-credentials: false
+        uses: actions/checkout@1af3b93b6815bc44a9784bd300feb67ff0d1eeb3 # v6.0.0
+
+      - name: install markdownlint-cli
+        run: sudo npm install -g markdownlint-cli
+
+      - name: run markdownlint
+        run: markdownlint .

@@ -1,0 +1,26 @@
+name: Latest Grafana API compatibility check
+on: [pull_request]
+
+jobs:
+  compatibilitycheck:
+    permissions:
+      contents: read
+      id-token: none
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8
+        with:
+          persist-credentials: false
+      - name: Setup Node.js environment
+        uses: actions/setup-node@2028fbc5c25fe9cf00d9f06a71cc4710d4507903
+        with:
+          node-version: '22'
+          cache: 'npm'
+      - name: Install dependencies
+        run: npm ci
+      - name: Build plugin frontend
+        run: npm run build
+      - name: Compatibility check plugin
+        run: npx @grafana/levitate@latest is-compatible --path packages/grafana-llm-app/src/module.ts --target @grafana/data,@grafana/ui,@grafana/runtime
+      - name: Compatibility check frontend library
+        run: npx @grafana/levitate@latest is-compatible --path packages/grafana-llm-frontend/src/index.ts --target @grafana/data,@grafana/ui,@grafana/runtime

@@ -1,0 +1,10 @@
+global:
+  enabled: true
+  severity: warning
+  jsonOutput: true
+  reportAll: false
+analyzers:
+  version:
+    enabled: false
+  brokenlinks:
+    enabled: false

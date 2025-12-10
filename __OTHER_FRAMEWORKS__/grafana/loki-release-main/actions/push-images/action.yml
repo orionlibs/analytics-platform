@@ -1,0 +1,31 @@
+---
+name: 'Push Images'
+description: 'An action to push multi-arch images and create manifests for them'
+
+# Define your inputs here.
+inputs:
+  imageDir:
+    description: 'root directory images are in'
+    required: true
+  imagePrefix:
+    description: 'repository prefix to push images to'
+    required: false
+    default: 'grafana'
+  isPlugin:
+    description: 'should the images be pushed as docer plugins'
+    required: false
+    default: 'false'
+  buildDir:
+    description: 'directory to build rootfs for docker plugin'
+    required: false
+  isLatest:
+    description: 'should we tag the image as latest'
+    default: 'false'
+    required: false
+
+# Define your outputs here.
+outputs: {}
+
+runs:
+  using: node20
+  main: dist/index.js

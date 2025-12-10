@@ -1,0 +1,295 @@
+compactor:
+  compaction:
+    block_retention: {{ .GlobalRetention }}
+  ring:
+    kvstore:
+      store: memberlist
+    {{- if .MemberList.EnableIPv6 }}
+    enable_inet6: true
+    {{- end}}
+distributor:
+  receivers:
+{{- if not .Gateway }}
+    jaeger:
+      protocols:
+        thrift_http:
+          endpoint: 0.0.0.0:14268
+{{- if .ReceiverTLS.Enabled }}
+          tls:
+{{- if .ReceiverTLS.ClientCAEnabled }}
+            client_ca_file:  {{ .ReceiverTLS.Paths.CA }}
+{{- end }}
+            cert_file: {{ .ReceiverTLS.Paths.Certificate }}
+            key_file: {{ .ReceiverTLS.Paths.Key }}
+            min_version: "{{ .ReceiverTLS.MinTLSVersion }}"
+{{- end }}
+        thrift_binary:
+          endpoint: 0.0.0.0:6832
+        thrift_compact:
+          endpoint: 0.0.0.0:6831
+        grpc:
+          endpoint: 0.0.0.0:14250
+{{- if .ReceiverTLS.Enabled }}
+          tls:
+{{- if .ReceiverTLS.ClientCAEnabled }}
+            client_ca_file:  {{ .ReceiverTLS.Paths.CA }}
+{{- end }}
+            cert_file: {{ .ReceiverTLS.Paths.Certificate }}
+            key_file: {{ .ReceiverTLS.Paths.Key }}
+            min_version: "{{ .ReceiverTLS.MinTLSVersion }}"
+{{- end }}
+    zipkin:
+      endpoint: 0.0.0.0:9411
+{{- if .ReceiverTLS.Enabled }}
+      tls:
+{{- if .ReceiverTLS.ClientCAEnabled }}
+        client_ca_file:  {{ .ReceiverTLS.Paths.CA }}
+{{- end }}
+        cert_file: {{ .ReceiverTLS.Paths.Certificate }}
+        key_file: {{ .ReceiverTLS.Paths.Key }}
+        min_version: "{{ .ReceiverTLS.MinTLSVersion }}"
+  {{- end }}
+{{- end }}
+    otlp:
+      protocols:
+        grpc:
+          endpoint: 0.0.0.0:4317
+{{- if and .Gates.GRPCEncryption .Gateway }}
+          tls:
+            client_ca_file:  {{ .TLS.Paths.CA }}
+            cert_file: {{ .TLS.Paths.Certificate }}
+            key_file: {{ .TLS.Paths.Key }}
+            min_version: "{{ .TLS.Profile.MinTLSVersionShort }}"
+{{- end }}
+{{- if .ReceiverTLS.Enabled }}
+          tls:
+{{- if .ReceiverTLS.ClientCAEnabled }}
+            client_ca_file:  {{ .ReceiverTLS.Paths.CA }}
+{{- end }}
+            cert_file: {{ .ReceiverTLS.Paths.Certificate }}
+            key_file: {{ .ReceiverTLS.Paths.Key }}
+            min_version: "{{ .ReceiverTLS.MinTLSVersion }}"
+{{- end }}
+        http:
+          endpoint: 0.0.0.0:4318
+{{- if and .Gates.GRPCEncryption .Gateway }}
+          tls:
+            client_ca_file:  {{ .TLS.Paths.CA }}
+            cert_file: {{ .TLS.Paths.Certificate }}
+            key_file: {{ .TLS.Paths.Key }}
+            min_version: "{{ .TLS.Profile.MinTLSVersionShort }}"
+{{- end }}
+{{- if .ReceiverTLS.Enabled }}
+          tls:
+{{- if .ReceiverTLS.ClientCAEnabled }}
+            client_ca_file:  {{ .ReceiverTLS.Paths.CA }}
+{{- end }}
+            cert_file: {{ .ReceiverTLS.Paths.Certificate }}
+            key_file: {{ .ReceiverTLS.Paths.Key }}
+            min_version: "{{ .ReceiverTLS.MinTLSVersion }}"
+{{- end }}
+  ring:
+    kvstore:
+      store: memberlist
+    {{- with .MemberList.InstanceAddr }}
+    instance_addr: {{ . }}
+    {{- end }}
+ingester:
+  lifecycler:
+    ring:
+      kvstore:
+        store: memberlist
+      replication_factor: {{ .ReplicationFactor }}
+{{- with .MemberList.InstanceAddr }}
+    address: {{ . }}
+{{- end }}
+    tokens_file_path: /var/tempo/tokens.json
+    {{- if .MemberList.EnableIPv6 }}
+    enable_inet6: true
+    {{- end}}
+  max_block_duration: 10m
+memberlist:
+  abort_if_cluster_join_fails: false
+  join_members:
+  {{- range .MemberList.JoinMembers }}
+  - {{ . }}
+  {{- end }}
+  {{- with .MemberList.InstanceAddr }}
+  advertise_addr: {{ . }}
+  {{- end }}
+multitenancy_enabled: {{ .Multitenancy }}
+{{- if or
+  .GlobalRateLimits.IngestionBurstSizeBytes
+  .GlobalRateLimits.IngestionRateLimitBytes
+  .GlobalRateLimits.MaxTracesPerUser
+  .GlobalRateLimits.MaxBytesPerTrace
+  .GlobalRateLimits.MaxBytesPerTagValues
+  (ne .GlobalRateLimits.MaxSearchDuration "0s")
+  .TenantRateLimitsPath
+}}
+overrides:
+{{- if .GlobalRateLimits.IngestionBurstSizeBytes }}
+  ingestion_burst_size_bytes: {{ .GlobalRateLimits.IngestionBurstSizeBytes }}
+{{- end }}
+{{- if .GlobalRateLimits.IngestionRateLimitBytes }}
+  ingestion_rate_limit_bytes: {{ .GlobalRateLimits.IngestionRateLimitBytes }}
+{{- end }}
+{{- if .GlobalRateLimits.MaxTracesPerUser }}
+  max_traces_per_user: {{ .GlobalRateLimits.MaxTracesPerUser }}
+{{- end }}
+{{- if .GlobalRateLimits.MaxBytesPerTrace }}
+  max_bytes_per_trace: {{ .GlobalRateLimits.MaxBytesPerTrace }}
+{{- end }}
+{{- if .GlobalRateLimits.MaxBytesPerTagValues }}
+  max_bytes_per_tag_values_query: {{ .GlobalRateLimits.MaxBytesPerTagValues }}
+{{- end }}
+{{- if ne .GlobalRateLimits.MaxSearchDuration "0s" }}
+  max_search_duration: {{ .GlobalRateLimits.MaxSearchDuration }}
+{{- end }}
+{{- if .TenantRateLimitsPath }}
+  per_tenant_override_config: {{ .TenantRateLimitsPath }}
+{{- end }}
+{{- end }}
+querier:
+  max_concurrent_queries: {{ .Search.MaxConcurrentQueries }}
+  frontend_worker:
+    frontend_address: {{ .QueryFrontendDiscovery }}
+{{- if .Gates.GRPCEncryption }}
+    grpc_client_config:
+      tls_enabled: true
+      tls_cert_path:  {{ .TLS.Paths.Certificate }}
+      tls_key_path: {{ .TLS.Paths.Key }}
+      tls_ca_path: {{ .TLS.Paths.CA }}
+      tls_server_name: {{ .TLS.ServerNames.QueryFrontend }}
+{{- if .TLS.Profile.Ciphers }}
+      tls_cipher_suites: {{ .TLS.Profile.Ciphers }}
+{{- end }}
+      tls_min_version: {{ .TLS.Profile.MinTLSVersion }}
+{{- end }}
+{{- if .Search.QueryTimeout }}
+  search:
+    query_timeout: {{ .Search.QueryTimeout }}
+{{- end }}
+{{- if .Gates.HTTPEncryption }}
+internal_server:
+  enable: true
+  http_listen_address: ""
+{{- if .TLS.Profile.Ciphers }}
+  tls_cipher_suites: {{ .TLS.Profile.Ciphers }}
+{{- end }}
+  tls_min_version: {{ .TLS.Profile.MinTLSVersion }}
+  http_tls_config:
+    cert_file: {{ .TLS.Paths.Certificate }}
+    key_file: {{ .TLS.Paths.Key }}
+{{- end }}
+server:
+  grpc_server_max_recv_msg_size: 4194304
+  grpc_server_max_send_msg_size: 4194304
+  http_listen_port: 3200
+  http_server_read_timeout: {{ .Timeout }}
+  http_server_write_timeout: {{ .Timeout }}
+  log_format: logfmt
+{{- if or .Gates.GRPCEncryption .Gates.HTTPEncryption }}
+{{- if .TLS.Profile.Ciphers }}
+  tls_cipher_suites: {{ .TLS.Profile.Ciphers }}
+{{- end }}
+  tls_min_version: {{ .TLS.Profile.MinTLSVersion }}
+{{- end }}
+{{- if .Gates.GRPCEncryption }}
+  grpc_tls_config:
+    cert_file:  {{ .TLS.Paths.Certificate }}
+    key_file: {{ .TLS.Paths.Key }}
+    client_ca_file: {{ .TLS.Paths.CA }}
+    client_auth_type: RequireAndVerifyClientCert
+{{- end }}
+{{- if .Gates.HTTPEncryption }}
+  http_tls_config:
+    cert_file:  {{ .TLS.Paths.Certificate }}
+    client_auth_type: RequireAndVerifyClientCert
+    key_file: {{ .TLS.Paths.Key }}
+    client_ca_file: {{ .TLS.Paths.CA }}
+{{- end }}
+storage:
+  trace:
+    backend: {{ .StorageType }}
+    blocklist_poll: 5m
+    {{- with .StorageParams.AzureStorage }}
+    azure:
+      container_name: {{ .Container }}
+      {{- if (eq $.StorageParams.CredentialMode "token") }}
+      use_federated_token: true
+      {{- end }}
+    {{- end }}
+    {{- with .StorageParams.GCS }}
+    gcs:
+      bucket_name: {{ .Bucket }}
+    {{- end }}
+    {{- if and .StorageParams.S3 (eq .StorageParams.CredentialMode "static") }}
+    s3:
+      endpoint: {{ .StorageParams.S3.Endpoint }}
+      bucket: {{ .StorageParams.S3.Bucket }}
+      insecure: {{ .StorageParams.S3.Insecure }}
+    {{- if .S3StorageTLS.Enabled }}
+    {{- if .S3StorageTLS.CA }}
+      tls_ca_path: {{ .S3StorageTLS.CA }}
+    {{- end }}
+    {{- if .S3StorageTLS.Certificate }}
+      tls_cert_path: {{ .S3StorageTLS.Certificate }}
+    {{- end }}
+    {{- if and .S3StorageTLS.Key }}
+      tls_key_path: {{ .S3StorageTLS.Key }}
+    {{- end }}
+    {{- end }}
+  {{- end }}
+    {{- if and .StorageParams.S3 (or (eq .StorageParams.CredentialMode "token") (eq .StorageParams.CredentialMode "token-cco")) }}
+    s3:
+      bucket: {{ .StorageParams.S3.Bucket }}
+      endpoint: s3.{{ .StorageParams.S3.Region }}.amazonaws.com
+      insecure: {{ .StorageParams.S3.Insecure }}
+    {{- if .S3StorageTLS.Enabled }}
+    {{- if .S3StorageTLS.CA }}
+      tls_ca_path: {{ .S3StorageTLS.CA }}
+    {{- end }}
+    {{- if .S3StorageTLS.Certificate }}
+      tls_cert_path: {{ .S3StorageTLS.Certificate }}
+    {{- end }}
+    {{- if and .S3StorageTLS.Key }}
+      tls_key_path: {{ .S3StorageTLS.Key }}
+    {{- end }}
+    {{- end }}
+    {{- end }}
+    local:
+      path: /var/tempo/traces
+    wal:
+      path: /var/tempo/wal
+usage_report:
+  reporting_enabled: false
+query_frontend:
+  search:
+    max_spans_per_span_set: 0
+{{- if .Search.ConcurrentJobs }}
+    concurrent_jobs: {{ .Search.ConcurrentJobs }}
+{{- end }}
+{{- if .Search.MaxDuration }}
+    max_duration: {{ .Search.MaxDuration }}
+{{- end }}
+{{- if .Search.DefaultResultLimit }}
+    default_result_limit: {{ .Search.DefaultResultLimit }}
+{{- end }}
+{{- if .Search.MaxResultLimit }}
+    max_result_limit: {{ .Search.MaxResultLimit }}
+{{- end }}
+{{- if .Gates.GRPCEncryption }}
+ingester_client:
+  grpc_client_config:
+    tls_enabled: true
+    tls_cert_path:  {{ .TLS.Paths.Certificate }}
+    tls_key_path: {{ .TLS.Paths.Key }}
+    tls_ca_path: {{ .TLS.Paths.CA }}
+    tls_server_name: {{ .TLS.ServerNames.Ingester }}
+    tls_insecure_skip_verify: false
+{{- if .TLS.Profile.Ciphers }}
+    tls_cipher_suites: {{ .TLS.Profile.Ciphers }}
+{{- end }}
+    tls_min_version: {{ .TLS.Profile.MinTLSVersion }}
+{{- end }}

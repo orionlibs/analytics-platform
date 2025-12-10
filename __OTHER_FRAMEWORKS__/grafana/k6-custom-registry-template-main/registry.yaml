@@ -1,0 +1,10 @@
+# import xk6-faker from registry.k6.io and limit versions
+- module: github.com/grafana/xk6-faker
+  constraints: ">=v0.4.0"
+
+# import xk6-sql from registry.k6.io
+- module: github.com/grafana/xk6-sql
+
+# import k6 from registry.k6.io and limit versions
+- module: go.k6.io/k6
+  constraints: ">=v0.50.0"
