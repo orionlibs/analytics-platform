@@ -1,0 +1,10 @@
+**/.DS_Store
+**/.idea
+**/.settings
+**/.project
+**/.classpath
+**/.prefs
+**/target
+**/bin
+**/*.iml
+**/*.log
